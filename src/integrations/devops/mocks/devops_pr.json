@@ -1,0 +1,226 @@
+{
+  "repository": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "name": "example.repo",
+    "url": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111",
+    "project": {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "exampleProject",
+      "description": "This Project will track all work associated with our products.",
+      "url": "https://dev.azure.com/exampleOrg/_apis/projects/22222222-2222-2222-2222-222222222222",
+      "state": "wellFormed",
+      "revision": 447,
+      "visibility": "private",
+      "lastUpdateTime": "2025-04-01T19:57:02.17Z"
+    },
+    "size": 3142292792,
+    "remoteUrl": "https://exampleOrg@dev.azure.com/exampleOrg/example.repo/_git/example.repo",
+    "sshUrl": "git@ssh.dev.azure.com:v3/exampleOrg/example.repo/example.repo",
+    "webUrl": "https://dev.azure.com/exampleOrg/example.repo/_git/example.repo",
+    "isDisabled": false,
+    "isInMaintenance": false
+  },
+  "pullRequestId": 1001,
+  "codeReviewId": 1001,
+  "status": "abandoned",
+  "createdBy": {
+    "displayName": "Alice Smith",
+    "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "_links": {
+      "avatar": {
+        "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/aad.AAAAAAAAAAAA"
+      }
+    },
+    "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "uniqueName": "alice.smith@example.com",
+    "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    "descriptor": "aad.AAAAAAAAAAAA"
+  },
+  "creationDate": "2025-04-18T08:08:23.4379547Z",
+  "closedDate": "2025-04-22T09:28:21.4137957Z",
+  "title": "12345 [Task Type] Reference data, Fix bugs",
+  "sourceRefName": "refs/heads/feature/ngrx-migration",
+  "targetRefName": "df44d24d",
+  "isDraft": false,
+  "mergeId": "33333333-3333-3333-3333-333333333333",
+  "lastMergeSourceCommit": {
+    "commitId": "0a6f0723",
+    "url": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/commits/abcd1234"
+  },
+  "lastMergeTargetCommit": {
+    "commitId": "df44d24d",
+    "url": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/commits/efgh5678"
+  },
+  "reviewers": [
+    {
+      "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "vote": 10,
+      "hasDeclined": false,
+      "isRequired": true,
+      "isFlagged": false,
+      "displayName": "DB Team",
+      "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/vssgp.BBBBBBBBBBBB"
+        }
+      },
+      "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "uniqueName": "vstfs:///Framework/IdentityDomain/CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC\\db_team",
+      "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "isContainer": true
+    },
+    {
+      "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "vote": 5,
+      "hasDeclined": false,
+      "isFlagged": false,
+      "displayName": "Bob Johnson",
+      "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/aad.CCCCCCCCCCCC"
+        }
+      },
+      "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "uniqueName": "bob.johnson@example.com",
+      "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=cccccccc-cccc-cccc-cccc-cccccccccccc"
+    },
+    {
+      "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/dddddddd-dddd-dddd-dddd-dddddddddddd",
+      "vote": 10,
+      "votedFor": [
+        {
+          "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "vote": 0,
+          "displayName": "DB Team",
+          "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "_links": {
+            "avatar": {
+              "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/vssgp.BBBBBBBBBBBB"
+            }
+          },
+          "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "uniqueName": "vstfs:///Framework/IdentityDomain/CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC\\db_team",
+          "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+          "isContainer": true
+        }
+      ],
+      "hasDeclined": false,
+      "isFlagged": false,
+      "displayName": "Carol Lee",
+      "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/dddddddd-dddd-dddd-dddd-dddddddddddd",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/aad.DDDDDDDDDDDD"
+        }
+      },
+      "id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+      "uniqueName": "carol.lee@example.com",
+      "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=dddddddd-dddd-dddd-dddd-dddddddddddd"
+    },
+    {
+      "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      "vote": 0,
+      "hasDeclined": false,
+      "isRequired": true,
+      "isFlagged": false,
+      "displayName": "API Team",
+      "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/vssgp.EEEEEEEEEE"
+        }
+      },
+      "id": "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      "uniqueName": "vstfs:///Framework/IdentityDomain/CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC\\api_team",
+      "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      "isContainer": true
+    },
+    {
+      "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/ffffffff-ffff-ffff-ffff-ffffffffffff",
+      "vote": 0,
+      "hasDeclined": false,
+      "isRequired": true,
+      "isFlagged": false,
+      "displayName": "UI Team",
+      "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/ffffffff-ffff-ffff-ffff-ffffffffffff",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/vssgp.FFFFFFFFFFFF"
+        }
+      },
+      "id": "ffffffff-ffff-ffff-ffff-ffffffffffff",
+      "uniqueName": "vstfs:///Framework/IdentityDomain/CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC\\ui_team",
+      "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=ffffffff-ffff-ffff-ffff-ffffffffffff",
+      "isContainer": true
+    },
+    {
+      "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/11112222-3333-4444-5555-666677778888",
+      "vote": 10,
+      "hasDeclined": false,
+      "isFlagged": false,
+      "displayName": "Dave Martinez",
+      "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/11112222-3333-4444-5555-666677778888",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/aad.111122223333"
+        }
+      },
+      "id": "11112222-3333-4444-5555-666677778888",
+      "uniqueName": "dave.martinez@example.com",
+      "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=11112222-3333-4444-5555-666677778888"
+    },
+    {
+      "reviewerUrl": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/reviewers/99998888-7777-6666-5555-444433332222",
+      "vote": 0,
+      "hasDeclined": false,
+      "isFlagged": false,
+      "displayName": "Eve Clark",
+      "url": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/99998888-7777-6666-5555-444433332222",
+      "_links": {
+        "avatar": {
+          "href": "https://dev.azure.com/exampleOrg/_apis/GraphProfile/MemberAvatars/aad.999988887777"
+        }
+      },
+      "id": "99998888-7777-6666-5555-444433332222",
+      "uniqueName": "eve.clark@example.com",
+      "imageUrl": "https://dev.azure.com/exampleOrg/_api/_common/identityImage?id=99998888-7777-6666-5555-444433332222"
+    }
+  ],
+  "url": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001",
+  "_links": {
+    "self": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001"
+    },
+    "repository": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111"
+    },
+    "workItems": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/workitems"
+    },
+    "sourceBranch": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/refs/heads/bugfix/tasktype-fix"
+    },
+    "targetBranch": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/refs/heads/features/kms-integration"
+    },
+    "statuses": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/statuses"
+    },
+    "sourceCommit": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/commits/abcd1234"
+    },
+    "targetCommit": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/commits/efgh5678"
+    },
+    "createdBy": {
+      "href": "https://spsprodcus1.vssps.visualstudio.com/AAAAAAA1-AAAA-AAAA-AAAA-AAAAAAAAAAAA/_apis/Identities/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+    },
+    "iterations": {
+      "href": "https://dev.azure.com/exampleOrg/22222222-2222-2222-2222-222222222222/_apis/git/repositories/11111111-1111-1111-1111-111111111111/pullRequests/1001/iterations"
+    }
+  },
+  "supportsIterations": true,
+  "artifactId": "vstfs:///Git/PullRequestId/22222222-2222-2222-2222-222222222222%2f11111111-1111-1111-1111-111111111111%2f1001"
+}

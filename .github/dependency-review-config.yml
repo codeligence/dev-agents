@@ -1,0 +1,67 @@
+# Dependency Review Configuration
+# This file configures the GitHub Dependency Review action for the project
+
+# Fail the action if any vulnerabilities are found at these severity levels or higher
+fail_on_severity: 'moderate'
+
+# Fail the action if vulnerabilities are found in these scopes
+fail_on_scopes: 
+  - 'runtime'
+
+# Block licenses that are incompatible with AGPL-3.0
+deny_licenses: 
+  - 'GPL-2.0'
+  - 'GPL-3.0'
+  - 'LGPL-2.1'
+  - 'LGPL-3.0'
+  - 'AGPL-1.0'
+  - 'AGPL-2.0'
+  - 'OSL-3.0'
+  - 'MS-PL'
+  - 'MS-RL'
+
+# Allow specific licenses that are compatible
+allow_licenses:
+  - 'MIT'
+  - 'Apache-2.0'
+  - 'BSD-2-Clause'
+  - 'BSD-3-Clause'
+  - 'ISC'
+  - 'MPL-2.0'
+  - 'CC0-1.0'
+  - 'Unlicense'
+
+# Allow specific GitHub Security Advisories if needed (commented out by default)
+# allow_ghsas:
+#   - 'GHSA-xxxx-xxxx-xxxx'
+
+# Block specific packages if needed
+# deny_packages:
+#   - name: 'package-name'
+#     version: '>= 1.0.0'
+
+# Additional configuration options
+comment_summary_in_pr: true
+warn_only: false
+base_ref: 'main'
+head_ref: '${{ github.event.pull_request.head.sha }}'
+
+# Exclude specific paths from dependency review
+exclude_paths:
+  - 'tests/**'
+  - 'docs/**'
+  - 'examples/**'
+  - '*.md'
+
+# Custom vulnerability database URL (optional)
+# vulnerability_check_url: 'https://api.osv.dev'
+
+# Review configuration for different file types
+# Python-specific settings
+python:
+  # Check for known vulnerable packages
+  check_vulnerable_packages: true
+  # Minimum severity level to report
+  min_severity: 'moderate'
+  # Include development dependencies in review
+  include_dev_dependencies: true

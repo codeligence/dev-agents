@@ -1,0 +1,78 @@
+core:
+  log:
+    dir: "@jinja {{env.CORE_LOG_DIR or './logs'}}"
+  storage:
+    file:
+      dir: "@jinja {{env.CORE_STORAGE_FILE_DIR or './storage'}}"
+
+models:
+  large: "@jinja {{env.LLM_MODEL_LARGE or 'openai:gpt-4.1'}}"
+  small: "@jinja {{env.LLM_MODEL_SMALL or 'openai:gpt-4.1-mini'}}"
+
+providers:
+  devops:
+    url: "@format {env[AZURE_URL]}"
+    organization: "@format {env[AZURE_DEVOPS_ORGANIZATION]}"
+    project: "@format {env[AZURE_DEVOPS_PROJECT]}"
+    pat: "@format {env[AZURE_DEVOPS_PAT]}"
+    repoId: "@format {env[AZURE_DEVOPS_REPOID]}"
+
+projects:
+  default:
+    git:
+      path: "@jinja {{env.GIT_REPO_PATH or '.'}}"
+      defaultBranch: "main"
+      autoPull: true
+      pullIntervalSeconds: "@jinja {{env.GIT_PULL_INTERVAL_SECONDS or 120}}"
+    pullrequests:
+      devops:
+        url: "@jinja {{ this.providers.devops.url }}"
+        organization: "@jinja {{ this.providers.devops.organization }}"
+        project: "@jinja {{ this.providers.devops.project }}"
+        pat: "@jinja {{ this.providers.devops.pat }}"
+        repoId: "@jinja {{ this.providers.devops.repoId }}"
+        mock: true
+    issues:
+      devops:
+        url: "@jinja {{ this.providers.devops.url }}"
+        organization: "@jinja {{ this.providers.devops.organization }}"
+        project: "@jinja {{ this.providers.devops.project }}"
+        pat: "@jinja {{ this.providers.devops.pat }}"
+        repoId: "@jinja {{ this.providers.devops.repoId }}"
+        mock: true
+
+slack:
+  bot:
+    botToken: "@format {env[SLACK_BOT_TOKEN]}"
+    channelId: "@format {env[SLACK_CHANNEL_ID]}"
+    appToken: "@format {env[SLACK_APP_TOKEN]}"
+    processingTimeout: 6000
+
+agui:
+  server:
+    host: "@jinja {{env.AGUI_HOST or '0.0.0.0'}}"
+    port: "@jinja {{env.AGUI_PORT or 8000}}"
+    reload: "@jinja {{env.AGUI_RELOAD or false}}"
+  agent:
+    defaultTimeout: "@jinja {{env.AGUI_DEFAULT_TIMEOUT or 300}}"
+    defaultAgentType: "@jinja {{env.AGUI_DEFAULT_AGENT_TYPE or 'chatbot'}}"
+    maxMessageLength: "@jinja {{env.AGUI_MAX_MESSAGE_LENGTH or 10000}}"
+
+cli:
+  agent:
+    defaultAgentType: "@jinja {{env.CLI_DEFAULT_AGENT_TYPE or 'gitchatbot'}}"
+
+agents:
+  gitchatbot:
+    model: "openai:gpt-4.1-mini"
+    maxTokens: 1000
+    temperature: 0.7
+    timeoutSeconds: 60
+
+subagents:
+  impactanalysis:
+    maxFiles: "@jinja {{env.IMPACT_ANALYSIS_MAX_FILES or 200}}"
+    retries: 3
+    model: "@jinja {{ this.models.large }}"
+  coderesearch:
+    model: "@jinja {{ this.models.small }}"

@@ -1,0 +1,1 @@
+"""CLI models for command-line interface entrypoint."""

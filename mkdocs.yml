@@ -1,0 +1,295 @@
+site_name: Dev Agents Documentation
+site_description: AI-Powered Development Team Automation with PydanticAI
+site_author: Dev Agents Team
+site_url: https://docs.dev-agents.ai/
+
+repo_name: dev-agents
+repo_url: https://github.com/codeligence/dev-agents
+edit_uri: edit/main/docs/
+
+copyright: Copyright &copy; 2025 Dev Agents Team
+
+theme:
+  name: material
+  custom_dir: overrides
+  features:
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
+    - content.tabs.link
+    - content.tooltips
+    - header.autohide
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.prune
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - navigation.tracking
+    - search.highlight
+    - search.share
+    - search.suggest
+    - toc.follow
+    - toc.integrate
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  favicon: assets/favicon.png
+  logo: assets/logo.png
+  icon:
+    logo: logo
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quick-start.md
+    - Configuration Overview: configuration/index.md
+  - Configuration:
+    - configuration/index.md
+    - Slack Integration: configuration/slack.md
+    - Azure DevOps: configuration/azure-devops.md
+    - AI Models: configuration/ai-models.md
+    - Environment Variables: configuration/environment.md
+    - Advanced Configuration: configuration/advanced.md
+  - User Guide:
+    - Basic Usage: user-guide/basic-usage.md
+    - Slack Commands: user-guide/slack-commands.md
+    - Impact Analysis: user-guide/impact-analysis.md
+    - Code Research: user-guide/code-research.md
+    - Troubleshooting: troubleshooting.md
+  - Integrations:
+    - integrations/index.md
+    - Slack Bot Setup: integrations/slack-setup.md
+    - Azure DevOps Setup: integrations/azure-devops-setup.md
+    - Git Repository: integrations/git-repository.md
+    - LLM Providers: integrations/llm-providers.md
+  - Developer Guide:
+    - Architecture: developer/architecture.md
+    - Agent Development: developer/agents.md
+    - Protocols & Interfaces: developer/protocols.md
+    - Configuration System: developer/configuration.md
+    - Breaking Changes: developer/breaking-changes.md
+    - Testing: developer/testing.md
+    - Contributing: developer/contributing.md
+  - Examples:
+    - examples/index.md
+    - Basic Usage: examples/basic-usage.md
+    - Custom Agents: examples/custom-agents.md
+    - Integration Examples: examples/integrations.md
+    - Advanced Use Cases: examples/advanced.md
+  - Migration Guides:
+    - migrations/index.md
+    - Version 1.0.0 Baseline: migrations/v1.0.0-baseline.md
+  - API Reference:
+    - api/index.md
+    - Core Framework: api/core.md
+    - Agents: api/agents.md
+    - Integrations: api/integrations.md
+    - Protocols: api/protocols.md
+
+plugins:
+  - search:
+      separator: '[\s\-,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+      lang: en
+  - autorefs
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+      htmlmin_opts:
+        remove_comments: true
+  - redirects:
+      redirect_maps:
+        'old-getting-started.md': 'installation.md'
+  - include-markdown
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            # Source code options
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_object_full_path: false
+            show_category_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+            # Class and inheritance options
+            show_bases: true
+            show_inheritance_diagram: false  # Can be slow
+            group_by_category: true
+
+            # Signature options
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+
+            # Docstring options
+            docstring_style: google
+            docstring_options:
+              ignore_init_summary: true
+              trim_doctest_flags: true
+
+            # Member options
+            merge_init_into_class: true
+            heading_level: 2
+            members_order: source
+            filters:
+              - "!^_"  # Exclude private members by default
+              - "!^__(?!init|new)__"  # Exclude magic methods except __init__ and __new__
+
+            # Path and import options
+            paths: [src]
+            find_stubs_package: true
+
+            # Extensions
+            extensions:
+              - griffe_fieldz
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: timeago
+      timezone: UTC
+      locale: en
+      fallback_to_build_date: true
+  - git-committers:
+      repository: .
+      branch: main
+      docs_path: docs/
+  - social:
+      enabled: !ENV [CI, false]  # Only enable in CI to avoid local build issues
+      cards: true
+      cards_layout_options:
+        background_color: "#2196F3"
+        color: "#FFFFFF"
+      cards_include:
+        - index.md
+        - installation.md
+        - quick-start.md
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+      title: On this page
+  - tables
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.magiclink:
+      normalize_issue_symbols: true
+      repo_url_shorthand: true
+      user: codeligence
+      repo: dev-agents
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.snippets:
+      auto_append:
+        - includes/mkdocs.md
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      combine_header_slug: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  version:
+    provider: mike
+    default: stable
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/codeligence/dev-agents
+      name: GitHub Repository
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/dev-agents/
+      name: PyPI Package
+    - icon: fontawesome/brands/docker
+      link: https://hub.docker.com/r/codeligence/dev-agents
+      name: Docker Hub
+    - icon: fontawesome/solid/book
+      link: https://dev-agents.readthedocs.io/
+      name: Documentation
+  analytics:
+    provider: google
+    property: G-XXXXXXXXXX  # Replace with actual GA4 property
+    feedback:
+      title: Was this page helpful?
+      ratings:
+        - icon: material/thumb-up-outline
+          name: This page was helpful
+          data: 1
+          note: >-
+            Thanks for your feedback!
+        - icon: material/thumb-down-outline
+          name: This page could be improved
+          data: 0
+          note: >-
+            Thanks for your feedback! Help us improve this page by
+            <a href="https://github.com/codeligence/dev-agents/issues/new/?title=[Docs]+{title}+-+{url}" target="_blank" rel="noopener">telling us what you need</a>.
+  generator: false
+  status:
+    new: Recently added
+    deprecated: Deprecated
+
+extra_css:
+  - stylesheets/extra.css
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+watch:
+  - src/
+  - docs/
+  - mkdocs.yml

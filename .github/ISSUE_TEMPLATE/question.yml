@@ -1,0 +1,215 @@
+name: ❓ Question / Help Request
+description: Ask for help or clarification about using dev-agents
+title: "[Question] "
+labels: ["question", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Need help with dev-agents? We're here to help! Please provide as much detail as possible.
+        
+        > [!TIP]
+        > For general discussions or open-ended questions, consider using [GitHub Discussions](https://github.com/codeligence/dev-agents/discussions) instead.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I have searched existing issues and discussions
+          required: true
+        - label: I have read the documentation and troubleshooting guide
+          required: true
+        - label: This is a specific question, not a bug report or feature request
+          required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Question Category
+      description: What area is your question about?
+      options:
+        - Installation & Setup
+        - Configuration
+        - Slack Integration
+        - Azure DevOps Integration
+        - Git Integration
+        - AI Agents & LLM Configuration
+        - Impact Analysis
+        - Code Research
+        - Agent Development
+        - Troubleshooting
+        - Best Practices
+        - Architecture & Design
+        - Performance
+        - Security
+        - Deployment
+        - Contributing
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your Question
+      description: What would you like to know?
+      placeholder: |
+        Please be as specific as possible:
+        - What are you trying to accomplish?
+        - What specific aspect needs clarification?
+        - What have you tried so far?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & Background
+      description: Provide context about your situation
+      placeholder: |
+        Help us understand your situation:
+        - What is your use case or project?
+        - What is your experience level with dev-agents?
+        - What environment are you working in?
+        - Are there any constraints or requirements?
+    validations:
+      required: true
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What You've Tried
+      description: What approaches have you already attempted?
+      placeholder: |
+        Describe what you've tried:
+        - Documentation you've consulted
+        - Commands or configurations you've tested
+        - Solutions that didn't work
+        - Error messages you encountered
+    validations:
+      required: false
+
+  - type: textarea
+    id: current_setup
+    attributes:
+      label: Current Setup
+      description: Describe your current environment and configuration
+      value: |
+        - OS: 
+        - Python Version: 
+        - Dev-Agents Version: 
+        - Installation Method: (pip, source, docker)
+        - Active Integrations: (Slack, Azure DevOps, etc.)
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: configuration
+    attributes:
+      label: Relevant Configuration
+      description: Share relevant configuration (remove secrets)
+      placeholder: |
+        ```yaml
+        # config/config.yaml (remove secrets/tokens)
+        agents:
+          gitchatbot:
+            model: "openai:gpt-4"
+        
+        integrations:
+          slack:
+            enabled: true
+        ```
+      render: yaml
+    validations:
+      required: false
+
+  - type: textarea
+    id: expected_outcome
+    attributes:
+      label: Expected Outcome
+      description: What would a good solution look like?
+      placeholder: |
+        Describe what you're hoping to achieve:
+        - What behavior or result are you looking for?
+        - What would indicate that your question is answered?
+        - Are there any specific constraints or preferences?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: urgency
+    attributes:
+      label: Urgency
+      description: How urgent is this question for you?
+      options:
+        - Low - General curiosity or future planning
+        - Medium - Would help improve my current workflow
+        - High - Blocking my current work
+        - Critical - Production issue or deadline pressure
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs_errors
+    attributes:
+      label: Relevant Logs or Errors
+      description: Include any relevant log output or error messages
+      placeholder: |
+        If you're encountering issues, paste relevant logs here:
+        ```
+        [Timestamp] ERROR: Description of error
+        Stack trace or additional details...
+        ```
+        
+        ⚠️ Remove any sensitive information (API keys, tokens, personal data)
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Code Examples or Screenshots
+      description: Provide examples that illustrate your question
+      placeholder: |
+        Include relevant code, configuration, or screenshots that help explain your question.
+        
+        ```python
+        # Example code you're working with
+        from dev_agents import Agent
+        # ...
+        ```
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: help_type
+    attributes:
+      label: Type of Help Needed
+      description: What kind of assistance would be most helpful?
+      options:
+        - label: Step-by-step guidance
+        - label: Code examples or snippets
+        - label: Configuration samples
+        - label: Best practice recommendations
+        - label: Troubleshooting assistance
+        - label: Architecture or design advice
+        - label: Pointer to relevant documentation
+        - label: Community discussion or brainstorming
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Anything else that might be relevant?
+      placeholder: |
+        Any other details that might help:
+        - Timeline or deadlines
+        - Team size or collaboration needs
+        - Integration with other tools
+        - Performance requirements
+        - Security considerations
