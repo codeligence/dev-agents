@@ -1,0 +1,137 @@
+version: 2
+
+updates:
+  # Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "dev-agents-team"
+    assignees:
+      - "dev-agents-team"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    # Group compatible updates together
+    groups:
+      # Development dependencies
+      dev-dependencies:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "isort"
+          - "mypy"
+          - "ruff"
+          - "bandit"
+          - "pre-commit"
+        update-types:
+          - "minor"
+          - "patch"
+      
+      # Documentation dependencies
+      docs-dependencies:
+        patterns:
+          - "mkdocs*"
+          - "mkdocstrings*"
+        update-types:
+          - "minor" 
+          - "patch"
+      
+      # AI/ML dependencies (more careful updates)
+      ai-dependencies:
+        patterns:
+          - "pydantic-ai"
+          - "openai"
+          - "*ai*"
+        update-types:
+          - "patch"
+      
+      # Infrastructure dependencies
+      infra-dependencies:
+        patterns:
+          - "slack-sdk"
+          - "azure-devops"
+          - "requests"
+          - "python-dotenv"
+          - "pyyaml"
+          - "dynaconf"
+          - "jinja2"
+        update-types:
+          - "patch"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "dev-agents-team"
+    assignees:
+      - "dev-agents-team"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    # Group GitHub Actions updates
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"
+
+  # Docker (if using multi-stage builds with base images)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "06:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 2
+    reviewers:
+      - "dev-agents-team"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+
+# Global configuration for security updates
+# Dependabot will automatically create PRs for security updates
+# regardless of the schedule above
+
+# Security policy:
+# - Critical and high severity security updates are processed immediately
+# - Medium and low severity updates follow the normal schedule
+# - All security updates are marked with 'security' label for prioritization
+
+# Version compatibility policy:
+# - Patch updates: Auto-merge when tests pass (security updates only)
+# - Minor updates: Require manual review
+# - Major updates: Require thorough review and testing
+
+# Dependency update strategy:
+# - Core dependencies: Conservative updates (patch only for critical packages)
+# - Development tools: More aggressive updates (minor + patch)
+# - Documentation tools: Regular updates (minor + patch)
+# - Infrastructure: Careful updates with thorough testing

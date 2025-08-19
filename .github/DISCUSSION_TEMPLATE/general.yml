@@ -1,0 +1,56 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Welcome to dev-agents discussions! 🚀
+        
+        This is the place for:
+        - 💡 Ideas and brainstorming
+        - 🤔 General questions about the project
+        - 📢 Announcements and updates
+        - 🛠️ Show and tell - what you've built
+        - 🎯 Best practices and tips
+        
+        For specific bugs or feature requests, please use [Issues](https://github.com/codeligence/dev-agents/issues) instead.
+
+  - type: textarea
+    id: topic
+    attributes:
+      label: Discussion Topic
+      description: What would you like to discuss?
+      placeholder: Describe your topic, question, or idea...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      description: What category best fits this discussion?
+      options:
+        - General Discussion
+        - Ideas & Brainstorming
+        - Show and Tell
+        - Best Practices
+        - Architecture & Design
+        - Agent Development
+        - Integration Patterns
+        - Use Cases & Examples
+        - Community & Collaboration
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional information or examples?
+      placeholder: |
+        Provide any relevant context:
+        - Code examples
+        - Configuration samples
+        - Use case descriptions
+        - Links to related resources
+    validations:
+      required: false

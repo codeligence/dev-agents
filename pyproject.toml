@@ -1,0 +1,545 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel", "commitizen>=3.25.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dev-agents"
+version = "0.1.0"
+description = "AI-powered development team automation with PydanticAI agents integrated in your infra"
+readme = "README.md"
+license = {file = "LICENSE.md"}
+requires-python = ">=3.11"
+authors = [
+    {name = "Dev Agents Team", email = "dev@codeligence.com"},
+    {name = "Juri Kuehn", email = "juri@codeligence.com"},
+]
+maintainers = [
+    {name = "Juri Kuehn", email = "juri@codeligence.com"},
+]
+keywords = [
+    "ai",
+    "agents",
+    "pydantic-ai",
+    "slack",
+    "azure-devops",
+    "automation",
+    "development",
+    "testing",
+    "impact-analysis",
+    "git",
+    "llm",
+    "chatbot",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Communications :: Chat",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+dependencies = [
+    "python-dotenv>=1.0.1,<2.0.0",
+    "pyyaml>=6.0.2,<7.0.0",
+    "dynaconf>=3.2.11,<4.0.0",
+    "jinja2>=3.1.6,<4.0.0",
+    "pydantic-ai~=0.7.3",
+]
+
+[project.urls]
+Homepage = "https://github.com/codeligence/dev-agents"
+"Bug Tracker" = "https://github.com/codeligence/dev-agents/issues"
+"Documentation" = "https://docs.dev-agents.ai"
+"Repository" = "https://github.com/codeligence/dev-agents"
+"Source Code" = "https://github.com/codeligence/dev-agents"
+
+[project.optional-dependencies]
+slack = [
+    "slack_sdk>=3.19.5,<4.0.0",
+]
+azure = [
+    "azure-devops>=7.1.0b4,<8.0.0",
+    "requests>=2.31.0,<3.0.0",
+]
+dev = [
+    # Testing
+    "pytest>=8.4.1,<9.0.0",
+    "pytest-asyncio>=0.21.0,<1.0.0",
+    "pytest-cov>=4.1.0,<5.0.0",
+    "pytest-mock>=3.11.0,<4.0.0",
+    "pytest-html>=4.1.0,<5.0.0",
+    "pytest-benchmark>=4.0.0,<5.0.0",
+    "pytest-xdist>=3.3.0,<4.0.0",  # Parallel testing
+
+    # Code Quality & Formatting
+    "black>=23.0.0,<25.0.0",
+    "isort>=5.12.0,<6.0.0",
+    "mypy>=1.5.0,<2.0.0",
+    "ruff>=0.1.0,<1.0.0",
+    "pre-commit>=3.3.0,<4.0.0",
+
+    # Code Complexity & Maintainability
+    "radon>=6.0.1,<7.0.0",  # Complexity analysis
+    "xenon>=0.9.0,<1.0.0",  # Complexity monitoring
+    "vulture>=2.10,<3.0.0",  # Dead code detection
+    "mccabe>=0.7.0,<1.0.0",  # Complexity checker
+
+    # Security & Vulnerability Analysis
+    "bandit[toml]>=1.7.5,<2.0.0",
+    "safety>=3.0.0,<4.0.0",
+    "pip-audit>=2.6.0,<3.0.0",
+    "semgrep>=1.45.0,<2.0.0",
+
+    # Documentation Quality
+    "pydocstyle>=6.3.0,<7.0.0",
+    "docformatter>=1.7.0,<2.0.0",
+    "interrogate>=1.5.0,<2.0.0",  # Documentation coverage
+
+    # Code Quality Metrics & Reporting
+    "coverage[toml]>=7.3.0,<8.0.0",
+    "coverage-badge>=1.1.0,<2.0.0",
+    "genbadge[coverage,tests]>=1.1.0,<2.0.0",
+    "diff-cover>=8.0.0,<9.0.0",  # Coverage diff analysis
+
+    # Dependency Analysis
+    "pipdeptree>=2.13.0,<3.0.0",
+    "pip-check>=2.8.1,<3.0.0",
+    "piprot>=0.9.11,<1.0.0",
+
+    # Git & Release Management
+    "commitizen>=3.25.0,<4.0.0",
+    "cz-conventional-gitmoji>=0.7.0,<1.0.0",
+    "gitpython>=3.1.40,<4.0.0",
+
+    # Performance & Profiling
+    "py-spy>=0.3.14,<1.0.0",
+    "memory-profiler>=0.61.0,<1.0.0",
+    "psutil>=5.9.0,<6.0.0",
+]
+docs = [
+    "mkdocs>=1.5.0,<2.0.0",
+    "mkdocs-material>=9.4.0,<10.0.0",
+    "mkdocstrings[python]>=0.24.0,<1.0.0",
+    "mkdocs-git-revision-date-localized-plugin>=1.2.0,<2.0.0",
+    "mkdocs-git-committers-plugin-2>=1.2.0,<2.0.0",
+    "mkdocs-minify-plugin>=0.7.0,<1.0.0",
+    "mkdocs-social-plugin>=0.3.0,<1.0.0",
+    "pymdown-extensions>=10.7.0,<11.0.0",
+    "pillow>=10.0.0,<11.0.0",
+    "cairosvg>=2.7.0,<3.0.0",
+    "mike>=2.0.0,<3.0.0",
+    "griffe>=0.38.0,<1.0.0",
+    "mkdocs-autorefs>=0.5.0,<1.0.0",
+    "linkchecker>=10.2.0,<11.0.0",
+    "mkdocs-redirects>=1.2.0,<2.0.0",
+    "mkdocs-include-markdown-plugin>=6.0.0,<7.0.0",
+]
+all = [
+    "dev-agents[slack,azure,dev,docs]",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
+
+[tool.setuptools.package-data]
+"*" = ["py.typed"]
+"config" = ["*.yaml", "*.yml"]
+
+[tool.setuptools.exclude-package-data]
+"*" = ["tests", "tests.*", "*.tests", "*.tests.*"]
+
+[project.scripts]
+dev-agents-slack-bot = "entrypoints.slack_bot:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--verbose",
+    "--tb=short",
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-report=json",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-branch",
+    "--cov-fail-under=60",
+    "--junit-xml=reports/junit.xml",
+    "--html=reports/pytest_report.html",
+    "--self-contained-html",
+    "--benchmark-sort=mean",
+    "--benchmark-json=reports/benchmark.json",
+    "--durations=10",
+    "--maxfail=5",
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "performance: marks tests as performance tests",
+    "security: marks tests as security tests",
+    "quality: marks tests as code quality tests",
+    "smoke: marks tests as smoke tests",
+    "regression: marks tests as regression tests",
+]
+asyncio_mode = "auto"
+junit_family = "xunit2"
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+log_file = "logs/pytest.log"
+log_file_level = "DEBUG"
+log_file_format = "%(asctime)s [%(levelname)8s] %(filename)s:%(lineno)d %(funcName)s(): %(message)s"
+log_file_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/venv/*",
+    "*/.*",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+    "@overload",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+skip_covered = false
+skip_empty = true
+sort = "Cover"
+fail_under = 60
+ignore_errors = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+show_contexts = true
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+[tool.coverage.json]
+output = "coverage.json"
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+src_paths = ["src", "tests"]
+known_first_party = ["dev_agents"]
+skip_glob = ["venv/*", "build/*"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+show_error_codes = true
+namespace_packages = true
+explicit_package_bases = true
+mypy_path = "src"
+packages = ["src"]
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = [
+    "slack_sdk.*",
+    "dynaconf.*",
+    "pydantic_ai.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "PTH", # flake8-use-pathlib
+    "ERA", # eradicate
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "B904",  # Use `raise ... from err`
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+"src/**/__init__.py" = ["F401"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["dev_agents"]
+from-first = true
+
+[tool.bandit]
+# Security scanning configuration for Bandit
+# Confidence levels: HIGH, MEDIUM, LOW
+confidence = "MEDIUM"
+# Severity levels: HIGH, MEDIUM, LOW
+severity = "MEDIUM"
+
+# Skip specific test IDs that are false positives or acceptable risks
+skips = [
+    "B101",  # Skip assert_used - asserts are ok in tests and dev code
+    "B601",  # Skip paramiko_calls - handled by other security measures
+]
+
+# Directories to exclude from scanning
+exclude_dirs = ["tests", "venv", "build", "dist", ".git", "__pycache__"]
+
+# File patterns to include (Python files by default)
+include = ["*.py"]
+
+# Additional security scanning options
+recursive = true
+aggregate = "file"
+
+# Reports
+format = "json"
+output = "bandit-report.json"
+
+[tool.safety]
+# Safety dependency vulnerability scanning configuration
+# Check for vulnerabilities in dependencies
+continue_on_error = true
+# Output format: json, text, bare
+output_format = "json"
+# Cache vulnerability data for faster runs
+cache = true
+# Ignore specific vulnerability IDs if needed (use sparingly)
+# ignore = ["12345", "67890"]
+
+[tool.semgrep]
+# Semgrep static analysis configuration
+config = ["auto", "p/security-audit", "p/secrets"]
+# Exclude paths from scanning
+exclude = ["tests/", "venv/", "build/", "dist/", ".git/"]
+# Output format: json, sarif, text
+output_format = "sarif"
+# Disable specific rules if needed
+# disable = ["python.lang.security.audit.dangerous-system-call.dangerous-system-call"]
+
+[tool.commitizen]
+name = "cz_conventional_gitmoji"
+version = "0.1.0"
+tag_format = "v$major.$minor.$patch"
+version_files = [
+    "pyproject.toml:version"
+]
+style = [
+    ["qmark", "fg:#ff9d00 bold"],
+    ["question", "bold"],
+    ["answer", "fg:#ff9d00 bold"],
+    ["pointer", "fg:#ff9d00 bold"],
+    ["highlighted", "fg:#ff9d00 bold"],
+    ["selected", "fg:#cc5454"],
+    ["separator", "fg:#cc5454"],
+    ["instruction", ""],
+    ["text", ""],
+    ["disabled", "fg:#858585 italic"]
+]
+
+[tool.commitizen.settings]
+major_version_zero = false
+pre_bump_hooks = [
+    "scripts/check-code-quality.sh",
+    "scripts/generate-quality-report.sh"
+]
+post_bump_hooks = [
+    "python scripts/generate-migration-guide.py --from=$CZ_PRE_CURRENT_VERSION --to=$CZ_POST_CURRENT_VERSION || echo 'Migration guide generation failed, continuing...'",
+    "git add docs/migrations/v*.md || true",
+    "git commit -m 'docs: add migration guide for v$CZ_POST_CURRENT_VERSION' || true",
+    "git push",
+    "git push --tags"
+]
+
+# =============================================================================
+# Code Quality & Complexity Analysis Tools
+# =============================================================================
+
+[tool.radon]
+# Code complexity analysis settings
+cc_min = "B"  # Minimum complexity grade to report (A, B, C, D, E, F)
+mi_min = "B"  # Minimum maintainability index grade
+raw_output = false
+show_complexity = true
+average = true
+total_average = true
+exclude_patterns = [
+    "venv/*",
+    "build/*",
+    "dist/*",
+    "*.egg-info/*",
+    "*/migrations/*",
+    "*/tests/*"
+]
+
+[tool.xenon]
+# Complexity monitoring thresholds
+max_absolute = "B"  # Maximum acceptable complexity grade
+max_modules = "B"
+max_average = "B"
+exclude = ["venv", "build", "dist", "tests"]
+ignore = ["E501"]  # Ignore line length in complexity calc
+
+[tool.vulture]
+# Dead code detection settings
+min_confidence = 80
+sort_by_size = true
+ignore_decorators = ["@overload", "@property", "@staticmethod", "@classmethod"]
+ignore_names = ["_*", "test_*", "setUp*", "tearDown*"]
+exclude = ["venv/", "build/", "dist/", "*.egg-info/"]
+
+[tool.pydocstyle]
+# Documentation style checking
+convention = "google"
+add_ignore = [
+    "D100",  # Missing docstring in public module
+    "D101",  # Missing docstring in public class
+    "D102",  # Missing docstring in public method
+    "D103",  # Missing docstring in public function
+    "D104",  # Missing docstring in public package
+    "D105",  # Missing docstring in magic method
+    "D106",  # Missing docstring in public nested class
+    "D107",  # Missing docstring in __init__
+]
+match_dir = "^(?!venv|build|dist|tests|\\.git).*"
+
+[tool.interrogate]
+# Documentation coverage analysis
+ignore-init-method = true
+ignore-init-module = true
+ignore-magic = true
+ignore-semiprivate = true
+ignore-private = true
+ignore-property-decorators = true
+ignore-module = true
+ignore-nested-functions = true
+ignore-nested-classes = true
+fail-under = 70
+exclude = ["setup.py", "docs", "build", "tests", "venv"]
+verbose = 2
+quiet = false
+whitelist-regex = []
+color = true
+generate-badge = "badges/"
+badge-format = "svg"
+
+[tool.diff-cover]
+# Coverage diff analysis
+compare-branch = "origin/main"
+ignore-staged = false
+ignore-unstaged = false
+fail-under = 60
+html-report = "htmlcov/diff-cover.html"
+xml-report = "diff-cover.xml"
+
+# =============================================================================
+# Security & Vulnerability Analysis Enhanced Configuration
+# =============================================================================
+
+[tool.bandit.assert_used]
+# Enhanced Bandit security configuration
+skips = ["*_test.py", "*/test_*.py", "*/tests/*"]
+
+[tool.bandit.hardcoded_tmp_directory]
+skips = ["*/tests/*"]
+
+[tool.bandit.subprocess_popen_with_shell_equals_true]
+shell_injection.level = "HIGH"
+shell_injection.confidence = "HIGH"
+
+[tool.genbadge]
+# Badge generation settings
+verbose = true
+output_dir = "badges/"
+name = "dev-agents"
+
+[tool.pip-audit]
+# Enhanced dependency vulnerability scanning
+desc = true
+output-format = "json"
+no-deps = false
+strict = true
+requirement = ["requirements.txt", "requirements-dev.txt"]
+
+# Performance testing configuration
+[tool.pytest.benchmark]
+auto_scale = "py311"
+sort = "mean"
+warmup = true
+warmup_iterations = 5
+disable_gc = true
+min_rounds = 3
+max_time = 0.1
+compare_fail = ["mean:5%", "stddev:10%"]
+histogram = true
+

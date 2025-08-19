@@ -1,0 +1,10 @@
+# CODEOWNERS for dev-agents
+# 
+# This file defines who should review changes to different parts of the codebase.
+# Lines starting with # are comments.
+# Each line is a file pattern followed by one or more owners.
+#
+# More info: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global rule - either core team member can review all changes
+* @jkuehn @codeligence

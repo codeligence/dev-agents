@@ -1,0 +1,172 @@
+#!/usr/bin/env python3
+"""CLI entrypoint for interactive command-line agent conversations."""
+
+import asyncio
+import sys
+from dotenv import load_dotenv
+
+from agents.agents.gitchatbot.agent import AGENT_NAME
+from core.agents.service import AgentService
+from core.config import BaseConfig, get_default_config
+from core.log import get_logger, setup_thread_logging, set_context_token, reset_context_token
+from core.message import MessageList
+from core.prompts import get_default_prompts
+from entrypoints.cli_models.agent_context import CLIAgentContext
+
+
+def _supports_color() -> bool:
+    """Check if terminal supports ANSI colors."""
+    return (
+        hasattr(sys.stdout, 'isatty') and sys.stdout.isatty() and 
+        hasattr(sys.stderr, 'isatty') and sys.stderr.isatty()
+    )
+
+
+def _colorize(text: str, color_code: str) -> str:
+    """Add ANSI color codes to text if terminal supports colors."""
+    if _supports_color():
+        return f"\033[{color_code}m{text}\033[0m"
+    return text
+
+
+def _green(text: str) -> str:
+    """Make text green if terminal supports colors."""
+    return _colorize(text, "92")  # Bright green
+
+# Load environment variables
+load_dotenv()
+
+# Set up logging
+base_config = get_default_config()
+setup_thread_logging(base_config)
+logger = get_logger("CLIEntrypoint", level="INFO")
+
+
+class CLIConfig:
+    """Configuration for CLI service."""
+
+    def __init__(self, base_config: BaseConfig):
+        self._base_config = base_config
+
+    def get_default_agent_type(self) -> str:
+        return self._base_config.get_value('cli.agent.defaultAgentType', AGENT_NAME)
+
+
+def _register_agents(agent_service: AgentService) -> None:
+    """Register available agents with the service."""
+    # Import and register the GitChatbot agent
+    from agents.agents.gitchatbot.agent import GitChatbotAgent
+
+    def create_chatbot_agent():
+        return GitChatbotAgent
+
+    agent_service.register_agent(AGENT_NAME, create_chatbot_agent)
+    logger.info("Registered agents: " + AGENT_NAME)
+
+
+async def run_cli() -> None:
+    """Run the interactive CLI loop."""
+    
+    # Initialize agent service and register agents
+    agent_service = AgentService()
+    _register_agents(agent_service)
+    
+    # Get configuration
+    cli_config = CLIConfig(base_config)
+    agent_type = cli_config.get_default_agent_type()
+    
+    # Initialize conversation history
+    conversation_history = MessageList()
+    thread_id = "cli-session"
+    
+    # Set logging context
+    context_token = set_context_token(thread_id)
+    
+    try:
+        print("Hello, what can I do for you?")
+        print("(Press Ctrl+D to exit)")
+        print()
+        
+        while True:
+            try:
+                # Get user input
+                user_input = input("You: ").strip()
+                
+                # Skip empty messages
+                if not user_input:
+                    continue
+                
+                # Create CLI agent context for this interaction
+                cli_context = CLIAgentContext(
+                    message_list=conversation_history,
+                    config=base_config,
+                    prompts=get_default_prompts(),
+                    thread_id=thread_id
+                )
+                
+                # Add user message to conversation history
+                cli_context.add_user_message(user_input)
+                
+                # Reprint user message in green with newlines
+                print(f"\n\n{_green(f'You: {user_input}')}\n\n")
+                
+                logger.info(f"Processing user input: {user_input[:50]}...")
+                
+                try:
+                    # Execute agent with full conversation history
+                    await agent_service.execute_agent_by_type(
+                        agent_type=agent_type,
+                        context=cli_context
+                    )
+                    
+                    logger.info("Agent execution completed successfully")
+                    
+                except Exception as agent_error:
+                    error_msg = f"Sorry, I encountered an error: {str(agent_error)}"
+                    print(f"❌ {error_msg}")
+                    logger.error(f"Agent execution failed: {str(agent_error)}")
+                
+            except EOFError:
+                # Ctrl+D pressed
+                print("\\nGoodbye!")
+                break
+            except KeyboardInterrupt:
+                # Ctrl+C pressed
+                print("\\nExiting...")
+                break
+            except Exception as input_error:
+                print(f"❌ Input error: {str(input_error)}")
+                logger.error(f"Input processing error: {str(input_error)}")
+                
+    finally:
+        reset_context_token(context_token)
+
+
+def main():
+    """Main entry point for CLI application."""
+    logger.info("Starting CLI service")
+    
+    try:
+        # Print release information if available
+        try:
+            with open("release.txt", "r") as f:
+                release_info = f.read().strip()
+                logger.info(f"Release information:\\n{release_info}")
+        except FileNotFoundError:
+            logger.info("No release information available")
+        except Exception as release_error:
+            logger.warning(f"Could not read release information: {release_error}")
+        
+        # Run the CLI loop
+        asyncio.run(run_cli())
+        
+    except KeyboardInterrupt:
+        logger.info("Received interrupt signal, shutting down...")
+        sys.exit(0)
+    except Exception as startup_error:
+        logger.error(f"Failed to start CLI service: {str(startup_error)}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
