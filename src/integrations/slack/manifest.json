@@ -1,12 +1,12 @@
 {
     "display_information": {
-        "name": "Betty Sharp",
-        "description": "Betty helps us developing our software",
+        "name": "DevAgents",
+        "description": "DevAgents help us developing our software",
         "background_color": "#32b3eb"
     },
     "features": {
         "bot_user": {
-            "display_name": "Betty",
+            "display_name": "DevAgents",
             "always_online": true
         }
     },
