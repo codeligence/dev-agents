@@ -108,7 +108,7 @@ dev = [
     "coverage[toml]>=7.3.0,<8.0.0",
     "coverage-badge>=1.1.0,<2.0.0",
     "genbadge[coverage,tests]>=1.1.0,<2.0.0",
-    "diff-cover>=8.0.0,<9.0.0",  # Coverage diff analysis
+    "diff-cover>=8.0.0,<10.0.0",  # Coverage diff analysis
 
     # Dependency Analysis
     "pipdeptree>=2.13.0,<3.0.0",
