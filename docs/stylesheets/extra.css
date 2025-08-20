@@ -1,0 +1,273 @@
+/* Extra CSS for Dev Agents documentation */
+
+/* Custom color scheme enhancements */
+:root {
+  --md-primary-fg-color: #2196f3;
+  --md-primary-fg-color--light: #64b5f6;
+  --md-primary-fg-color--dark: #1976d2;
+  --md-accent-fg-color: #ff9800;
+  --md-accent-fg-color--transparent: rgba(255, 152, 0, 0.1);
+}
+
+/* Code block enhancements */
+.highlight pre {
+  border-radius: 8px;
+  border-left: 4px solid var(--md-primary-fg-color);
+}
+
+/* Admonition styling improvements */
+.md-typeset .admonition {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin: 1.5em 0;
+}
+
+.md-typeset .admonition.tip {
+  border-left-color: #00c853;
+}
+
+.md-typeset .admonition.warning {
+  border-left-color: #ff9800;
+}
+
+.md-typeset .admonition.failure {
+  border-left-color: #f44336;
+}
+
+/* Card grid styling */
+.md-typeset .grid.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.md-typeset .grid.cards > div {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  padding: 1rem;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.md-typeset .grid.cards > div:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* Code title styling */
+.md-typeset code[title] {
+  position: relative;
+}
+
+.md-typeset code[title]::before {
+  content: attr(title);
+  display: block;
+  font-size: 0.7em;
+  font-weight: bold;
+  color: var(--md-default-fg-color--light);
+  margin-bottom: 0.5em;
+  padding: 0.25em 0.5em;
+  background: var(--md-code-bg-color);
+  border-radius: 4px 4px 0 0;
+  margin: -0.5em -0.5em 0.5em -0.5em;
+}
+
+/* Tab styling improvements */
+.md-typeset .tabbed-set {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.md-typeset .tabbed-labels > label {
+  background: var(--md-default-bg-color);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.md-typeset .tabbed-labels > label:hover {
+  background: var(--md-accent-fg-color--transparent);
+}
+
+.md-typeset .tabbed-set > input:checked + label {
+  border-bottom-color: var(--md-primary-fg-color);
+  background: var(--md-accent-fg-color--transparent);
+}
+
+/* Table styling improvements */
+.md-typeset table {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.md-typeset table th {
+  background: var(--md-primary-fg-color);
+  color: white;
+  font-weight: 600;
+}
+
+.md-typeset table tr:nth-child(even) {
+  background: var(--md-default-fg-color--lightest);
+}
+
+/* Mermaid diagram styling */
+.md-typeset .mermaid {
+  text-align: center;
+  margin: 2rem 0;
+  padding: 1rem;
+  background: var(--md-code-bg-color);
+  border-radius: 8px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+}
+
+/* Navigation improvements */
+.md-nav__item--active > .md-nav__link {
+  color: var(--md-primary-fg-color);
+  font-weight: 600;
+}
+
+.md-nav__link:hover {
+  color: var(--md-primary-fg-color);
+}
+
+/* Search result styling */
+.md-search-result__meta {
+  color: var(--md-default-fg-color--light);
+  font-size: 0.8em;
+}
+
+.md-search-result__title {
+  color: var(--md-primary-fg-color);
+}
+
+/* Footer improvements */
+.md-footer {
+  background: linear-gradient(135deg, var(--md-primary-fg-color--dark), var(--md-primary-fg-color));
+}
+
+/* Custom button styling */
+.md-typeset .md-button {
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.md-typeset .md-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.md-typeset .md-button--primary {
+  background: var(--md-primary-fg-color);
+  border-color: var(--md-primary-fg-color);
+}
+
+.md-typeset .md-button--primary:hover {
+  background: var(--md-primary-fg-color--dark);
+  border-color: var(--md-primary-fg-color--dark);
+}
+
+/* Responsive improvements */
+@media screen and (max-width: 76.25em) {
+  .md-typeset .grid.cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dark mode adjustments */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #64b5f6;
+  --md-primary-fg-color--light: #90caf9;
+  --md-primary-fg-color--dark: #42a5f5;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition {
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+}
+
+[data-md-color-scheme="slate"] .md-typeset table {
+  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.05);
+}
+
+[data-md-color-scheme="slate"] .md-typeset .mermaid {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Print styles */
+@media print {
+  .md-header, .md-nav, .md-footer {
+    display: none;
+  }
+  
+  .md-content__inner {
+    margin: 0;
+  }
+  
+  .md-typeset .highlight pre,
+  .md-typeset .admonition,
+  .md-typeset table {
+    break-inside: avoid;
+  }
+}
+
+/* Animation enhancements */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.md-typeset .admonition {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.md-typeset .grid.cards > div {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Custom icons and badges */
+.md-typeset .badge {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  font-size: 0.75em;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+  background: var(--md-accent-fg-color);
+  color: white;
+}
+
+.md-typeset .badge.badge-primary {
+  background: var(--md-primary-fg-color);
+}
+
+.md-typeset .badge.badge-success {
+  background: #28a745;
+}
+
+.md-typeset .badge.badge-warning {
+  background: #ffc107;
+  color: #212529;
+}
+
+.md-typeset .badge.badge-danger {
+  background: #dc3545;
+}
+
+/* Syntax highlighting improvements */
+.md-typeset .highlight .k { color: #0077aa; font-weight: bold; }
+.md-typeset .highlight .s { color: #d73a49; }
+.md-typeset .highlight .c { color: #6a737d; font-style: italic; }
+.md-typeset .highlight .n { color: #24292e; }
+.md-typeset .highlight .o { color: #d73a49; }
+
+/* Dark mode syntax highlighting */
+[data-md-color-scheme="slate"] .md-typeset .highlight .k { color: #79b8ff; }
+[data-md-color-scheme="slate"] .md-typeset .highlight .s { color: #9ecbff; }
+[data-md-color-scheme="slate"] .md-typeset .highlight .c { color: #6a737d; }
+[data-md-color-scheme="slate"] .md-typeset .highlight .n { color: #e1e4e8; }
+[data-md-color-scheme="slate"] .md-typeset .highlight .o { color: #f97583; }

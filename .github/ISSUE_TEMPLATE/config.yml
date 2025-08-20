@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 GitHub Discussions
+    url: https://github.com/codeligence/dev-agents/discussions
+    about: Ask questions, share ideas, and discuss with the community
+  - name: 📖 Documentation
+    url: https://docs.dev-agents.ai/
+    about: Check the documentation for guides and API reference
+  - name: 🔒 Security Issues
+    url: mailto:security@[your-domain].com
+    about: Report security vulnerabilities privately via email
+  - name: 💼 Commercial Support
+    url: https://[your-domain].com/support
+    about: Get professional support and consulting services

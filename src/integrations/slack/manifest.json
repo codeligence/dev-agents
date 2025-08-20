@@ -1,0 +1,51 @@
+{
+    "display_information": {
+        "name": "Betty Sharp",
+        "description": "Betty helps us developing our software",
+        "background_color": "#32b3eb"
+    },
+    "features": {
+        "bot_user": {
+            "display_name": "Betty",
+            "always_online": true
+        }
+    },
+    "oauth_config": {
+        "scopes": {
+            "bot": [
+                "app_mentions:read",
+                "assistant:write",
+                "channels:history",
+                "channels:manage",
+                "channels:read",
+                "chat:write",
+                "chat:write.customize",
+                "chat:write.public",
+                "commands",
+                "files:read",
+                "files:write",
+                "groups:history",
+                "im:history",
+                "users:read",
+                "canvases:read",
+                "canvases:write"
+            ]
+        }
+    },
+    "settings": {
+        "event_subscriptions": {
+            "bot_events": [
+                "app_mention",
+                "message.channels",
+                "message.groups",
+                "message.im"
+            ]
+        },
+        "interactivity": {
+            "is_enabled": true
+        },
+        "org_deploy_enabled": false,
+        "socket_mode_enabled": true,
+        "token_rotation_enabled": false
+    }
+}

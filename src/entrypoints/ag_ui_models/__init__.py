@@ -1,0 +1,1 @@
+"""AG-UI entrypoint module for streaming agent events."""

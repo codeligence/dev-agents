@@ -1,0 +1,174 @@
+name: 📚 Documentation Issue
+description: Report issues or suggest improvements to documentation
+title: "[Docs] "
+labels: ["documentation", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Help us improve the documentation for dev-agents! Whether you found something confusing,
+        missing, or have suggestions for better explanations, we want to hear from you.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I have searched existing issues for similar documentation problems
+          required: true
+        - label: I have checked the latest version of the documentation
+          required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Issue Type
+      description: What kind of documentation issue is this?
+      options:
+        - Missing Documentation - Feature/function not documented
+        - Incorrect Information - Documentation contains errors
+        - Unclear Instructions - Hard to understand or follow
+        - Outdated Content - Information is no longer accurate
+        - Broken Links - Links that don't work
+        - Formatting Issues - Display or formatting problems
+        - Spelling/Grammar - Language improvements needed
+        - Better Examples - Need more or better examples
+        - New Guide Request - Request for new tutorial or guide
+        - API Reference - Issues with API documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: location
+    attributes:
+      label: Documentation Location
+      description: Where is the documentation issue located?
+      options:
+        - README.md
+        - Getting Started Guide
+        - Installation Instructions
+        - Configuration Guide
+        - API Reference
+        - User Guide - Slack Integration
+        - User Guide - Azure DevOps
+        - User Guide - Git Integration
+        - Development/Contributing Guide
+        - Architecture Documentation
+        - Code Comments/Docstrings
+        - CLI Help Text
+        - Error Messages
+        - GitHub Pages Site
+        - Other/Multiple Locations
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Current Documentation
+      description: What does the current documentation say? (copy/paste or link)
+      placeholder: |
+        Paste the current text or provide a link to the problematic documentation.
+        If it's missing documentation, just write "Missing" or "Not documented"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: What's wrong or confusing about the current documentation?
+      placeholder: |
+        Be specific about:
+        - What you were trying to do
+        - What was confusing or wrong
+        - What information was missing
+        - Where you got stuck
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Documentation
+      description: What should the documentation say instead?
+      placeholder: |
+        Describe what the documentation should explain or how it should be improved:
+        - Missing steps or information
+        - Clearer explanations
+        - Better examples
+        - Corrected information
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggested
+    attributes:
+      label: Suggested Content
+      description: If you have specific text suggestions, provide them here
+      placeholder: |
+        If you have specific wording suggestions, examples, or content improvements,
+        please provide them here. Even rough drafts are helpful!
+      render: markdown
+
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Target Audience
+      description: Who would benefit most from this documentation improvement?
+      options:
+        - New Users - People just getting started
+        - Developers - People integrating or extending
+        - DevOps/Admins - People deploying and managing
+        - Contributors - People wanting to contribute
+        - All Users - General improvement
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is fixing this documentation?
+      options:
+        - High - Blocks users from getting started
+        - Medium - Causes significant confusion
+        - Low - Minor improvement
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional context that would help
+      placeholder: |
+        - Your experience level with the project
+        - What you were trying to accomplish
+        - Screenshots of confusing UI/docs
+        - Links to related discussions
+        - Similar documentation that works well
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples of Good Documentation
+      description: Are there examples of similar documentation done well?
+      placeholder: |
+        Link to other projects, pages, or sections that handle similar
+        topics well and could serve as inspiration.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help write or improve this documentation
+          required: false
+        - label: I would be willing to review proposed documentation changes
+          required: false
+        - label: I can provide more examples or use cases
+          required: false
