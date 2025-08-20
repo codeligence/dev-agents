@@ -112,8 +112,8 @@ other_section:
     def test_avatar_name_substitution_with_real_prompts(self):
         """Test that avatar name environment variables work with the real prompts file."""
         # Set avatar environment variables
-        os.environ['AVATAR_FULL_NAME'] = 'Betty Sharp'
-        os.environ['AVATAR_SHORT_NAME'] = 'Betty'
+        os.environ['AVATAR_FULL_NAME'] = 'Kira Draft'
+        os.environ['AVATAR_SHORT_NAME'] = 'Kira'
 
         try:
             # Load the actual prompts file from config/prompts.yaml (default behavior)
@@ -123,8 +123,8 @@ other_section:
             # Get the followup prompt (where avatar variables are used)
             followup_prompt = agent_prompts.get_chatbot_prompt()
 
-            assert "Betty" in followup_prompt, f"Expected 'Betty' to be in prompt: {followup_prompt[:200]}..."
-            assert "Betty Sharp" in followup_prompt, f"Expected 'Betty Sharp' to be in prompt: {followup_prompt[:200]}..."
+            assert "Kira" in followup_prompt, f"Expected 'Kira' to be in prompt: {followup_prompt[:200]}..."
+            assert "Kira Draft" in followup_prompt, f"Expected 'Kira Draft' to be in prompt: {followup_prompt[:200]}..."
 
         finally:
             # Clean up environment variables
