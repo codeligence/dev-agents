@@ -1,0 +1,183 @@
+name: ✨ Feature Request
+description: Suggest a new feature or enhancement for dev-agents
+title: "[Feature] "
+labels: ["enhancement", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! We appreciate your ideas for improving dev-agents.
+        
+        > [!NOTE]
+        > Please search existing issues and the roadmap to avoid duplicates.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I have searched existing issues and this is not a duplicate
+          required: true
+        - label: I have checked the project roadmap and documentation
+          required: true
+        - label: This feature aligns with the project's goals
+          required: false
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A clear and concise description of the feature
+      placeholder: What feature would you like to see added?
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve?
+      placeholder: |
+        Describe the problem you're trying to solve or the gap you've identified.
+        Is your feature request related to a problem?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this feature to work?
+      placeholder: |
+        Describe your proposed solution in detail:
+        - What would the user interface look like?
+        - How would it integrate with existing features?
+        - What would the user workflow be?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component Area
+      description: Which area would this feature affect?
+      options:
+        - Slack Integration
+        - Azure DevOps Integration
+        - Git Integration
+        - AI Agents/LLM
+        - Impact Analysis
+        - Code Research
+        - Configuration System
+        - CLI Interface
+        - API/SDK
+        - Documentation
+        - DevOps/CI
+        - New Integration
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: How important is this feature to you?
+      options:
+        - High - Critical for my workflow
+        - Medium - Would significantly improve my experience
+        - Low - Nice to have improvement
+        - Very Low - Minor enhancement
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative approaches?
+      placeholder: |
+        Describe any alternative solutions or features you've considered.
+        Are there existing workarounds?
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Examples and Use Cases
+      description: Provide concrete examples of how this feature would be used
+      placeholder: |
+        Example 1: When a developer...
+        Example 2: During code review...
+        Example 3: In our CI/CD pipeline...
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups or Designs
+      description: If applicable, provide mockups, wireframes, or design ideas
+      placeholder: |
+        You can drag and drop images here or provide links to designs.
+        Code examples or configuration samples are also helpful.
+
+  - type: dropdown
+    id: breaking
+    attributes:
+      label: Breaking Changes
+      description: Would this feature require breaking changes?
+      options:
+        - No - Fully backward compatible
+        - Minor - Small config changes needed
+        - Major - Significant breaking changes
+        - Unknown - Need more investigation
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Assessment
+      description: What would be the impact of implementing this feature?
+      placeholder: |
+        Consider:
+        - Performance implications
+        - Security considerations  
+        - Maintenance overhead
+        - Dependencies on external services
+        - Effect on existing users
+
+  - type: checkboxes
+    id: implementation
+    attributes:
+      label: Implementation Considerations
+      options:
+        - label: This feature would require new dependencies
+        - label: This feature would require database/storage changes
+        - label: This feature would require API changes
+        - label: This feature would require configuration changes
+        - label: This feature would require documentation updates
+        - label: This feature would need extensive testing
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other information that would be helpful
+      placeholder: |
+        - Links to relevant documentation
+        - Similar implementations in other projects
+        - Research or articles supporting this feature
+        - Community discussion links
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to help implement this feature
+          required: false
+        - label: I would be willing to help with testing
+          required: false
+        - label: I would be willing to help with documentation
+          required: false

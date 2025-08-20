@@ -1,0 +1,147 @@
+{
+  "id": 10001,
+  "rev": 3,
+  "fields": {
+    "System.AreaPath": "acmecorp.com\\Team Alpha Squad",
+    "System.TeamProject": "acmecorp.com",
+    "System.IterationPath": "acmecorp.com\\Team Alpha\\2025 - Q2\\04.2025\\04.2025.3",
+    "System.WorkItemType": "Bug",
+    "System.State": "Ready for Review",
+    "System.Reason": "Updated for general review",
+    "System.AssignedTo": {
+      "displayName": "John Doe",
+      "url": "https://example.com/identities/11111111-1111-1111-1111-111111111111",
+      "_links": {
+        "avatar": {
+          "href": "https://example.com/avatars/johndoe.png"
+        }
+      },
+      "id": "11111111-1111-1111-1111-111111111111",
+      "uniqueName": "john.doe@acmecorp.com",
+      "imageUrl": "https://example.com/avatars/johndoe.png",
+      "descriptor": "descriptor.johndoe"
+    },
+    "System.CreatedDate": "2025-04-16T14:23:16.797Z",
+    "System.CreatedBy": {
+      "displayName": "Jane Doe",
+      "url": "https://example.com/identities/22222222-2222-2222-2222-222222222222",
+      "_links": {
+        "avatar": {
+          "href": "https://example.com/avatars/janedoe.png"
+        }
+      },
+      "id": "22222222-2222-2222-2222-222222222222",
+      "uniqueName": "jane.doe@acmecorp.com",
+      "imageUrl": "https://example.com/avatars/janedoe.png",
+      "descriptor": "descriptor.janedoe"
+    },
+    "System.ChangedDate": "2025-04-28T04:17:00.723Z",
+    "System.ChangedBy": {
+      "displayName": "Jane Doe",
+      "url": "https://example.com/identities/22222222-2222-2222-2222-222222222222",
+      "_links": {
+        "avatar": {
+          "href": "https://example.com/avatars/janedoe.png"
+        }
+      },
+      "id": "22222222-2222-2222-2222-222222222222",
+      "uniqueName": "jane.doe@acmecorp.com",
+      "imageUrl": "https://example.com/avatars/janedoe.png",
+      "descriptor": "descriptor.janedoe"
+    },
+    "System.CommentCount": 2,
+    "System.Title": "General Task Issue: Minor UI Inconsistency",
+    "System.BoardColumn": "Ready for Review",
+    "System.BoardColumnDone": false,
+    "Microsoft.VSTS.Common.StateChangeDate": "2025-04-28T04:17:00.723Z",
+    "Microsoft.VSTS.Common.ActivatedDate": "2025-04-17T15:44:04.980Z",
+    "Microsoft.VSTS.Common.ActivatedBy": {
+      "displayName": "John Doe",
+      "url": "https://example.com/identities/11111111-1111-1111-1111-111111111111",
+      "_links": {
+        "avatar": {
+          "href": "https://example.com/avatars/johndoe.png"
+        }
+      },
+      "id": "11111111-1111-1111-1111-111111111111",
+      "uniqueName": "john.doe@acmecorp.com",
+      "imageUrl": "https://example.com/avatars/johndoe.png",
+      "descriptor": "descriptor.johndoe"
+    },
+    "Microsoft.VSTS.Common.Priority": 2,
+    "Microsoft.VSTS.Common.Severity": "Medium",
+    "Microsoft.VSTS.Common.StackRank": 307102198.0,
+    "Microsoft.VSTS.Common.ValueArea": "Business",
+    "Custom.Application": "Generic App",
+    "Custom.ApplicationArea": "General Settings",
+    "Custom.EscapedTo": "Development",
+    "Custom.UsersAffected": "Unknown",
+    "Custom.PatientsAffected": "Unknown",
+    "Custom.RFTDate": "2025-04-25T07:05:10.683Z",
+    "WEF_23ABAD1094D644A8AE3671CA80F63E47_Kanban.Column": "Ready for Review",
+    "WEF_23ABAD1094D644A8AE3671CA80F63E47_Kanban.Column.Done": false,
+    "Custom.Dev": {
+      "displayName": "John Doe",
+      "url": "https://example.com/identities/11111111-1111-1111-1111-111111111111",
+      "_links": {
+        "avatar": {
+          "href": "https://example.com/avatars/johndoe.png"
+        }
+      },
+      "id": "11111111-1111-1111-1111-111111111111",
+      "uniqueName": "john.doe@acmecorp.com",
+      "imageUrl": "https://example.com/avatars/johndoe.png",
+      "descriptor": "descriptor.johndoe"
+    },
+    "System.Description": "<div><img src=\"https://example.com/assets/sample-image.png\" alt=\"Generic Image\"><br></div><div><p>This issue describes a minor inconsistency in the user interface. The text label or icon might not appear as expected in some conditions.</p></div><div><p>Please refer to the internal documentation for more details.</p></div>",
+    "Microsoft.VSTS.TCM.ReproSteps": "<div><p>Environment:</p><ul><li><a href=\"https://acmecorpwebapps.dev/genericapp/settings\">https://acmecorpwebapps.dev/genericapp/settings</a></li></ul></div><div><p>Precondition:</p><ul><li>Feature Flag for Task Management is enabled</li><li>User has proper access rights to modify settings</li></ul></div><div><p>Steps:</p><ol><li>Log in to Generic App</li><li>Navigate to the Settings page</li><li>Select Task Management</li><li>Create a new task entry</li><li>Verify label consistency after performing the action</li></ol></div><div><p>Expected result: The UI elements display correctly.</p></div><div><p>Actual result: The UI element is not shown consistently.</p></div>",
+    "Custom.TestingNotes": "<div>AC all criteria must be met.</div>",
+    "System.Tags": "GeneralIssue"
+  },
+  "relations": [
+    {
+      "rel": "System.LinkTypes.Related",
+      "url": "https://example.com/apis/wit/workItems/10002",
+      "attributes": {
+        "isLocked": false,
+        "name": "Related"
+      }
+    },
+    {
+      "rel": "ArtifactLink",
+      "url": "vstfs:///Git/PullRequestId/EXAMPLE-GUID-PR/NEW-PR-GUID/54321",
+      "attributes": {
+        "authorizedDate": "2025-04-18T08:09:34.067Z",
+        "id": 54321,
+        "resourceCreatedDate": "2025-04-18T08:09:34.067Z",
+        "resourceModifiedDate": "2025-04-18T08:09:34.067Z",
+        "revisedDate": "9999-01-01T00:00:00Z",
+        "name": "Pull Request"
+      }
+    }
+  ],
+  "_links": {
+    "self": {
+      "href": "https://example.com/apis/wit/workItems/10001"
+    },
+    "workItemUpdates": {
+      "href": "https://example.com/apis/wit/workItems/10001/updates"
+    },
+    "workItemRevisions": {
+      "href": "https://example.com/apis/wit/workItems/10001/revisions"
+    },
+    "workItemComments": {
+      "href": "https://example.com/apis/wit/workItems/10001/comments"
+    },
+    "html": {
+      "href": "https://example.com/workitems/edit/10001"
+    },
+    "workItemType": {
+      "href": "https://example.com/apis/wit/workItemTypes/Bug"
+    },
+    "fields": {
+      "href": "https://example.com/apis/wit/fields"
+    }
+  },
+  "url": "https://example.com/apis/wit/workItems/10001"
+}

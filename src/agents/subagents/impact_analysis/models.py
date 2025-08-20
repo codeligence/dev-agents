@@ -1,0 +1,204 @@
+from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
+
+from pydantic import BaseModel, Field
+
+from core.config import BaseConfig
+from core.prompts import BasePrompts
+
+
+@dataclass
+class UIComponent:
+    """Represents a UI component that might be impacted by code changes."""
+    name: str
+    file_path: str
+    component_type: str  # 'component', 'page', 'service', etc.
+    dependencies: List[str]
+    impact_reason: str
+
+
+class UIImpactReport(BaseModel):
+    """Report detailing the potential UI impacts of code changes."""
+    summary: str = Field(description="Executive summary of UI impacts")
+    impacted_components: List[Dict[str, Any]] = Field(
+        description="List of UI components that may be impacted",
+        default_factory=list
+    )
+    testing_recommendations: List[str] = Field(
+        description="Specific testing recommendations for UI components",
+        default_factory=list
+    )
+    risk_assessment: str = Field(description="Overall risk assessment for UI changes")
+    
+    def format_report(self) -> str:
+        """Format the UI impact report as a markdown string."""
+        lines = []
+        lines.append(f"**Summary**: {self.summary}")
+        
+        if self.impacted_components:
+            lines.append(f"**Components Affected**: {len(self.impacted_components)}")
+            for component in self.impacted_components:
+                name = component.get('name', 'Unknown')
+                impact_reason = component.get('impact_reason', 'No reason specified')
+                lines.append(f"  - {name}: {impact_reason}")
+        
+        if self.testing_recommendations:
+            lines.append("**Testing Recommendations**:")
+            for rec in self.testing_recommendations:
+                lines.append(f"  - {rec}")
+        
+        return "\n".join(lines)
+
+
+@dataclass
+class ApiChange:
+    """Represents an API change that might impact system functionality."""
+    endpoint_or_method: str
+    change_type: str  # 'modified', 'added', 'removed', 'deprecated'
+    file_path: str
+    impact_description: str
+    breaking_change: bool = False
+
+
+class ApiImpactReport(BaseModel):
+    """Report detailing the potential API impacts of code changes."""
+    summary: str = Field(description="Executive summary of API impacts")
+    api_changes: List[Dict[str, Any]] = Field(
+        description="List of API changes detected",
+        default_factory=list
+    )
+    breaking_changes: List[Dict[str, Any]] = Field(
+        description="List of breaking changes that require immediate attention",
+        default_factory=list
+    )
+    integration_risks: List[str] = Field(
+        description="Potential integration risks and considerations",
+        default_factory=list
+    )
+    testing_recommendations: List[str] = Field(
+        description="Specific testing recommendations for API changes",
+        default_factory=list
+    )
+    risk_assessment: str = Field(description="Overall risk assessment for API changes")
+    
+    def format_report(self) -> str:
+        """Format the API impact report as a markdown string."""
+        lines = []
+        lines.append(f"**Summary**: {self.summary}")
+        
+        if self.api_changes:
+            lines.append(f"**API Changes**: {len(self.api_changes)}")
+            for change in self.api_changes:
+                endpoint = change.get('endpoint_or_method', 'Unknown')
+                change_type = change.get('change_type', 'Unknown')
+                description = change.get('impact_description', 'No description')
+                lines.append(f"  - {endpoint} ({change_type}): {description}")
+        
+        if self.breaking_changes:
+            lines.append(f"**Breaking Changes**: {len(self.breaking_changes)}")
+            for change in self.breaking_changes:
+                endpoint = change.get('endpoint_or_method', 'Unknown')
+                description = change.get('impact_description', 'No description')
+                lines.append(f"  - ⚠️ {endpoint}: {description}")
+        
+        if self.integration_risks:
+            lines.append("**Integration Risks**:")
+            for risk in self.integration_risks:
+                lines.append(f"  - {risk}")
+        
+        if self.testing_recommendations:
+            lines.append("**Testing Recommendations**:")
+            for rec in self.testing_recommendations:
+                lines.append(f"  - {rec}")
+        
+        return "\n".join(lines)
+
+
+@dataclass
+class ImpactAnalysisResult:
+    """Combined result of UI and API impact analysis."""
+    ui_impacts: List[UIImpactReport]
+    api_impacts: List[ApiImpactReport]
+
+    @property
+    def has_any_impact(self) -> bool:
+        """Whether any impact was detected."""
+        return len(self.ui_impacts) > 0 or len(self.api_impacts) > 0
+
+    def summary(self) -> str:
+        """Generate a comprehensive markdown summary of the impact analysis."""
+        summary_lines = ["# Comprehensive Change Impact Analysis"]
+
+        if self.ui_impacts:
+            total_ui_components = sum(len(report.impacted_components) for report in self.ui_impacts)
+            summary_lines.append(f"\n## Frontend Impact Summary")
+            summary_lines.append(f"- **Files analyzed**: {len(self.ui_impacts)} frontend files")
+            summary_lines.append(f"- **UI components affected**: {total_ui_components}")
+
+            summary_lines.append(f"\n### UI Impact Details")
+            for i, report in enumerate(self.ui_impacts, 1):
+                summary_lines.append(f"\n#### Frontend Analysis {i}")
+                summary_lines.append(report.format_report())
+
+        if self.api_impacts:
+            total_api_components = sum(len(report.api_changes) for report in self.api_impacts)
+            summary_lines.append(f"\n## Backend Impact Summary")
+            summary_lines.append(f"- **Files analyzed**: {len(self.api_impacts)} backend files")
+            summary_lines.append(f"- **API components affected**: {total_api_components}")
+
+            summary_lines.append(f"\n### API Impact Details")
+            for i, report in enumerate(self.api_impacts, 1):
+                summary_lines.append(f"\n#### Backend Analysis {i}")
+                summary_lines.append(report.format_report())
+
+        if not self.ui_impacts and not self.api_impacts:
+            summary_lines.append("\n## No Impact Detected")
+            summary_lines.append("No specific frontend or backend impacts were identified in the analyzed files.")
+
+        summary_report = "\n".join(summary_lines) + "\n\n\nUse this output to craft the user response in fenced markdown (encapsulated in ```)"
+        
+        return summary_report
+
+
+class ImpactAnalysisConfig(BaseConfig):
+    """Typed configuration wrapper for impact analysis settings."""
+
+    def __init__(self, base_config: BaseConfig):
+        # Initialize parent with the same config path
+        super().__init__(base_config._config_path)
+
+    def get_max_files(self) -> int:
+        """Get maximum number of files to analyze (default: 200)."""
+        return int(self.get_value('subagents.impactanalysis.maxFiles', 200))
+
+    def get_impact_analysis_model(self) -> str:
+        """Get the LLM model for code research (default: 'openai:gpt-4o-mini')."""
+        return self.get_value('subagents.impactanalysis.model')
+
+    def get_code_research_model(self) -> str:
+        """Get the LLM model for code research (default: 'openai:gpt-4o-mini')."""
+        return self.get_value('subagents.coderesearch.model')
+
+    def get_num_retries(self) -> int:
+        """Get number of retries for failed requests (default: 3)."""
+        return int(self.get_value('subagents.impactanalysis.retries', 3))
+
+
+class ImpactAnalysisPrompts(BasePrompts):
+    """Typed prompts wrapper for impact analysis."""
+
+    def __init__(self, base_prompts: BasePrompts):
+        # Initialize parent with the same prompts path
+        super().__init__(base_prompts._prompts_path)
+
+    def get_ui_impact_prompt(self) -> str:
+        """Get the UI impact analysis system prompt."""
+        return self.get_prompt('agents.impactanalysis.ui_impact_analysis')
+
+    def get_api_impact_prompt(self) -> str:
+        """Get the API impact analysis system prompt."""
+        return self.get_prompt('agents.impactanalysis.api_impact_analysis')
+
+    def get_file_instruction_prompt(self) -> str:
+        """Get the file instruction prompt template."""
+        return self.get_prompt('agents.impactanalysis.file_instruction_prompt')

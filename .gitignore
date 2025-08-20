@@ -1,0 +1,74 @@
+# Development artifacts
+data/
+logs/
+src/logs/
+venv/
+src/dev_agents.egg-info/
+specs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.tmp
+
+# Environment and secrets
+.env
+!.env.example
+.secrets/
+credentials.json
+
+# Testing and coverage
+.tox/
+.nox/
+.coverage
+.pytest_cache/
+cover/
+*.cover
+.hypothesis/
+
+# Documentation
+.readthedocs/
+site/
+
+# Misc
+*.bak
+*.orig
+.mypy_cache/
+.dmypy.json
+dmypy.json
+*.log
+
+/licenses_*
+/pyproject.toml.backup

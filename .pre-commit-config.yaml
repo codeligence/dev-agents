@@ -1,0 +1,184 @@
+# Pre-commit configuration for dev-agents project
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+
+repos:
+  # Basic file checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        name: Trim trailing whitespace
+        description: This hook trims trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end of files
+        description: Ensures that a file is either empty or ends with one newline
+      - id: check-yaml
+        name: Check YAML
+        description: This hook checks yaml files for parseable syntax
+        args: ['--allow-multiple-documents']
+      - id: check-json
+        name: Check JSON
+        description: This hook checks json files for parseable syntax
+      - id: check-toml
+        name: Check TOML
+        description: This hook checks toml files for parseable syntax
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        description: Check for files that contain merge conflict strings
+      - id: check-added-large-files
+        name: Check for added large files
+        description: Prevent giant files from being committed
+        args: ['--maxkb=500']
+      - id: check-case-conflict
+        name: Check for case conflicts
+        description: Check for files that would conflict in case-insensitive filesystems
+      - id: check-docstring-first
+        name: Check docstring is first
+        description: Checks a common error of defining a docstring after code
+      - id: check-executables-have-shebangs
+        name: Check that executables have shebangs
+        description: Ensures that (non-binary) executables have a shebang
+      - id: check-shebang-scripts-are-executable
+        name: Check that scripts with shebangs are executable
+        description: Ensures that (non-binary) files with a shebang are executable
+      - id: mixed-line-ending
+        name: Mixed line ending
+        description: Replaces or checks mixed line endings
+        args: ['--fix=lf']
+
+  # Python code formatting with Black
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+        name: Black - Python code formatter
+        description: The uncompromising Python code formatter
+        language_version: python3.11
+        args: ['--config', 'pyproject.toml']
+
+  # Import sorting with isort
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        name: isort - Sort Python imports
+        description: A Python utility/library to sort imports
+        language_version: python3.11
+        args: ['--settings-path', 'pyproject.toml']
+
+  # Python linting with Ruff (fast alternative to flake8)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.10
+    hooks:
+      - id: ruff
+        name: Ruff - Python linter
+        description: An extremely fast Python linter, written in Rust
+        args: ['--fix', '--exit-non-zero-on-fix']
+      - id: ruff-format
+        name: Ruff - Python formatter
+        description: An extremely fast Python formatter, written in Rust
+
+  # Type checking with mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.1
+    hooks:
+      - id: mypy
+        name: mypy - Static type checker
+        description: A static type checker for Python
+        language_version: python3.11
+        args: ['--config-file', 'pyproject.toml']
+        additional_dependencies: 
+          - 'types-PyYAML'
+          - 'types-requests'
+          - 'pydantic'
+          - 'slack_sdk'
+        exclude: ^(tests/|scripts/|docs/)
+
+  # Security scanning with Bandit
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9
+    hooks:
+      - id: bandit
+        name: Bandit - Security linter
+        description: A tool designed to find common security issues in Python code
+        language_version: python3.11
+        args: ['-c', 'pyproject.toml']
+        exclude: ^tests/
+
+  # Commit message validation
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.27.0
+    hooks:
+      - id: commitizen
+        name: Commitizen - Conventional commits
+        description: Check whether the commit message follows committing rules
+        stages: [commit-msg]
+
+  # Additional Python checks
+  - repo: https://github.com/pycqa/pydocstyle
+    rev: 6.3.0
+    hooks:
+      - id: pydocstyle
+        name: pydocstyle - Docstring style checker
+        description: A static analysis tool for checking compliance with Python docstring conventions
+        args: ['--convention=google', '--add-ignore=D100,D101,D102,D103,D104,D105,D106,D107']
+        exclude: ^(tests/|scripts/)
+
+  # Security and dependency checks
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+        name: Safety - Check Python dependencies for known security vulnerabilities
+        description: Check Python dependencies for known security vulnerabilities
+        files: requirements.*\.txt$|pyproject\.toml$
+
+  # Dockerfile linting (if using Docker)
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.12.0
+    hooks:
+      - id: hadolint-docker
+        name: Hadolint - Dockerfile linter
+        description: A smarter Dockerfile linter
+        files: Dockerfile.*
+
+  # YAML formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        name: Prettier - Code formatter
+        description: An opinionated code formatter
+        files: \.(yaml|yml|json|md)$
+        args: ['--write']
+
+# Configuration for pre-commit
+default_language_version:
+  python: python3.11
+
+# Global exclusions
+exclude: |
+  (?x)^(
+    \.git/.*|
+    \.venv/.*|
+    venv/.*|
+    build/.*|
+    dist/.*|
+    .*\.egg-info/.*|
+    __pycache__/.*|
+    \.mypy_cache/.*|
+    \.pytest_cache/.*|
+    data/.*|
+    logs/.*|
+    .*\.log$
+  )$
+
+# Fail fast - stop running hooks after the first failure
+fail_fast: false
+
+# Minimum pre-commit version
+minimum_pre_commit_version: '3.3.0'
+
+# Default stages to run hooks
+default_stages: [commit, push]
