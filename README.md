@@ -1,7 +1,5 @@
 # Dev Agents
 
-## Intro
-
 Welcome to Dev Agents! We devs love building software, but the reality in agile teams is that we spend more than half of our time with tasks _around_ the code: writing docs, reviewing PRs, communicating, researching, checking issues and logs, and so on. **Dev Agents** are here to reduce the painful stuff so we can focus on what matters most: **building cool software**.
 
 **Dev Agents** are self-hosted AI teammates that live in your tools and take over docs, reviews, release notes, triage, and more. It’s not just about freeing up **up to 10 hours per developer per week** - it’s about having a _companion_ that prepares work, lowers stress, and cuts the headaches around delivery.
@@ -16,12 +14,13 @@ For CTOs: **multiply output without burning out your best engineers** - with aud
 
 - **One Dev AI Avatar, many skills.** A consistent teammate (e.g. **Betty Sharp**, **Kira Draft**, **Nomi Stack**, **Vera Note**, **Luc Codewalker**) that shows up across your stack.
 
-- **Open-source core.** Free under **AGPLv3**; enterprise license available for closed-source use and support.
+- **Open Source.** Free under **AGPLv3**; enterprise license available for closed-source use and support.
 
 - **LLM-flexible.** Works with major hosted models or local LLMs; switch via config.
 
 - **Built for real teams.** Especially 5+ dev orgs, multi-generation architectures, compliance/documentation needs.
 
+- **Context and Integrations for Dev Teams.** While it works similarly to Claude Code or Gemini CLI, Dev Agents provide you with pre-engineered, dev specific contexts, prompts, and integrations for reproducible, cost-efficient results and a quick start.
 
 **Concrete wins**
 
