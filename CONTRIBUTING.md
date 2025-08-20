@@ -10,7 +10,6 @@ Thank you for your interest in contributing to dev-agents! This project implemen
 - [Testing Guidelines](#testing-guidelines)
 - [Pull Request Process](#pull-request-process)
 - [Issue Reporting](#issue-reporting)
-- [Development Workflow](#development-workflow)
 - [Architecture Overview](#architecture-overview)
 
 ## Getting Started
@@ -33,7 +32,7 @@ dev-agents is built using enterprise-grade software architecture patterns while 
 
 1. **Clone the repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/codeligence/dev-agents.git
    cd dev-agents
    ```
 
@@ -45,27 +44,14 @@ dev-agents is built using enterprise-grade software architecture patterns while 
 
 3. **Install dependencies**:
    ```bash
-   pip install -e .
+   pip install -e .[all]
    ```
 
-4. **Configure environment**:
-   ```bash
-   cp config/config.yaml.example config/config.yaml  # if available
-   # Edit config/config.yaml with your settings
-   ```
-
-5. **Set up environment variables**:
+4. **Set up environment variables**:
    ```bash
    cp .env.example .env  # if available
    # Edit .env with your API keys and configuration
    ```
-
-### Development Dependencies
-
-For development work, you may need additional packages:
-```bash
-pip install pytest pytest-asyncio mypy black isort pre-commit
-```
 
 ## Code Standards
 
@@ -147,27 +133,6 @@ pytest tests/core/test_config.py
 pytest -v
 ```
 
-### Writing Tests
-
-```python
-import pytest
-from unittest.mock import Mock, AsyncMock
-from src.core.protocols.agent_protocols import AgentExecutionContext
-
-@pytest.mark.asyncio
-async def test_agent_execution():
-    # Arrange
-    mock_context = Mock(spec=AgentExecutionContext)
-    mock_context.get_config.return_value = {"key": "value"}
-    
-    # Act
-    result = await my_agent.run(mock_context)
-    
-    # Assert
-    assert result.success is True
-    mock_context.get_config.assert_called_once()
-```
-
 ## Pull Request Process
 
 ### Branch Strategy
@@ -184,12 +149,12 @@ async def test_agent_execution():
 
 ### Commit Standards
 
-- **Conventional Commits**: Use the format `type(scope): description`
+- **Conventional Commits**: Use the format `#ISSUE-ID: description`
 - **Examples**:
-  - `feat(agents): add code research agent`
-  - `fix(slack): handle message parsing edge cases`
-  - `docs(readme): update installation instructions`
-  - `refactor(config): simplify environment variable handling`
+  - `#12: add code research agent`
+  - `#45: handle message parsing edge cases`
+  - `#67: update installation instructions`
+  - `#78: simplify environment variable handling`
 
 ### Pull Request Requirements
 
@@ -233,60 +198,6 @@ For new features, provide:
 
 **DO NOT** report security vulnerabilities in public issues. Please follow our [Security Policy](SECURITY.md).
 
-## Development Workflow
-
-### Pre-commit Hooks
-
-Set up pre-commit hooks for consistent code quality:
-
-```bash
-pre-commit install
-```
-
-This will run the following checks before each commit:
-- Black code formatting
-- isort import sorting
-- mypy type checking
-- Basic linting
-
-### Code Quality Tools
-
-```bash
-# Format code with Black
-black src tests
-
-# Sort imports with isort
-isort src tests
-
-# Type checking with mypy
-mypy src
-
-# Run linting
-flake8 src tests
-```
-
-### Agent Development Pattern
-
-When creating new agents, follow this pattern:
-
-```python
-from src.core.protocols.agent_protocols import AgentExecutionContext, Agent
-
-class MyAgent(Agent[MyResultType]):
-    def __init__(self, context: AgentExecutionContext) -> None:
-        super().__init__(context)
-        self.context = context
-        # Initialize agent with context
-    
-    async def run(self) -> MyResultType:
-        # Agent implementation
-        return result
-
-# Register with factory
-from src.core.agents.factory import SimpleAgentFactory
-SimpleAgentFactory.register_agent("my-agent", MyAgent)
-```
-
 ## Architecture Overview
 
 ### Core Principles
@@ -310,13 +221,10 @@ This project adheres to a code of conduct that ensures a welcoming environment f
 
 ## Getting Help
 
-- **Documentation**: Check the `docs/` directory and `CLAUDE.md`
+- **Documentation**: Check the `docs/` directory
 - **Issues**: Search existing issues before creating new ones
 - **Discussions**: Use GitHub Discussions for general questions
 - **Contact**: Reach out to maintainers for complex questions
 
-## License
-
-By contributing to dev-agents, you agree that your contributions will be licensed under the same license as the project (see LICENSE.md).
 
 Thank you for contributing to dev-agents!
