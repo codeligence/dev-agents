@@ -1,17 +1,16 @@
 site_name: Dev Agents Documentation
 site_description: AI-Powered Development Team Automation with PydanticAI
 site_author: Dev Agents Team
-site_url: https://docs.dev-agents.ai/
+site_url: https://dev-agents.ai/
 
 repo_name: dev-agents
 repo_url: https://github.com/codeligence/dev-agents
 edit_uri: edit/main/docs/
 
-copyright: Copyright &copy; 2025 Dev Agents Team
+copyright: Copyright &copy; 2025 Codeligence
 
 theme:
   name: material
-  custom_dir: overrides
   features:
     - announce.dismiss
     - content.action.edit
@@ -129,6 +128,7 @@ plugins:
       default_handler: python
       handlers:
         python:
+          paths: [src]
           options:
             # Source code options
             show_source: true
@@ -163,8 +163,6 @@ plugins:
               - "!^_"  # Exclude private members by default
               - "!^__(?!init|new)__"  # Exclude magic methods except __init__ and __new__
 
-            # Path and import options
-            paths: [src]
             find_stubs_package: true
 
             # Extensions
@@ -186,10 +184,10 @@ plugins:
       cards_layout_options:
         background_color: "#2196F3"
         color: "#FFFFFF"
-      cards_include:
-        - index.md
-        - installation.md
-        - quick-start.md
+#      cards_include:
+#        - index.md
+#        - installation.md
+#        - quick-start.md
 
 markdown_extensions:
   - abbr
@@ -288,6 +286,7 @@ extra_javascript:
   - javascripts/mathjax.js
   - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+  - https://unpkg.com/mermaid@10.6.1/dist/mermaid.min.js
 
 watch:
   - src/

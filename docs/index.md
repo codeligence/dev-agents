@@ -3,7 +3,6 @@
 **AI-Powered Development Team Automation with PydanticAI**
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/codeligence/dev-agents/actions)
-[![Coverage](https://img.shields.io/badge/coverage-85%25-brightgreen.svg)](https://codecov.io/gh/codeligence/dev-agents)
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://pypi.org/project/dev-agents/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
@@ -14,7 +13,7 @@
 
 Dev Agents is an enterprise-grade Python framework that revolutionizes development workflows by using AI agents to analyze code changes, generate testing insights, and provide intelligent assistance through Slack integration.
 
-Built on the powerful [PydanticAI](https://docs.pydantic.ai/) framework, Dev Agents provides a protocol-based, type-safe architecture for creating sophisticated AI-powered development tools.
+Built on the elegant [PydanticAI](https://docs.pydantic.ai/) framework, Dev Agents provides a protocol-based, type-safe architecture for creating sophisticated AI-powered development tools.
 
 ## Key Features
 
@@ -58,7 +57,7 @@ dev-agents-slack-bot
 ## Architecture Overview
 
 ```mermaid
-graph TB
+flowchart TB
     subgraph "User Interface"
         A[Slack Bot] 
         B[CLI Tools]
