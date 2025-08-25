@@ -1,3 +1,21 @@
+# Copyright (C) 2025 Codeligence
+#
+# This file is part of Dev Agents.
+#
+# Dev Agents is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Dev Agents is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
+
+
 from typing import Union
 
 from pydantic_ai import Agent as PydanticAgent, RunContext
@@ -8,6 +26,8 @@ from agents.agents.gitchatbot.models import ChatbotContext, PersistentAgentDeps
 from agents.agents.gitchatbot.prompts import GitChatbotAgentPrompts
 from agents.subagents.impact_analysis.impact_analysis_subagent import ImpactAnalysisSubagent
 from core.exceptions import AgentGracefulExit
+from core.integrations.context_integration_loader import ContextIntegrationLoader
+from core.project_config import ProjectConfigFactory
 from core.protocols.agent_protocols import AgentExecutionContext
 from core.storage import get_storage
 
@@ -31,6 +51,11 @@ class GitChatbotAgent(PydanticAIAgent):
         # Get prompts
         base_prompts = context.get_prompts()
         self.prompts = GitChatbotAgentPrompts(base_prompts)
+
+        # Setup project loader for PR/Issue loading with caching
+        project_factory = ProjectConfigFactory(base_config)
+        self.project_config = project_factory.get_default_project_config()
+        self.project_loader = ContextIntegrationLoader(self.project_config)
 
         # Set up the PydanticAI agent
         self.setup_agent()
@@ -133,10 +158,36 @@ class GitChatbotAgent(PydanticAIAgent):
             if context.target_commit_hash:
                 updated_fields.append(f"target_commit_hash: {context.target_commit_hash}")
 
+            # Fetch additional context from project loader
+            additional_context_parts = []
+            
+            # Load pull request context if PR ID is provided
+            if context.pull_request_id:
+                try:
+                    pr_model = await self.project_loader.load_pullrequest(str(context.pull_request_id))
+                    additional_context_parts.append(f"Pull Request #{context.pull_request_id}: {pr_model.context}")
+                except Exception as e:
+                    self.logger.warning(f"Could not load pull request #{context.pull_request_id}: {e}")
+
+            # Load issue context if issue ID is provided
+            if context.issue_id:
+                try:
+                    issue_model = await self.project_loader.load_issue(str(context.issue_id))
+                    additional_context_parts.append(f"Issue #{context.issue_id}: {issue_model.context}")
+                except Exception as e:
+                    self.logger.warning(f"Could not load issue #{context.issue_id}: {e}")
+
+            # Build the response message
             if updated_fields:
-                return f"Context updated successfully with: {', '.join(updated_fields)}. The context has been persisted and will be available for other tools."
+                base_message = f"Context updated successfully with: {', '.join(updated_fields)}. The context has been persisted and will be available for other tools."
             else:
-                return "Context update called but no fields were provided. Current context remains unchanged."
+                base_message = "Context update called but no fields were provided. Current context remains unchanged."
+            
+            # Append additional context if any was loaded
+            if additional_context_parts:
+                base_message += f"\n\nAdditional context loaded:\n" + "\n".join(additional_context_parts)
+            
+            return base_message
 
         @self.agent.tool
         async def create_touched_files_summary(ctx: RunContext[PersistentAgentDeps]) -> str:
@@ -192,27 +243,51 @@ class GitChatbotAgent(PydanticAIAgent):
 
                 # Create GitRepository instance
                 git_repo = GitRepository(
-                    base_config=self.context.get_config()
+                    project_config=self.project_config
                 )
 
                 # Build GitDiffContext based on available information
                 git_diff_context = None
+                context_description = None
 
                 if current_context.pull_request_id:
-                    # Use PR-based diff loading (most complete context)
+                    # Use PR-based diff loading via ContextIntegrationLoader (most complete context)
                     self.logger.info(f"Loading diff for PR #{current_context.pull_request_id}")
-                    git_diff_context = await git_repo.get_diff_from_pr(
-                        current_context.pull_request_id,
-                        current_context.issue_id  # Optional work item context
+
+                    # Get branch information from PR using ContextIntegrationLoader
+                    source_branch, target_branch = await self.project_loader.get_branches_from_pr(
+                        current_context.pull_request_id
                     )
+
+                    # Build context description
+                    context_description = f"Pull Request #{current_context.pull_request_id}"
+
+                    # Add issue context if available
+                    if current_context.issue_id:
+                        try:
+                            issue_model = await self.project_loader.load_issue(str(current_context.issue_id))
+                            issue_title = f"Issue #{current_context.issue_id}"
+                            context_description = f"Pull Request #{current_context.pull_request_id} - {issue_title}\n\n" + issue_model.context
+                        except Exception as e:
+                            self.logger.warning(f"Could not load issue #{current_context.issue_id}: {e}")
+
+                    # Get git diff using branches
+                    git_diff_context = git_repo.get_diff_from_branches(
+                        source_branch,
+                        target_branch,
+                        context_description,
+                        include_patch=True
+                    )
+
                 elif current_context.source_branch_name and current_context.target_branch_name:
-                    # Use branch comparison
+                    # Use direct branch comparison
                     context_description = f"Branch comparison: {current_context.source_branch_name} -> {current_context.target_branch_name}"
                     self.logger.info(f"Loading diff for {context_description}")
                     git_diff_context = git_repo.get_diff_from_branches(
                         current_context.source_branch_name,
                         current_context.target_branch_name,
-                        context_description
+                        context_description,
+                        include_patch=True
                     )
 
                 if not git_diff_context:
@@ -237,4 +312,3 @@ class GitChatbotAgent(PydanticAIAgent):
             except Exception as e:
                 self.logger.error(f"Error during impact analysis: {e}")
                 return f"Impact analysis failed: {str(e)}"
-

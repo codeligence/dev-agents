@@ -1,3 +1,21 @@
+# Copyright (C) 2025 Codeligence
+#
+# This file is part of Dev Agents.
+#
+# Dev Agents is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Dev Agents is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
+
+
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 
@@ -29,24 +47,24 @@ class UIImpactReport(BaseModel):
         default_factory=list
     )
     risk_assessment: str = Field(description="Overall risk assessment for UI changes")
-    
+
     def format_report(self) -> str:
         """Format the UI impact report as a markdown string."""
         lines = []
         lines.append(f"**Summary**: {self.summary}")
-        
+
         if self.impacted_components:
             lines.append(f"**Components Affected**: {len(self.impacted_components)}")
             for component in self.impacted_components:
                 name = component.get('name', 'Unknown')
                 impact_reason = component.get('impact_reason', 'No reason specified')
                 lines.append(f"  - {name}: {impact_reason}")
-        
+
         if self.testing_recommendations:
             lines.append("**Testing Recommendations**:")
             for rec in self.testing_recommendations:
                 lines.append(f"  - {rec}")
-        
+
         return "\n".join(lines)
 
 
@@ -80,12 +98,12 @@ class ApiImpactReport(BaseModel):
         default_factory=list
     )
     risk_assessment: str = Field(description="Overall risk assessment for API changes")
-    
+
     def format_report(self) -> str:
         """Format the API impact report as a markdown string."""
         lines = []
         lines.append(f"**Summary**: {self.summary}")
-        
+
         if self.api_changes:
             lines.append(f"**API Changes**: {len(self.api_changes)}")
             for change in self.api_changes:
@@ -93,24 +111,24 @@ class ApiImpactReport(BaseModel):
                 change_type = change.get('change_type', 'Unknown')
                 description = change.get('impact_description', 'No description')
                 lines.append(f"  - {endpoint} ({change_type}): {description}")
-        
+
         if self.breaking_changes:
             lines.append(f"**Breaking Changes**: {len(self.breaking_changes)}")
             for change in self.breaking_changes:
                 endpoint = change.get('endpoint_or_method', 'Unknown')
                 description = change.get('impact_description', 'No description')
                 lines.append(f"  - ⚠️ {endpoint}: {description}")
-        
+
         if self.integration_risks:
             lines.append("**Integration Risks**:")
             for risk in self.integration_risks:
                 lines.append(f"  - {risk}")
-        
+
         if self.testing_recommendations:
             lines.append("**Testing Recommendations**:")
             for rec in self.testing_recommendations:
                 lines.append(f"  - {rec}")
-        
+
         return "\n".join(lines)
 
 
@@ -156,7 +174,7 @@ class ImpactAnalysisResult:
             summary_lines.append("No specific frontend or backend impacts were identified in the analyzed files.")
 
         summary_report = "\n".join(summary_lines) + "\n\n\nUse this output to craft the user response in fenced markdown (encapsulated in ```)"
-        
+
         return summary_report
 
 
@@ -165,7 +183,7 @@ class ImpactAnalysisConfig(BaseConfig):
 
     def __init__(self, base_config: BaseConfig):
         # Initialize parent with the same config path
-        super().__init__(base_config._config_path)
+        super().__init__(base_config=base_config)
 
     def get_max_files(self) -> int:
         """Get maximum number of files to analyze (default: 200)."""
@@ -182,6 +200,37 @@ class ImpactAnalysisConfig(BaseConfig):
     def get_num_retries(self) -> int:
         """Get number of retries for failed requests (default: 3)."""
         return int(self.get_value('subagents.impactanalysis.retries', 3))
+
+    def get_frontend_patterns(self) -> list[str]:
+        """Get frontend file classification patterns."""
+        patterns = self.get_value('subagents.impactanalysis.fileClassification.frontendPatterns', [])
+        if not patterns:
+            # Fallback to default patterns if config not available
+            return [
+                r'.*\.(js|ts|jsx|tsx)$',
+                r'.*\.(html|htm)$',
+                r'.*\.(css|scss|sass|less)$',
+                r'.*\.(vue|svelte)$',
+                r'.*/src/app/.*',
+                r'.*/components?/.*\.(js|ts|jsx|tsx)$',
+            ]
+        return patterns
+
+    def get_backend_patterns(self) -> list[str]:
+        """Get backend file classification patterns."""
+        patterns = self.get_value('subagents.impactanalysis.fileClassification.backendPatterns', [])
+        if not patterns:
+            # Fallback to default patterns if config not available
+            return [
+                r'.*\.(cs|java|py|php|rb|go|rs)$',
+                r'.*\.cs$',
+                r'.*Controller\.cs$',
+                r'.*/Models?/.*\.cs$',
+                r'.*/Services?/.*\.cs$',
+                r'.*appsettings.*\.json$',
+                r'.*\.sql$',
+            ]
+        return patterns
 
 
 class ImpactAnalysisPrompts(BasePrompts):

@@ -1,14 +1,14 @@
 # Dev Agents
 
-Welcome to Dev Agents! We devs love building software, but the reality in agile teams is that we spend more than half of our time with tasks _around_ the code: writing docs, reviewing PRs, communicating, researching, checking issues and logs, and so on. **Dev Agents** are here to reduce the painful stuff so we can focus on what matters most: **building cool software**.
+Welcome to Dev Agents! We devs love building software, but the reality in agile teams is that we spend more than half of our time with tasks _around_ the code: writing docs, reviewing PRs, communicating, researching, checking issues and logs, and so on. **Dev Agents** are here to reduce the painful stuff so we can focus on what matters most: **building cool software as a team**.
 
 **Dev Agents** are self-hosted AI teammates that live in your tools and take over docs, reviews, release notes, triage, and more. It’s not just about freeing up **up to 10 hours per developer per week** - it’s about having a _companion_ that prepares work, lowers stress, and cuts the headaches around delivery.
 
-We were tired of the closed-source solutions for dev team work assistants, so here we are. Coming from Java/C#, we love enterprise design patterns and clean code, so you will find quite a bit of it in this repo.
+We were tired of the closed-source solutions for dev team work assistants, so here we are. Coming from Java / C#, we love enterprise design patterns and clean code, so you will find quite a bit of it in this repo.
 
 The project is open source (**AGPLv3**). An optional enterprise license and support (closed-source and managed deployments, customizations, SLAs) are offered by [Codeligence](mailto:sales@codeligence.com).
 
-For CTOs: **multiply output without burning out your best engineers** - with auditability, predictable spend, and no SaaS lock-in.
+For Leads, Heads and CTOs: **multiply output without burning out your best engineers** - with auditability, predictable spend, and no SaaS lock-in.
 
 ## What you get (at a glance)
 

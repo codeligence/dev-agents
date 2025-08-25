@@ -58,7 +58,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/codeligence/dev-agents"
 "Bug Tracker" = "https://github.com/codeligence/dev-agents/issues"
-"Documentation" = "https://docs.dev-agents.ai"
+"Documentation" = "https://dev-agents.ai"
 "Repository" = "https://github.com/codeligence/dev-agents"
 "Source Code" = "https://github.com/codeligence/dev-agents"
 
@@ -85,7 +85,7 @@ dev = [
     "isort>=5.12.0,<6.0.0",
     "mypy>=1.5.0,<2.0.0",
     "ruff>=0.1.0,<1.0.0",
-    "pre-commit>=3.3.0,<4.0.0",
+    "pre-commit>=4.3.0,<5.0.0",
 
     # Code Complexity & Maintainability
     "radon>=6.0.1,<7.0.0",  # Complexity analysis
@@ -132,7 +132,7 @@ docs = [
     "mkdocs-git-revision-date-localized-plugin>=1.4.7,<2.0.0",
     "mkdocs-git-committers-plugin-2>=2.5.0,<3.0.0",
     "mkdocs-minify-plugin>=0.8.0,<1.0.0",
-    "mkdocs-social-plugin>=0.3.0,<1.0.0",
+    "mkdocs-social-plugin>=0.1.0,<1.0.0",
     "pymdown-extensions>=10.16.1,<11.0.0",
     "pillow>=11.3.0,<12.0.0",
     "cairosvg>=2.8.2,<3.0.0",

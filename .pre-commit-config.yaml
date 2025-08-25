@@ -3,6 +3,15 @@
 # See https://pre-commit.com/hooks.html for more hooks
 
 repos:
+  - repo: local
+    hooks:
+      - id: agplv3-header-check
+        name: Check AGPLv3 License Header
+        entry: |
+          bash -c 'for file in $(git diff --cached --name-only --diff-filter=ACM | grep -E "^(src|test)/.*\.py$"); do if ! grep -q "GNU Affero General Public License" "$file"; then echo "Error: $file is missing the AGPLv3 license header."; exit 1; fi; done'
+        language: system
+        files: ^(src|test)/.*\.py$
+
   # Basic file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
@@ -88,7 +97,7 @@ repos:
         description: A static type checker for Python
         language_version: python3.11
         args: ['--config-file', 'pyproject.toml']
-        additional_dependencies: 
+        additional_dependencies:
           - 'types-PyYAML'
           - 'types-requests'
           - 'pydantic'

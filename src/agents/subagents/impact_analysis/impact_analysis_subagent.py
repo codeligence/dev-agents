@@ -1,3 +1,21 @@
+# Copyright (C) 2025 Codeligence
+#
+# This file is part of Dev Agents.
+#
+# Dev Agents is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Dev Agents is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
+
+
 """Impact Analysis Subagent
 
 This subagent orchestrates UI and API impact analysis using CodeResearchAgent
@@ -39,30 +57,12 @@ class ImpactAnalysisSubagent:
 
     def is_frontend_file(self, file_path: str) -> bool:
         """Determine if a file is a frontend file based on its path and extension."""
-        frontend_patterns = [
-            r'.*\.(js|ts|jsx|tsx)$',  # JavaScript/TypeScript files
-            r'.*\.(html|htm)$',  # HTML files
-            r'.*\.(css|scss|sass|less)$',  # Style files
-            r'.*\.(vue|svelte)$',  # Framework files
-            r'.*/src/app/.*',  # Angular app files
-            r'.*/components?/.*\.(js|ts|jsx|tsx)$',  # Component files
-            r'.*/services?/.*\.(js|ts)$',  # Frontend service files
-        ]
+        frontend_patterns = self.config.get_frontend_patterns()
         return any(re.match(pattern, file_path, re.IGNORECASE) for pattern in frontend_patterns)
 
     def is_backend_file(self, file_path: str) -> bool:
         """Determine if a file is a backend file based on its path and extension."""
-        backend_patterns = [
-            r'.*\.cs$',  # C# files
-            r'.*Controller\.cs$',  # Controllers
-            r'.*/Models?/.*\.cs$',  # Model files
-            r'.*/DTOs?/.*\.cs$',  # DTO files
-            r'.*/Contracts?/.*\.cs$',  # Contract files
-            r'.*\.csproj$',  # Project files
-            r'.*appsettings.*\.json$',  # Configuration files
-            r'.*\.sql$',  # SQL files
-            r'.*/Services?/.*\.cs$',  # Service files
-        ]
+        backend_patterns = self.config.get_backend_patterns()
         return any(re.match(pattern, file_path, re.IGNORECASE) for pattern in backend_patterns)
 
     async def _generate_ui_impact_report(self, file_path: str, file_diff: str,

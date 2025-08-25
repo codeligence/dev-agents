@@ -1,0 +1,162 @@
+{
+  "id": 155016530,
+  "iid": 133,
+  "project_id": 15513260,
+  "title": "Feature implementation",
+  "description": "This is a mock GitLab merge request for testing purposes.\n\n## Changes\n- Added new feature\n- Fixed bug in existing functionality\n- Improved performance\n\n## Checklist\n- [x] Tests added\n- [x] Documentation updated\n- [ ] Performance tested",
+  "state": "opened",
+  "imported": false,
+  "imported_from": "none",
+  "created_at": "2023-05-13T07:26:38.402Z",
+  "updated_at": "2023-05-14T03:38:31.354Z",
+  "merged_by": null,
+  "merge_user": null,
+  "merged_at": null,
+  "closed_by": null,
+  "closed_at": null,
+  "target_branch": "main",
+  "source_branch": "feature-implementation",
+  "user_notes_count": 2,
+  "upvotes": 1,
+  "downvotes": 0,
+  "author": {
+    "id": 4155490,
+    "username": "developer",
+    "name": "Test Developer",
+    "state": "active",
+    "avatar_url": "https://secure.gravatar.com/avatar/123456?s=80&d=identicon",
+    "web_url": "https://gitlab.com/developer"
+  },
+  "assignees": [
+    {
+      "id": 5122456,
+      "username": "reviewer1",
+      "name": "Code Reviewer",
+      "state": "active",
+      "avatar_url": "https://secure.gravatar.com/avatar/789012?s=80&d=identicon",
+      "web_url": "https://gitlab.com/reviewer1"
+    }
+  ],
+  "assignee": {
+    "id": 5122456,
+    "username": "reviewer1",
+    "name": "Code Reviewer",
+    "state": "active",
+    "avatar_url": "https://secure.gravatar.com/avatar/789012?s=80&d=identicon",
+    "web_url": "https://gitlab.com/reviewer1"
+  },
+  "reviewers": [
+    {
+      "id": 6133567,
+      "username": "reviewer2",
+      "name": "Another Reviewer",
+      "state": "active",
+      "avatar_url": "https://secure.gravatar.com/avatar/345678?s=80&d=identicon",
+      "web_url": "https://gitlab.com/reviewer2"
+    }
+  ],
+  "source_project_id": 15513260,
+  "target_project_id": 15513260,
+  "labels": ["feature", "enhancement"],
+  "draft": false,
+  "work_in_progress": false,
+  "milestone": {
+    "id": 503236,
+    "iid": 2,
+    "project_id": 15513260,
+    "title": "v1.0",
+    "description": "Version 1.0 milestone",
+    "state": "active",
+    "created_at": "2023-04-05T12:00:00.000Z",
+    "updated_at": "2023-04-05T12:00:00.000Z",
+    "due_date": "2023-06-01",
+    "start_date": "2023-05-01",
+    "web_url": "https://gitlab.com/test-group/test-project/-/milestones/2"
+  },
+  "merge_when_pipeline_succeeds": true,
+  "merge_status": "can_be_merged",
+  "detailed_merge_status": "can_be_merged",
+  "sha": "e82eb4a098e32c796079ca3915e07487fc4db24c",
+  "merge_commit_sha": null,
+  "squash_commit_sha": null,
+  "discussion_locked": null,
+  "should_remove_source_branch": true,
+  "force_remove_source_branch": false,
+  "reference": "!133",
+  "references": {
+    "short": "!133",
+    "relative": "!133",
+    "full": "test-group/test-project!133"
+  },
+  "web_url": "https://gitlab.com/test-group/test-project/-/merge_requests/133",
+  "time_stats": {
+    "time_estimate": 0,
+    "total_time_spent": 0,
+    "human_time_estimate": null,
+    "human_total_time_spent": null
+  },
+  "squash": false,
+  "task_completion_status": {
+    "count": 3,
+    "completed_count": 2
+  },
+  "has_conflicts": false,
+  "blocking_discussions_resolved": true,
+  "approvals_before_merge": null,
+  "subscribed": true,
+  "changes_count": "5",
+  "latest_build_started_at": "2023-05-13T09:46:50.032Z",
+  "latest_build_finished_at": "2023-05-13T09:47:20.706Z",
+  "first_deployed_to_production_at": null,
+  "pipeline": {
+    "id": 538317940,
+    "iid": 1877,
+    "project_id": 15513260,
+    "sha": "e82eb4a098e32c796079ca3915e07487fc4db24c",
+    "ref": "refs/merge-requests/133/merge",
+    "status": "success",
+    "source": "merge_request_event",
+    "created_at": "2023-05-13T09:46:39.560Z",
+    "updated_at": "2023-05-13T09:47:20.706Z",
+    "web_url": "https://gitlab.com/test-group/test-project/-/pipelines/538317940"
+  },
+  "head_pipeline": {
+    "id": 538317940,
+    "iid": 1877,
+    "project_id": 15513260,
+    "sha": "e82eb4a098e32c796079ca3915e07487fc4db24c",
+    "ref": "refs/merge-requests/133/merge",
+    "status": "success",
+    "source": "merge_request_event",
+    "created_at": "2023-05-13T09:46:39.560Z",
+    "updated_at": "2023-05-13T09:47:20.706Z",
+    "web_url": "https://gitlab.com/test-group/test-project/-/pipelines/538317940",
+    "before_sha": "1162f719d711319a2efb2a35566f3bfdadee8bab",
+    "tag": false,
+    "yaml_errors": null,
+    "user": {
+      "id": 4155490,
+      "username": "developer",
+      "name": "Test Developer",
+      "state": "active",
+      "avatar_url": "https://secure.gravatar.com/avatar/123456?s=80&d=identicon",
+      "web_url": "https://gitlab.com/developer"
+    },
+    "started_at": "2023-05-13T09:46:50.032Z",
+    "finished_at": "2023-05-13T09:47:20.697Z",
+    "committed_at": null,
+    "duration": 30,
+    "queued_duration": 10,
+    "coverage": null
+  },
+  "diff_refs": {
+    "base_sha": "1162f719d711319a2efb2a35566f3bfdadee8bab",
+    "head_sha": "e82eb4a098e32c796079ca3915e07487fc4db24c",
+    "start_sha": "1162f719d711319a2efb2a35566f3bfdadee8bab"
+  },
+  "merge_error": null,
+  "first_contribution": false,
+  "user": {
+    "can_merge": true
+  }
+}

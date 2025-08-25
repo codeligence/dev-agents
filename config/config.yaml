@@ -11,18 +11,24 @@ models:
 
 providers:
   devops:
-    url: "@format {env[AZURE_URL]}"
-    organization: "@format {env[AZURE_DEVOPS_ORGANIZATION]}"
-    project: "@format {env[AZURE_DEVOPS_PROJECT]}"
-    pat: "@format {env[AZURE_DEVOPS_PAT]}"
-    repoId: "@format {env[AZURE_DEVOPS_REPOID]}"
+    url: "@jinja {{ env.get('AZURE_URL', '') }}"
+    organization: "@jinja {{ env.get('AZURE_DEVOPS_ORGANIZATION', '') }}"
+    project: "@jinja {{ env.get('AZURE_DEVOPS_PROJECT', '') }}"
+    pat: "@jinja {{ env.get('AZURE_DEVOPS_PAT', '') }}"
+    repoId: "@jinja {{ env.get('AZURE_DEVOPS_REPOID', '') }}"
+    mock: "@jinja {{ env.get('AZURE_DEVOPS_MOCK', 'False') }}"
+  gitlab:
+    api_url: "@jinja {{ env.get('GITLAB_API_URL', '') }}"
+    project_id: "@jinja {{ env.get('GITLAB_PROJECT_ID', '') }}"
+    token: "@jinja {{ env.get('GITLAB_TOKEN', '') }}"
+    mock: "@jinja {{ env.get('GITLAB_MOCK', 'False') }}"
 
 projects:
   default:
     git:
       path: "@jinja {{env.GIT_REPO_PATH or '.'}}"
       defaultBranch: "main"
-      autoPull: true
+      autoPull: "@jinja {{env.GIT_AUTOPULL or 'false'}}"
       pullIntervalSeconds: "@jinja {{env.GIT_PULL_INTERVAL_SECONDS or 120}}"
     pullrequests:
       devops:
@@ -31,7 +37,12 @@ projects:
         project: "@jinja {{ this.providers.devops.project }}"
         pat: "@jinja {{ this.providers.devops.pat }}"
         repoId: "@jinja {{ this.providers.devops.repoId }}"
-        mock: true
+        mock: "@jinja {{ this.providers.devops.mock }}"
+      gitlab:
+        api_url: "@jinja {{ this.providers.gitlab.api_url }}"
+        project_id: "@jinja {{ this.providers.gitlab.project_id }}"
+        token: "@jinja {{ this.providers.gitlab.token }}"
+        mock: "@jinja {{ this.providers.gitlab.mock }}"
     issues:
       devops:
         url: "@jinja {{ this.providers.devops.url }}"
@@ -39,7 +50,12 @@ projects:
         project: "@jinja {{ this.providers.devops.project }}"
         pat: "@jinja {{ this.providers.devops.pat }}"
         repoId: "@jinja {{ this.providers.devops.repoId }}"
-        mock: true
+        mock: "@jinja {{ this.providers.devops.mock }}"
+      gitlab:
+        api_url: "@jinja {{ this.providers.gitlab.api_url }}"
+        project_id: "@jinja {{ this.providers.gitlab.project_id }}"
+        token: "@jinja {{ this.providers.gitlab.token }}"
+        mock: "@jinja {{ this.providers.gitlab.mock }}"
 
 slack:
   bot:
@@ -74,5 +90,34 @@ subagents:
     maxFiles: "@jinja {{env.IMPACT_ANALYSIS_MAX_FILES or 200}}"
     retries: 3
     model: "@jinja {{ this.models.large }}"
+    fileClassification:
+      frontendPatterns:
+        - '.*\.(js|ts|jsx|tsx)$'                    # JavaScript/TypeScript files
+        - '.*\.(html|htm)$'                         # HTML files
+        - '.*\.(css|scss|sass|less|styl)$'          # Style files
+        - '.*\.(vue|svelte)$'                       # Framework files
+        - '.*/src/app/.*'                            # Angular app files
+        - '.*/components?/.*\.(js|ts|jsx|tsx)$'      # Component files
+        - '.*/pages/.*\.(js|ts|jsx|tsx)$'           # Next.js/Nuxt pages
+        - '.*/views/.*\.(js|ts|jsx|tsx|vue)$'       # Vue.js views
+        - '.*/public/.*'                             # Static assets
+        - '.*/assets/.*'                             # Frontend assets
+        - '.*/styles?/.*'                            # Style directories
+        - '.*/static/.*'                             # Static files
+        - '.*\.(json)$.*/(public|assets|static)/'   # Frontend config files
+      backendPatterns:
+        - '.*\.(cs|java|py|php|rb|go|rs)$'          # Server language files
+        - '.*Controller\.(cs|java|py)$'             # Controllers
+        - '.*/Controllers?/.*\.(cs|java|py)$'        # Controller directories
+        - '.*/Models?/.*\.(cs|java|py)$'             # Model files
+        - '.*/DTOs?/.*\.(cs|java|py)$'               # DTO files
+        - '.*/Contracts?/.*\.(cs|java|py)$'          # Contract files
+        - '.*/Services?/.*\.(cs|java|py|js|ts)$'     # Service files
+        - '.*/api/.*\.(js|ts|py|cs|java|php|rb|go)$' # API routes
+        - '.*appsettings.*\.json$'                   # Configuration files
+        - '.*\.(sql|csproj|pom\.xml|requirements\.txt|Gemfile|go\.mod|Cargo\.toml)$' # Project/DB files
+        - '.*/server/.*'                             # Server directories
+        - '.*/backend/.*'                            # Backend directories
+        - '.*/src/main/.*\.(java|kt)$'               # Java/Kotlin main sources
   coderesearch:
     model: "@jinja {{ this.models.small }}"
