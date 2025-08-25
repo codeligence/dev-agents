@@ -1,4 +1,23 @@
+# Copyright (C) 2025 Codeligence
+#
+# This file is part of Dev Agents.
+#
+# Dev Agents is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Dev Agents is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
+
+
 from typing import Optional, Dict, Any, List, TYPE_CHECKING
+
 from core.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
@@ -30,11 +49,11 @@ class ProjectConfig:
 
     def get_provider_config(self, provider_type: str, provider_name: str) -> Optional[Dict[str, Any]]:
         """Get configuration for a specific provider.
-        
+
         Args:
             provider_type: 'pullrequests' or 'issues'
             provider_name: Provider name (e.g., 'devops', 'github', 'jira')
-            
+
         Returns:
             Provider configuration dict or None if not found
         """
@@ -63,13 +82,13 @@ class ProjectConfigFactory:
 
     def get_project_config(self, project_name: str) -> ProjectConfig:
         """Get configuration for a specific project.
-        
+
         Args:
             project_name: Name of the project
-            
+
         Returns:
             ProjectConfig instance
-            
+
         Raises:
             ConfigurationError: If project is not found
         """
@@ -80,9 +99,10 @@ class ProjectConfigFactory:
                 f"Project '{project_name}' not found in configuration. "
                 f"Available projects: {available}"
             )
-        
+
         return ProjectConfig(project_name, self._base_config)
 
     def get_default_project_config(self) -> ProjectConfig:
         """Get the default project configuration."""
         return self.get_project_config("default")
+

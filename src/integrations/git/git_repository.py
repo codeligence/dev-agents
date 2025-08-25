@@ -1,3 +1,21 @@
+# Copyright (C) 2025 Codeligence
+#
+# This file is part of Dev Agents.
+#
+# Dev Agents is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Dev Agents is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
+
+
 import shlex
 import subprocess
 import threading
@@ -5,12 +23,8 @@ import time
 from pathlib import Path
 from typing import Dict, Optional, List
 
-from agents.agents.gitchatbot.models import ChatbotContext
-from core.config import BaseConfig
-from core.config import get_default_config
-from core.project_config import ProjectConfigFactory
-from core.integrations import get_provider_registry
 from core.log import get_logger
+from core.project_config import ProjectConfig
 from integrations.git.changed_file import ChangedFile, ChangedFileSet
 from integrations.git.config import GitRepositoryConfig
 from integrations.git.models import GitDiffContext, DiffMetadata
@@ -33,20 +47,13 @@ class GitRepository:
 
     def __init__(
             self,
-            base_config: Optional[BaseConfig] = None
+            project_config: ProjectConfig
     ) -> None:
-        self.base_config = base_config or get_default_config()
-
-        # Setup project configuration
-        project_factory = ProjectConfigFactory(self.base_config)
-        self.project_config = project_factory.get_default_project_config()
+        self.project_config = project_config
 
         # Use GitRepositoryConfig to get repository path
         git_config = GitRepositoryConfig.from_project_config(self.project_config)
         self.repo_path = Path(git_config.get_repo_dir()).resolve()
-
-        # Setup provider registry
-        self.provider_registry = get_provider_registry()
 
         # Auto-pull with rate limiting if enabled
         self._auto_pull_if_needed(git_config)
@@ -150,73 +157,10 @@ class GitRepository:
             files=sorted(files, key=lambda f: f.path),
         )
 
-    async def get_diff_from_pr(self, pullrequest_id: str, issue_id: Optional[int] = None) -> GitDiffContext:
-        """Get diff context from PR ID with optional WorkItem context.
-
-        Parameters
-        ----------
-        pullrequest_id: Pull Request ID
-        issue_id: Optional Work Item ID for additional context
-
-        Returns
-        -------
-        GitDiffContext with git data and business context from PR/WorkItem
-        """
-        # Get PR details to resolve branches using provider system
-        pr_provider = self.provider_registry.resolve_pullrequest_provider(self.project_config)
-        if not pr_provider:
-            raise ValueError("No pull request provider available for current configuration")
-
-        pr_model = await pr_provider.load(pullrequest_id)
-
-        # Extract branch information from the model using refs lists
-        source_branch = self._resolve_refs_to_branch(pr_model.source_refs)
-        target_branch = self._resolve_refs_to_branch(pr_model.target_refs)
-
-        if not source_branch or not target_branch:
-            raise ValueError(f"Pull request {pullrequest_id} - could not resolve valid source/target references")
-
-        context = f"Pull Request #{pullrequest_id}"
-
-        if issue_id:
-            issue_provider = self.provider_registry.resolve_issue_provider(self.project_config)
-            if issue_provider:
-                issue_model = await issue_provider.load(str(issue_id))
-                # Extract title from context - this is a simplified approach
-                issue_title = f"Issue #{issue_id}"
-                context = f"Pull Request #{pullrequest_id} - {issue_title}\n\n" + issue_model.context
-
-        # Get the actual diff data
-        changed_files = self._get_changed_file_set(source_branch, target_branch, include_patch=True)
-        file_diffs = changed_files.get_file_diffs()
-
-        # Calculate metadata
-        total_files = len(changed_files.files)
-        total_insertions = sum(f.insertions or 0 for f in changed_files.files)
-        total_deletions = sum(f.deletions or 0 for f in changed_files.files)
-
-        metadata = DiffMetadata(
-            total_files_changed=total_files,
-            line_counts={
-                'insertions': total_insertions,
-                'deletions': total_deletions,
-                'total': total_insertions + total_deletions
-            }
-        )
-
-        return GitDiffContext(
-            changed_files=changed_files,
-            file_diffs=file_diffs,
-            source_branch=source_branch,
-            target_branch=target_branch,
-            repo_path=str(self.repo_path),
-            context=context,
-            metadata=metadata,
-        )
 
     def _auto_pull_if_needed(self, git_config: GitRepositoryConfig) -> None:
         """Execute auto-pull with per-repository rate limiting if conditions are met.
-        
+
         Args:
             git_config: GitRepositoryConfig instance for accessing settings
         """
@@ -236,7 +180,7 @@ class GitRepository:
         # Use lock to prevent concurrent pulls for the same repository
         with _pull_locks[repo_path_str]:
             last_pull_time = _last_pull_times.get(repo_path_str, 0)
-            
+
             # Check if enough time has passed since last pull
             if current_time - last_pull_time >= pull_interval:
                 try:
@@ -284,7 +228,7 @@ class GitRepository:
             raise ValueError(f"Branch ref '{branch}' not found (local or remote)")
         return result
 
-    def _resolve_refs_to_branch(self, refs: List[str]) -> Optional[str]:
+    def resolve_refs_to_branch(self, refs: List[str]) -> Optional[str]:
         """Resolve first valid reference from a list of refs (branches/commits)."""
         for ref in refs:
             resolved = self._resolve_branch_safe(ref)

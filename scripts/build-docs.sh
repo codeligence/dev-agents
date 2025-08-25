@@ -30,16 +30,16 @@ log_error() {
 # Check if mkdocs is installed
 check_dependencies() {
     log_info "Checking documentation dependencies..."
-    
+
     if ! command -v mkdocs &> /dev/null; then
         log_error "MkDocs not found. Installing documentation dependencies..."
         pip install -e .[docs]
     else
         log_success "MkDocs found"
     fi
-    
+
     # Check if key plugins are available
-    python -c "import mkdocs_material" 2>/dev/null || {
+    python -c "import material" 2>/dev/null || {
         log_warning "Material theme not found. Installing..."
         pip install -e .[docs]
     }
@@ -48,25 +48,25 @@ check_dependencies() {
 # Build the documentation
 build_docs() {
     log_info "Building documentation..."
-    
+
     # Clean previous build
     if [ -d "site" ]; then
         rm -rf site
         log_info "Cleaned previous build"
     fi
-    
+
     # Set strict mode based on environment variable
     local strict_flag=""
     if [ "${STRICT_BUILD:-true}" = "true" ]; then
         strict_flag="--strict"
     fi
-    
+
     # Build documentation
     mkdocs build $strict_flag
-    
+
     if [ $? -eq 0 ]; then
         log_success "Documentation built successfully in 'site/' directory"
-        
+
         # Show build statistics
         if [ -d "site" ]; then
             local size=$(du -sh site/ | cut -f1)
@@ -83,18 +83,18 @@ build_docs() {
 serve_docs() {
     local host="${DOCS_HOST:-127.0.0.1}"
     local port="${DOCS_PORT:-8000}"
-    
+
     log_info "Starting documentation server..."
     log_info "Documentation will be available at: http://$host:$port"
     log_info "Press Ctrl+C to stop the server"
-    
+
     mkdocs serve --dev-addr="$host:$port"
 }
 
 # Deploy to GitHub Pages (if configured)
 deploy_docs() {
     log_info "Deploying documentation to GitHub Pages..."
-    
+
     # Check if gh-pages branch exists
     if git show-ref --verify --quiet refs/heads/gh-pages; then
         log_info "gh-pages branch found"
@@ -105,9 +105,9 @@ deploy_docs() {
         git commit --allow-empty -m "Initial gh-pages commit"
         git checkout main
     fi
-    
+
     mkdocs gh-deploy --force
-    
+
     if [ $? -eq 0 ]; then
         log_success "Documentation deployed to GitHub Pages"
     else
@@ -119,10 +119,10 @@ deploy_docs() {
 # Validate documentation links and structure
 validate_docs() {
     log_info "Validating documentation..."
-    
+
     # Build first to generate the site
     mkdocs build --quiet
-    
+
     # Check for broken internal links with linkchecker
     log_info "Checking for broken internal links..."
     if command -v linkchecker &> /dev/null; then
@@ -133,7 +133,7 @@ validate_docs() {
             --no-warnings \
             --output=text \
             site/ > linkcheck.log 2>&1 || true
-        
+
         if grep -q "ERROR" linkcheck.log; then
             log_error "Found broken links:"
             grep "ERROR" linkcheck.log
@@ -146,7 +146,7 @@ validate_docs() {
     else
         log_warning "linkchecker not found, skipping link validation"
     fi
-    
+
     # Validate documentation structure
     log_info "Validating documentation structure..."
     python -c "
@@ -187,14 +187,14 @@ if missing_files:
 else:
     print('✅ All navigation files exist')
 "
-    
+
     if [ $? -eq 0 ]; then
         log_success "Documentation structure validation passed"
     else
         log_error "Documentation structure validation failed"
         return 1
     fi
-    
+
     # Check API documentation coverage
     log_info "Validating API documentation coverage..."
     python -c "
@@ -205,14 +205,14 @@ def get_public_classes_and_functions(file_path):
     try:
         with open(file_path, 'r') as f:
             tree = ast.parse(f.read())
-        
+
         public_items = []
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and not node.name.startswith('_'):
                 public_items.append(f'class {node.name}')
             elif isinstance(node, ast.FunctionDef) and not node.name.startswith('_'):
                 public_items.append(f'function {node.name}')
-        
+
         return public_items
     except:
         return []
@@ -222,20 +222,20 @@ src_path = Path('src')
 if src_path.exists():
     python_files = list(src_path.rglob('*.py'))
     python_files = [f for f in python_files if '__pycache__' not in str(f)]
-    
+
     total_items = 0
     for py_file in python_files:
         items = get_public_classes_and_functions(py_file)
         total_items += len(items)
-    
+
     print(f'Found {len(python_files)} Python files with {total_items} public items')
-    
+
     # Check if API documentation exists
     api_docs = Path('docs/api')
     if api_docs.exists():
         api_files = list(api_docs.glob('*.md'))
         print(f'Found {len(api_files)} API documentation files')
-        
+
         if len(api_files) >= 4:
             print('✅ API documentation structure looks complete')
         else:
@@ -252,7 +252,7 @@ manage_versions() {
     local action="$1"
     local version="$2"
     local alias="$3"
-    
+
     case "$action" in
         "list")
             log_info "Available documentation versions:"
@@ -264,7 +264,7 @@ manage_versions() {
                 echo "Usage: $0 version deploy <version> [alias]"
                 exit 1
             fi
-            
+
             log_info "Deploying documentation version: $version"
             if [ -n "$alias" ]; then
                 mike deploy --push --update-aliases "$version" "$alias"
@@ -280,7 +280,7 @@ manage_versions() {
                 echo "Usage: $0 version delete <version>"
                 exit 1
             fi
-            
+
             log_info "Deleting documentation version: $version"
             mike delete --push "$version"
             log_success "Deleted version $version"
@@ -291,7 +291,7 @@ manage_versions() {
                 echo "Usage: $0 version set-default <version>"
                 exit 1
             fi
-            
+
             log_info "Setting default version: $version"
             mike set-default --push "$version"
             log_success "Set $version as default version"
@@ -307,9 +307,9 @@ manage_versions() {
 # Generate comprehensive documentation report
 generate_report() {
     log_info "Generating documentation report..."
-    
+
     local report_file="docs_report_$(date +%Y%m%d_%H%M%S).md"
-    
+
     cat > "$report_file" << EOF
 # Documentation Report
 
@@ -324,12 +324,12 @@ Generated: $(date)
 ## Documentation Statistics
 
 EOF
-    
+
     # Count files
     local total_md=$(find docs/ -name "*.md" | wc -l)
     local api_md=$(find docs/api/ -name "*.md" 2>/dev/null | wc -l || echo "0")
     local total_images=$(find docs/ -name "*.png" -o -name "*.jpg" -o -name "*.gif" -o -name "*.svg" | wc -l)
-    
+
     cat >> "$report_file" << EOF
 - Total Markdown files: $total_md
 - API documentation files: $api_md
@@ -339,7 +339,7 @@ EOF
 ## Navigation Structure
 
 EOF
-    
+
     # Add navigation info
     python -c "
 import yaml
@@ -360,11 +360,11 @@ def print_nav(items, level=0):
             print(f'{indent}- {item}')
 print_nav(nav)
 " >> "$report_file"
-    
+
     echo "" >> "$report_file"
     echo "## Plugin Configuration" >> "$report_file"
     echo "" >> "$report_file"
-    
+
     # Add plugin info
     python -c "
 import yaml
@@ -378,7 +378,7 @@ for plugin in plugins:
     else:
         print(f'- {plugin}: Default configuration')
 " >> "$report_file"
-    
+
     log_success "Documentation report generated: $report_file"
 }
 
@@ -421,26 +421,26 @@ show_help() {
 # Clean build artifacts
 clean_docs() {
     log_info "Cleaning documentation build artifacts..."
-    
+
     if [ -d "site" ]; then
         rm -rf site
         log_success "Removed 'site' directory"
     fi
-    
+
     # Clean any temporary files
     find . -name "*.pyc" -delete 2>/dev/null || true
     find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
-    
+
     log_success "Clean completed"
 }
 
 # Main script logic
 main() {
     local command="${1:-build}"
-    
+
     # Change to script directory
     cd "$(dirname "$0")/.."
-    
+
     case "$command" in
         "build")
             check_dependencies

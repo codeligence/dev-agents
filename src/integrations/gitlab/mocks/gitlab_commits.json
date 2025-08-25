@@ -1,0 +1,53 @@
+[
+  {
+    "id": "e82eb4a098e32c796079ca3915e07487fc4db24c",
+    "short_id": "e82eb4a0",
+    "created_at": "2023-05-13T07:24:35.000Z",
+    "parent_ids": [
+      "6104942438c14ec7bd21c6cd5bd995272b3faff6"
+    ],
+    "title": "Add new feature implementation",
+    "message": "Add new feature implementation\n\nImplements the core functionality for the new feature\nwith comprehensive unit tests.",
+    "author_name": "Test Developer",
+    "author_email": "developer@example.com",
+    "authored_date": "2023-05-13T07:24:35.000Z",
+    "committer_name": "Test Developer",
+    "committer_email": "developer@example.com",
+    "committed_date": "2023-05-13T07:24:35.000Z",
+    "web_url": "https://gitlab.com/test-group/test-project/-/commit/e82eb4a098e32c796079ca3915e07487fc4db24c"
+  },
+  {
+    "id": "6104942438c14ec7bd21c6cd5bd995272b3faff6",
+    "short_id": "61049424",
+    "created_at": "2023-05-13T07:15:21.000Z",
+    "parent_ids": [
+      "1162f719d711319a2efb2a35566f3bfdadee8bab"
+    ],
+    "title": "Fix bug in existing functionality",
+    "message": "Fix bug in existing functionality\n\nAddresses issue #42 by correcting the logic\nin the data processing pipeline.",
+    "author_name": "Test Developer",
+    "author_email": "developer@example.com",
+    "authored_date": "2023-05-13T07:15:21.000Z",
+    "committer_name": "Test Developer",
+    "committer_email": "developer@example.com",
+    "committed_date": "2023-05-13T07:15:21.000Z",
+    "web_url": "https://gitlab.com/test-group/test-project/-/commit/6104942438c14ec7bd21c6cd5bd995272b3faff6"
+  },
+  {
+    "id": "a5391128ffd5bbd6f6ed181ddc52696ab25c947e",
+    "short_id": "a5391128",
+    "created_at": "2023-05-12T18:43:12.000Z",
+    "parent_ids": [
+      "6104942438c14ec7bd21c6cd5bd995272b3faff6"
+    ],
+    "title": "Improve performance in critical section",
+    "message": "Improve performance in critical section\n\nOptimizes database queries and adds caching\nto reduce response time by 50%.",
+    "author_name": "Test Developer",
+    "author_email": "developer@example.com",
+    "authored_date": "2023-05-12T18:43:12.000Z",
+    "committer_name": "Test Developer",
+    "committer_email": "developer@example.com",
+    "committed_date": "2023-05-12T18:43:12.000Z",
+    "web_url": "https://gitlab.com/test-group/test-project/-/commit/a5391128ffd5bbd6f6ed181ddc52696ab25c947e"
+  }
+]

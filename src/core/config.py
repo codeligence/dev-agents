@@ -1,3 +1,21 @@
+# Copyright (C) 2025 Codeligence
+#
+# This file is part of Dev Agents.
+#
+# Dev Agents is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Dev Agents is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
+
+
 from typing import Dict, Any
 import os
 import threading
@@ -15,21 +33,28 @@ logger = get_logger("BaseConfig")
 class BaseConfig:
     """Base configuration class that loads and resolves YAML config with environment variables using Dynaconf."""
 
-    def __init__(self, config_path: str = None):
-        if config_path is None:
-            # Default to config/config.yml relative to project root
-            project_root = Path(__file__).parent.parent.parent
-            config_path = project_root / "config" / "config.yaml"
+    def __init__(self, config_path: str = None, base_config: 'BaseConfig' = None):
+        if base_config is not None:
+            # Copy constructor: copy fields from another BaseConfig instance
+            self._config_path = base_config._config_path
+            self._settings = base_config._settings
+            self._config_data = base_config._config_data
+        else:
+            # Normal constructor: load config from path
+            if config_path is None:
+                # Default to config/config.yml relative to project root
+                project_root = Path(__file__).parent.parent.parent
+                config_path = project_root / "config" / "config.yaml"
 
-        self._config_path = config_path
-        self._settings = self._load_config()
-        # Keep backward compatibility for tests
-        try:
-            self._config_data = self._settings.to_dict()
-        except Exception as e:
-            logger.exception("Failed to load config: {}".format(e))
-            # Fallback to basic dict if to_dict() fails
-            self._config_data = {}
+            self._config_path = config_path
+            self._settings = self._load_config()
+            # Keep backward compatibility for tests
+            try:
+                self._config_data = self._settings.to_dict()
+            except Exception as e:
+                logger.exception("Failed to load config: {}".format(e))
+                # Fallback to basic dict if to_dict() fails
+                self._config_data = {}
 
     def _load_config(self) -> Dynaconf:
         """Load and resolve the YAML configuration file using Dynaconf."""
@@ -40,6 +65,8 @@ class BaseConfig:
         settings = Dynaconf(
             settings_files=[str(self._config_path), str(self._config_path).replace(".yaml", ".custom.yaml")],
             envvar_prefix="",  # Allow all environment variables
+            envvar_default="",
+            ignore_unknown_envvars=True,
             environments=False,
             load_dotenv=True,
             # Set up environment variable resolution for nested keys
