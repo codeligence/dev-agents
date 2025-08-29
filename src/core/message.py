@@ -17,10 +17,15 @@
 
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from datetime import datetime
-from typing import List, Dict
 
-from pydantic_ai.messages import UserPromptPart, TextPart, ModelRequest, ModelResponse
+from pydantic_ai.messages import (
+    ModelRequest,
+    ModelResponse,
+    TextPart,
+    UserPromptPart,
+)
 
 
 class BaseMessage(ABC):
@@ -68,23 +73,25 @@ class BaseMessage(ABC):
 class MessageList:
     """Container for grouped messages with filtering capabilities."""
 
-    def __init__(self, messages: List[BaseMessage] = None):
+    def __init__(self, messages: list[BaseMessage] | None = None):
         self._messages = messages or []
 
     def add_message(self, message: BaseMessage) -> None:
         """Add a message to the list."""
         self._messages.append(message)
 
-    def get_messages(self) -> List[BaseMessage]:
+    def get_messages(self) -> list[BaseMessage]:
         """Get all messages in the list."""
         return self._messages.copy()
 
-    def filter_by_thread_id(self, thread_id: str) -> 'MessageList':
+    def filter_by_thread_id(self, thread_id: str) -> "MessageList":
         """Return a new MessageList containing only messages from the specified thread."""
-        filtered_messages = [msg for msg in self._messages if msg.get_thread_id() == thread_id]
+        filtered_messages = [
+            msg for msg in self._messages if msg.get_thread_id() == thread_id
+        ]
         return MessageList(filtered_messages)
 
-    def group_by_thread_id(self) -> Dict[str, 'MessageList']:
+    def group_by_thread_id(self) -> dict[str, "MessageList"]:
         """Group messages by thread ID and return a dictionary of thread_id -> MessageList."""
         groups = {}
         for message in self._messages:
@@ -94,9 +101,9 @@ class MessageList:
             groups[thread_id].add_message(message)
         return groups
 
-    def get_thread_ids(self) -> List[str]:
+    def get_thread_ids(self) -> list[str]:
         """Get all unique thread IDs in the message list."""
-        return list(set(msg.get_thread_id() for msg in self._messages))
+        return list({msg.get_thread_id() for msg in self._messages})
 
     def __len__(self) -> int:
         return len(self._messages)
@@ -104,10 +111,10 @@ class MessageList:
     def __bool__(self) -> bool:
         return bool(self._messages)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[BaseMessage]:
         return iter(self._messages)
 
-    def to_pydantic_chat_history(self) -> List[ModelRequest | ModelResponse]:
+    def to_pydantic_chat_history(self) -> list[ModelRequest | ModelResponse]:
         """Convert messages to Pydantic AI chat history format with alternating structure.
 
         Groups consecutive messages by role (user vs bot) and creates alternating
@@ -134,23 +141,39 @@ class MessageList:
             else:
                 # Role changed, process current group and start new one
                 if current_group:
-                    history.append(self._create_message_part(current_group, current_is_bot))
+                    history.append(
+                        self._create_message_part(
+                            current_group, current_is_bot or False
+                        )
+                    )
                 current_group = [message]
                 current_is_bot = is_bot
 
         # Process the last group
         if current_group:
-            history.append(self._create_message_part(current_group, current_is_bot))
+            history.append(
+                self._create_message_part(current_group, current_is_bot or False)
+            )
 
         return history
 
-    def _create_message_part(self, messages: List[BaseMessage], is_bot: bool) -> ModelRequest | ModelResponse:
+    def _create_message_part(
+        self, messages: list[BaseMessage], is_bot: bool
+    ) -> ModelRequest | ModelResponse:
         """Create ModelRequest or ModelResponse from a group of messages with same role."""
         if is_bot:
             # Bot messages become ModelResponse with list of TextPart
-            parts = [TextPart(content=msg.get_formatted_message()) for msg in messages]
-            return ModelResponse(parts=parts)
+            text_parts = [
+                TextPart(content=msg.get_formatted_message()) for msg in messages
+            ]
+            return ModelResponse(
+                parts=text_parts  # type: ignore[arg-type]  # TextPart is valid for ModelResponse
+            )
         else:
             # User messages become ModelRequest with list of UserPromptPart
-            parts = [UserPromptPart(content=msg.get_formatted_message()) for msg in messages]
-            return ModelRequest(parts=parts)
+            user_parts = [
+                UserPromptPart(content=msg.get_formatted_message()) for msg in messages
+            ]
+            return ModelRequest(
+                parts=user_parts  # type: ignore[arg-type]  # UserPromptPart is valid for ModelRequest
+            )

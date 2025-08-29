@@ -18,33 +18,33 @@
 
 """AG-UI message implementation for converting AG-UI protocol messages to BaseMessage format."""
 
-from datetime import datetime
-from typing import Optional
 from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
 
-from core.message import BaseMessage
+from core.message import BaseMessage, MessageList
 
 
 @dataclass
 class AGUIMessage(BaseMessage):
     """Implementation of BaseMessage for AG-UI protocol messages.
-    
+
     Converts AG-UI Message objects to the internal BaseMessage interface
     used by the agent framework.
     """
-    
+
     message_id: str
     role: str  # "user", "assistant", "system", "tool", "developer"
     content: str
-    name: Optional[str] = None
-    timestamp: Optional[datetime] = None
+    name: str | None = None
+    timestamp: datetime | None = None
     thread_id: str = "default"
-    
-    def __post_init__(self):
+
+    def __post_init__(self) -> None:
         """Set default timestamp if not provided."""
         if self.timestamp is None:
             self.timestamp = datetime.now()
-    
+
     def get_user_name(self) -> str:
         """Get the display name of the message sender."""
         if self.name:
@@ -61,42 +61,44 @@ class AGUIMessage(BaseMessage):
             return "Developer"
         else:
             return self.role.title()
-    
+
     def get_user_id(self) -> str:
         """Get the unique identifier of the message sender."""
         return f"{self.role}_{self.message_id}"
-    
+
     def get_message_content(self) -> str:
         """Get the text content of the message."""
         return self.content
-    
+
     def get_message_date(self) -> datetime:
         """Get the timestamp when the message was sent."""
-        return self.timestamp
-    
+        return self.timestamp or datetime.now()
+
     def get_thread_id(self) -> str:
         """Get the unique identifier of the thread this message belongs to."""
         return self.thread_id
-    
+
     def is_bot(self) -> bool:
         """Check if this message was sent by a bot."""
         return self.role in ("assistant", "system", "tool")
 
 
-def convert_agui_messages_to_message_list(agui_messages: list, thread_id: str = "default") -> 'MessageList':
+def convert_agui_messages_to_message_list(
+    agui_messages: list[Any], thread_id: str = "default"
+) -> "MessageList":
     """Convert list of AG-UI Message objects to MessageList.
-    
+
     Args:
         agui_messages: List of AG-UI Message dictionaries/objects
         thread_id: Thread identifier for all messages
-        
+
     Returns:
         MessageList containing converted AGUIMessage objects
     """
     from core.message import MessageList
-    
-    converted_messages = []
-    
+
+    converted_messages: list[BaseMessage] = []
+
     for msg in agui_messages:
         # Handle both dict and object forms
         if isinstance(msg, dict):
@@ -105,7 +107,7 @@ def convert_agui_messages_to_message_list(agui_messages: list, thread_id: str = 
                 role=msg.get("role", "user"),
                 content=msg.get("content", ""),
                 name=msg.get("name"),
-                thread_id=thread_id
+                thread_id=thread_id,
             )
         else:
             # Assume it's already a proper Message object with attributes
@@ -114,9 +116,9 @@ def convert_agui_messages_to_message_list(agui_messages: list, thread_id: str = 
                 role=getattr(msg, "role", "user"),
                 content=getattr(msg, "content", ""),
                 name=getattr(msg, "name", None),
-                thread_id=thread_id
+                thread_id=thread_id,
             )
-        
+
         converted_messages.append(agui_msg)
-    
+
     return MessageList(converted_messages)

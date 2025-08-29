@@ -16,18 +16,20 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any
 import asyncio
 import queue
 import signal
 import threading
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Dict, Set
 
-from core.log import get_logger, set_context_token, reset_context_token
-from core.message import MessageList, BaseMessage
-from integrations.slack.slack_client_service import SlackClientService
+from core.config import get_default_config
+from core.log import get_logger, reset_context_token, set_context_token
+from core.message import BaseMessage, MessageList
 from core.protocols.message_consumer_protocols import MessageConsumer
+from integrations.slack.models import SlackBotConfig
+from integrations.slack.slack_client_service import SlackClientService
 
 
 @dataclass
@@ -62,9 +64,6 @@ class SlackMessage(BaseMessage):
         return self.is_from_bot
 
 
-
-
-
 class SlackBotService:
     """Core service for Slack bot message processing."""
 
@@ -72,21 +71,25 @@ class SlackBotService:
         self.consumer = consumer
         self.processing_timeout = processing_timeout
         self.logger = get_logger("SlackBotService")
-        self.slack_service = SlackClientService()
+        self.slack_service = SlackClientService(SlackBotConfig(get_default_config()))
 
         # Thread management
-        self.active_threads: Set[str] = set()
-        self.thread_locks: Dict[str, asyncio.Lock] = {}
+        self.active_threads: set[str] = set()
+        self.thread_locks: dict[str, asyncio.Lock] = {}
         self.main_lock = asyncio.Lock()
 
         # Message queue for thread communication
-        self.message_queue = queue.Queue()
+        self.message_queue: queue.Queue[dict[str, Any]] = queue.Queue()
 
         # Shutdown management
-        self.shutdown_event = threading.Event()  # Use threading.Event for cross-thread signaling
-        self.asyncio_shutdown_event = None  # Will be created in asyncio thread
-        self.asyncio_thread = None
-        self.asyncio_loop = None
+        self.shutdown_event = (
+            threading.Event()
+        )  # Use threading.Event for cross-thread signaling
+        self.asyncio_shutdown_event: asyncio.Event | None = (
+            None  # Will be created in asyncio thread
+        )
+        self.asyncio_thread: threading.Thread | None = None
+        self.asyncio_loop: asyncio.AbstractEventLoop | None = None
 
         # Set up message callback
         self.slack_service.set_message_callback(self._handle_new_message)
@@ -94,20 +97,24 @@ class SlackBotService:
         # Set up signal handlers for graceful shutdown
         self._setup_signal_handlers()
 
-    def start(self):
+    def start(self) -> None:
         """Start the Slack bot service with proper thread separation."""
         self.logger.info("Starting Slack Bot Service")
 
         # Validate Slack configuration
         if not self.slack_service.bot_token or not self.slack_service.channel_id:
-            self.logger.error("Missing Slack credentials. Please set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID")
+            self.logger.error(
+                "Missing Slack credentials. Please set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID"
+            )
             return
 
         self.logger.info(f"Connected to Slack channel: {self.slack_service.channel_id}")
 
         # Start the asyncio thread for message processing
         self.logger.info("Starting asyncio message processing thread...")
-        self.asyncio_thread = threading.Thread(target=self._run_asyncio_loop, daemon=False)
+        self.asyncio_thread = threading.Thread(
+            target=self._run_asyncio_loop, daemon=False
+        )
         self.asyncio_thread.start()
 
         # Start Socket Mode client for real-time messages (daemon thread)
@@ -124,7 +131,11 @@ class SlackBotService:
             raise
         finally:
             # Signal asyncio thread to shutdown
-            if self.asyncio_loop and not self.asyncio_loop.is_closed():
+            if (
+                self.asyncio_loop
+                and not self.asyncio_loop.is_closed()
+                and self.asyncio_shutdown_event
+            ):
                 self.asyncio_loop.call_soon_threadsafe(self.asyncio_shutdown_event.set)
 
             # Wait for asyncio thread to finish
@@ -133,36 +144,39 @@ class SlackBotService:
 
             self.logger.info("Slack Bot Service shutdown complete")
 
-    def _handle_new_message(self, raw_message: dict):
+    def _handle_new_message(self, raw_message: dict[str, Any]) -> None:
         """Handle a new message from the Socket Mode client (runs in daemon thread)."""
         try:
             # Put raw message in queue for asyncio thread to process
             self.message_queue.put(raw_message)
 
             # Extract thread_ts for logging
-            thread_ts = raw_message.get("thread_ts", raw_message.get("messageId", "unknown"))
+            thread_ts = raw_message.get(
+                "thread_ts", raw_message.get("messageId", "unknown")
+            )
             self.logger.debug(f"Raw message queued for processing: {thread_ts}")
 
         except Exception as e:
             self.logger.error(f"Error handling new message: {str(e)}")
 
-    def _setup_signal_handlers(self):
+    def _setup_signal_handlers(self) -> None:
         """Set up signal handlers for graceful shutdown."""
-        def signal_handler(signum, frame):
+
+        def signal_handler(signum: int, _frame: Any) -> None:
             self.logger.info(f"Received signal {signum}, initiating shutdown...")
             # Signal shutdown using threading.Event (thread-safe)
             self.shutdown_event.set()
 
         # Register handlers for common termination signals
-        signal.signal(signal.SIGINT, signal_handler)   # Ctrl+C
+        signal.signal(signal.SIGINT, signal_handler)  # Ctrl+C
         signal.signal(signal.SIGTERM, signal_handler)  # Process termination
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Trigger graceful shutdown."""
         self.logger.info("Shutdown requested")
         self.shutdown_event.set()
 
-    def _run_asyncio_loop(self):
+    def _run_asyncio_loop(self) -> None:
         """Run the asyncio event loop in a dedicated thread."""
         # Create new event loop for this thread
         self.asyncio_loop = asyncio.new_event_loop()
@@ -180,12 +194,12 @@ class SlackBotService:
             self.asyncio_loop.close()
             self.logger.info("Asyncio message processing thread stopped")
 
-    async def _message_queue_processor(self):
+    async def _message_queue_processor(self) -> None:
         """Process messages from queue in asyncio context."""
         while True:
             try:
                 # Check for shutdown
-                if self.asyncio_shutdown_event.is_set():
+                if self.asyncio_shutdown_event and self.asyncio_shutdown_event.is_set():
                     self.logger.info("Asyncio shutdown event received")
                     break
 
@@ -213,39 +227,53 @@ class SlackBotService:
                     # Extract unique (channel_id, thread_id) pairs
                     unique_threads = set()
                     for raw_message in raw_messages:
-                        channel_id = raw_message.get('channelId', 'unknown')
-                        thread_id = raw_message.get('thread_ts', raw_message.get('messageId', 'unknown'))
-                        message_id = raw_message.get('messageId', 'unknown')
-                        username = raw_message.get('username', 'unknown')
-                        content = raw_message.get('content', '')
+                        channel_id = raw_message.get("channelId", "unknown")
+                        thread_id = raw_message.get(
+                            "thread_ts", raw_message.get("messageId", "unknown")
+                        )
+                        message_id = raw_message.get("messageId", "unknown")
+                        username = raw_message.get("username", "unknown")
+                        content = raw_message.get("content", "")
                         content_preview = content[:100]
-                        
-                        self.logger.debug(f"Raw message: {username}: {content_preview} (thread: {thread_id})")
-                        
+
+                        self.logger.debug(
+                            f"Raw message: {username}: {content_preview} (thread: {thread_id})"
+                        )
+
                         # Check if this is a top-level message (not a thread response)
                         if thread_id == message_id:
                             # Top-level message: only process if bot is explicitly mentioned
                             if self.slack_service.is_bot_mentioned(content):
-                                self.logger.info(f"Bot mentioned in top-level message from {username}, will process")
+                                self.logger.info(
+                                    f"Bot mentioned in top-level message from {username}, will process"
+                                )
                                 unique_threads.add((channel_id, thread_id))
                             else:
-                                self.logger.debug(f"Bot not mentioned in top-level message from {username}, skipping")
+                                self.logger.debug(
+                                    f"Bot not mentioned in top-level message from {username}, skipping"
+                                )
                         else:
                             # Thread response: always process
-                            self.logger.debug(f"Thread response from {username}, will process")
+                            self.logger.debug(
+                                f"Thread response from {username}, will process"
+                            )
                             unique_threads.add((channel_id, thread_id))
 
-                    self.logger.info(f"Processing {len(raw_messages)} raw messages into {len(unique_threads)} unique threads")
+                    self.logger.info(
+                        f"Processing {len(raw_messages)} raw messages into {len(unique_threads)} unique threads"
+                    )
 
                     # Process each unique thread
                     for channel_id, thread_id in unique_threads:
-                        asyncio.create_task(self._process_messages(thread_id, channel_id))
+                        asyncio.create_task(
+                            self._process_messages(thread_id, channel_id)
+                        )
 
             except Exception as e:
                 self.logger.error(f"Error in message queue processor: {str(e)}")
                 await asyncio.sleep(1)  # Wait before retrying
 
-    async def _process_messages(self, thread_id: str, channel_id: str):
+    async def _process_messages(self, thread_id: str, channel_id: str) -> None:
         """Process messages for a specific thread with conversation loading and thread-safe locking."""
         # Get or create thread lock
         async with self.main_lock:
@@ -259,7 +287,9 @@ class SlackBotService:
                 async with thread_lock:
                     # Check if thread is already being processed
                     if thread_id in self.active_threads:
-                        self.logger.info(f"Thread {thread_id} is already being processed, skipping")
+                        self.logger.info(
+                            f"Thread {thread_id} is already being processed, skipping"
+                        )
                         return
 
                     # Mark thread as active
@@ -270,18 +300,26 @@ class SlackBotService:
 
                     try:
                         # Load full conversation using existing Slack client method
-                        self.logger.info(f"Loading conversation for thread {thread_id} in channel {channel_id}")
-                        slack_messages = self.slack_service.get_thread_conversation(channel_id, thread_id)
+                        self.logger.info(
+                            f"Loading conversation for thread {thread_id} in channel {channel_id}"
+                        )
+                        slack_messages = self.slack_service.get_thread_conversation(
+                            channel_id, thread_id
+                        )
 
                         # Convert to SlackMessage objects using existing method
                         processed_messages = [
-                            self.slack_service.create_slack_message_from_api(msg, channel_id)
+                            self.slack_service.create_slack_message_from_api(
+                                msg, channel_id
+                            )
                             for msg in slack_messages
                         ]
 
                         # Create MessageList and call consumer
                         message_list = MessageList(processed_messages)
-                        self.logger.info(f"Processing thread {thread_id} with {len(message_list)} messages")
+                        self.logger.info(
+                            f"Processing thread {thread_id} with {len(message_list)} messages"
+                        )
 
                         # Consume messages
                         await self.consumer.consume(message_list)
@@ -289,16 +327,22 @@ class SlackBotService:
                         self.logger.info(f"Successfully processed thread {thread_id}")
 
                     except Exception as e:
-                        self.logger.error(f"Error processing thread {thread_id}: {str(e)}")
+                        self.logger.error(
+                            f"Error processing thread {thread_id}: {str(e)}"
+                        )
 
                     finally:
                         # Clean up
                         reset_context_token(token)
                         self.active_threads.discard(thread_id)
 
-        except asyncio.TimeoutError:
-            self.logger.error(f"Thread {thread_id} processing timed out after {self.processing_timeout}s")
+        except TimeoutError:
+            self.logger.error(
+                f"Thread {thread_id} processing timed out after {self.processing_timeout}s"
+            )
             self.active_threads.discard(thread_id)
         except Exception as e:
-            self.logger.error(f"Unexpected error processing thread {thread_id}: {str(e)}")
+            self.logger.error(
+                f"Unexpected error processing thread {thread_id}: {str(e)}"
+            )
             self.active_threads.discard(thread_id)

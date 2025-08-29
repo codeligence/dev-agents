@@ -19,12 +19,14 @@
 """Base agent implementations for common patterns."""
 
 from abc import abstractmethod
-from typing import Optional
-from pydantic_ai import Agent as PydanticAgent, RunContext
+from typing import Any, cast
+
+from pydantic_ai import Agent as PydanticAgent
+from pydantic_ai import RunContext
 
 from core.exceptions import AgentGracefulExit
-from core.protocols.agent_protocols import Agent, AgentExecutionContext
 from core.log import get_logger
+from core.protocols.agent_protocols import Agent, AgentExecutionContext
 
 
 class PydanticAIAgent(Agent):
@@ -45,11 +47,11 @@ class PydanticAIAgent(Agent):
             context: Execution context providing access to messages, config, and communication
         """
         self.context = context
-        self.result: Optional[str] = None
+        self.result: str | None = None
         self.logger = get_logger(self.__class__.__name__)
 
         # Subclasses must set up self.agent (PydanticAgent instance)
-        self.agent: Optional[PydanticAgent] = None
+        self.agent: PydanticAgent[Any, Any] | None = None
 
     @abstractmethod
     def setup_agent(self) -> None:
@@ -63,7 +65,7 @@ class PydanticAIAgent(Agent):
         """
         ...
 
-    def get_dependencies(self):
+    def get_dependencies(self) -> Any:
         """Get dependencies for the PydanticAI agent.
 
         Returns:
@@ -71,7 +73,9 @@ class PydanticAIAgent(Agent):
         """
         return None
 
-    async def send_toolcall_message(self, ctx: RunContext, fallback_message: Optional[str] = None) -> None:
+    async def send_toolcall_message(
+        self, ctx: RunContext[Any], fallback_message: str | None = None
+    ) -> None:
         """
         Some models provide a message for the user when calling tools. Use it to inform the user.
 
@@ -93,7 +97,7 @@ class PydanticAIAgent(Agent):
         elif fallback_message:
             await self.context.send_status(fallback_message)
 
-    async def run(self):
+    async def run(self) -> str:
         """Execute the agent using standard PydanticAI flow.
 
         Template method that handles:
@@ -111,7 +115,9 @@ class PydanticAIAgent(Agent):
             self.setup_agent()
 
         if self.agent is None:
-            raise RuntimeError("setup_agent() must set self.agent to a PydanticAgent instance")
+            raise RuntimeError(
+                "setup_agent() must set self.agent to a PydanticAgent instance"
+            )
 
         self.logger.info(f"Starting {self.__class__.__name__} execution")
 
@@ -121,12 +127,17 @@ class PydanticAIAgent(Agent):
 
             if not message_list:
                 self.logger.warning("No messages to respond to")
-                await self.context.send_response("I don't see any messages to respond to. Please send me a message!")
-                return
+                response = (
+                    "I don't see any messages to respond to. Please send me a message!"
+                )
+                await self.context.send_response(response)
+                return response
 
             # Get chat history for processing
             chat_history = message_list.to_pydantic_chat_history()
-            self.logger.info(f"Processing conversation with {len(chat_history)} message groups")
+            self.logger.info(
+                f"Processing conversation with {len(chat_history)} message groups"
+            )
 
             # Use PydanticAI to generate response with full chat history
             self.logger.info("Calling PydanticAI agent with chat history...")
@@ -140,11 +151,15 @@ class PydanticAIAgent(Agent):
 
             response = result.output
 
-            self.logger.info(f"Generated response: {response[:100]}..." if len(response) > 100 else f"Generated response: {response}")
+            self.logger.info(
+                f"Generated response: {response[:100]}..."
+                if len(response) > 100
+                else f"Generated response: {response}"
+            )
             await self.context.send_response(response)
 
             self.result = response
-            return response
+            return cast("str", response)
 
         except AgentGracefulExit:
             # Re-raise without interception - let it propagate up naturally

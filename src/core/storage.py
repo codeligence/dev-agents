@@ -16,10 +16,10 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
+import json
 
 from core.config import BaseConfig, get_default_config
 from core.log import get_logger
@@ -70,7 +70,7 @@ class BaseStorage(ABC):
 class FileStorage(BaseStorage):
     """File-based storage implementation using JSON files."""
 
-    def __init__(self, base_config: BaseConfig = None):
+    def __init__(self, base_config: BaseConfig | None = None):
         """
         Initialize FileStorage with configuration.
 
@@ -81,7 +81,7 @@ class FileStorage(BaseStorage):
         self.logger = get_logger("FileStorage")
 
         # Get storage directory from config
-        storage_dir = self._base_config.get_value('core.storage.file.dir', './storage')
+        storage_dir = self._base_config.get_value("core.storage.file.dir", "./storage")
         self.storage_dir = Path(storage_dir)
 
         # Ensure storage directory exists
@@ -110,7 +110,7 @@ class FileStorage(BaseStorage):
                 self.logger.debug(f"No stored file found for key '{key}'")
                 return default
 
-            with open(file_path, 'r') as f:
+            with Path(file_path).open() as f:
                 value = json.load(f)
 
             self.logger.debug(f"Retrieved value for key '{key}' from {file_path}")
@@ -131,7 +131,7 @@ class FileStorage(BaseStorage):
         try:
             file_path = self._get_file_path(key)
 
-            with open(file_path, 'w') as f:
+            with Path(file_path).open("w") as f:
                 json.dump(value, f, indent=2)
 
             self.logger.debug(f"Stored value for key '{key}' at {file_path}")
@@ -165,10 +165,10 @@ class FileStorage(BaseStorage):
 
 
 # Global storage cache - similar to logger cache pattern
-_storage_cache = {}
+_storage_cache: dict[str, BaseStorage] = {}
 
 
-def get_storage(config: Optional[BaseConfig] = None) -> BaseStorage:
+def get_storage(config: BaseConfig | None = None) -> BaseStorage:
     """
     Get a global storage instance based on configuration.
 
@@ -188,7 +188,7 @@ def get_storage(config: Optional[BaseConfig] = None) -> BaseStorage:
         config = get_default_config()
 
     # Create cache key based on config values
-    storage_file_dir = config.get_value('core.storage.file.dir')
+    storage_file_dir = config.get_value("core.storage.file.dir")
     cache_key = f"file:{storage_file_dir}" if storage_file_dir else "default"
 
     # Return cached instance if available
@@ -202,7 +202,9 @@ def get_storage(config: Optional[BaseConfig] = None) -> BaseStorage:
     _storage_cache[cache_key] = storage_instance
 
     logger = get_logger("GlobalStorage")
-    logger.info(f"Created global storage instance: {type(storage_instance).__name__} (cache_key: {cache_key})")
+    logger.info(
+        f"Created global storage instance: {type(storage_instance).__name__} (cache_key: {cache_key})"
+    )
 
     return storage_instance
 
@@ -218,14 +220,11 @@ def _create_storage_instance(config: BaseConfig) -> BaseStorage:
         BaseStorage instance
     """
     # Check for file storage configuration
-    storage_file_dir = config.get_value('core.storage.file.dir')
+    storage_file_dir = config.get_value("core.storage.file.dir")
     if storage_file_dir:
         return FileStorage(config)
 
     # Future: Add other storage types here
-    # storage_redis_url = config.get_value('storage.redis.url')
-    # if storage_redis_url:
-    #     return RedisStorage(config)
 
     # Default fallback to file storage
     return FileStorage(config)

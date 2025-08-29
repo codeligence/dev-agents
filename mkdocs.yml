@@ -56,58 +56,22 @@ theme:
     text: Roboto
     code: Roboto Mono
   favicon: assets/favicon.png
-  logo: assets/logo.png
+  logo: assets/logo.svg
   icon:
     logo: logo
 
 nav:
   - Home: index.md
-  - Getting Started:
-    - Installation: installation.md
-    - Quick Start: quick-start.md
-    - Configuration Overview: configuration/index.md
+  - Quick Start: quick-start.md
   - Configuration:
-    - configuration/index.md
-    - Slack Integration: configuration/slack.md
-    - Azure DevOps: configuration/azure-devops.md
-    - AI Models: configuration/ai-models.md
-    - Environment Variables: configuration/environment.md
-    - Advanced Configuration: configuration/advanced.md
-  - User Guide:
-    - Basic Usage: user-guide/basic-usage.md
-    - Slack Commands: user-guide/slack-commands.md
-    - Impact Analysis: user-guide/impact-analysis.md
-    - Code Research: user-guide/code-research.md
-    - Troubleshooting: troubleshooting.md
-  - Integrations:
-    - integrations/index.md
-    - Slack Bot Setup: integrations/slack-setup.md
-    - Azure DevOps Setup: integrations/azure-devops-setup.md
-    - Git Repository: integrations/git-repository.md
-    - LLM Providers: integrations/llm-providers.md
-  - Developer Guide:
-    - Architecture: developer/architecture.md
-    - Agent Development: developer/agents.md
-    - Protocols & Interfaces: developer/protocols.md
-    - Configuration System: developer/configuration.md
-    - Breaking Changes: developer/breaking-changes.md
-    - Testing: developer/testing.md
-    - Contributing: developer/contributing.md
-  - Examples:
-    - examples/index.md
-    - Basic Usage: examples/basic-usage.md
-    - Custom Agents: examples/custom-agents.md
-    - Integration Examples: examples/integrations.md
-    - Advanced Use Cases: examples/advanced.md
-  - Migration Guides:
-    - migrations/index.md
-    - Version 1.0.0 Baseline: migrations/v1.0.0-baseline.md
-  - API Reference:
-    - api/index.md
-    - Core Framework: api/core.md
-    - Agents: api/agents.md
-    - Integrations: api/integrations.md
-    - Protocols: api/protocols.md
+    - Environment Variables: configuration/environment-variables.md
+    - config.yaml: configuration/config-yaml.md
+    - prompts.yaml: configuration/prompts-yaml.md
+    - Integrations:
+      - Git: configuration/integrations/git.md
+      - Slack: configuration/integrations/slack.md
+      - Azure DevOps: configuration/integrations/azure-devops.md
+      - GitLab: configuration/integrations/gitlab.md
 
 plugins:
   - search:
@@ -120,9 +84,6 @@ plugins:
       minify_css: true
       htmlmin_opts:
         remove_comments: true
-  - redirects:
-      redirect_maps:
-        'old-getting-started.md': 'installation.md'
   - include-markdown
   - mkdocstrings:
       default_handler: python
@@ -174,10 +135,6 @@ plugins:
       timezone: UTC
       locale: en
       fallback_to_build_date: true
-  - git-committers:
-      repository: .
-      branch: main
-      docs_path: docs/
   - social:
       enabled: !ENV [CI, false]  # Only enable in CI to avoid local build issues
       cards: true

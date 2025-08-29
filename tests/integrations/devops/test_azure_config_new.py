@@ -16,9 +16,10 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import pytest
-import tempfile
+from pathlib import Path
 import os
+import tempfile
+
 from core.config import BaseConfig
 from integrations.devops.config import AzureDevOpsConfig
 
@@ -34,7 +35,7 @@ class TestAzureDevOpsConfigNew:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         azure_config = AzureDevOpsConfig(config_data)
 
@@ -43,7 +44,7 @@ class TestAzureDevOpsConfigNew:
         assert azure_config.get_project() == "test-project"
         assert azure_config.get_pat() == "test-token"
         assert azure_config.get_repo_id() == "test-repo-id"
-        assert azure_config.get_use_mocks() == False
+        assert not azure_config.get_use_mocks()
 
     def test_empty_dict_constructor(self):
         """Test AzureDevOpsConfig initialization with empty dictionary."""
@@ -54,7 +55,7 @@ class TestAzureDevOpsConfigNew:
         assert azure_config.get_project() is None
         assert azure_config.get_pat() is None
         assert azure_config.get_repo_id() is None
-        assert azure_config.get_use_mocks() == False  # Should default to False
+        assert not azure_config.get_use_mocks()  # Should default to False
 
     def test_none_constructor(self):
         """Test AzureDevOpsConfig initialization with None."""
@@ -65,29 +66,29 @@ class TestAzureDevOpsConfigNew:
         assert azure_config.get_project() is None
         assert azure_config.get_pat() is None
         assert azure_config.get_repo_id() is None
-        assert azure_config.get_use_mocks() == False
+        assert not azure_config.get_use_mocks()
 
     def test_mock_setting_variations(self):
         """Test different mock setting variations."""
         # Test boolean true
         config = AzureDevOpsConfig({"mock": True})
-        assert config.get_use_mocks() == True
+        assert config.get_use_mocks()
 
         # Test string 'true'
         config = AzureDevOpsConfig({"mock": "true"})
-        assert config.get_use_mocks() == True
+        assert config.get_use_mocks()
 
         # Test string 'false'
         config = AzureDevOpsConfig({"mock": "false"})
-        assert config.get_use_mocks() == False
+        assert not config.get_use_mocks()
 
         # Test integer 1
         config = AzureDevOpsConfig({"mock": 1})
-        assert config.get_use_mocks() == True
+        assert config.get_use_mocks()
 
         # Test integer 0
         config = AzureDevOpsConfig({"mock": 0})
-        assert config.get_use_mocks() == False
+        assert not config.get_use_mocks()
 
     def test_is_configured_with_complete_config(self):
         """Test is_configured with all required fields."""
@@ -96,20 +97,20 @@ class TestAzureDevOpsConfigNew:
             "organization": "test-org",
             "project": "test-project",
             "pat": "test-token",
-            "repoId": "test-repo-id"
+            "repoId": "test-repo-id",
         }
         azure_config = AzureDevOpsConfig(config_data)
-        assert azure_config.is_configured() == True
+        assert azure_config.is_configured()
 
     def test_is_configured_with_missing_fields(self):
         """Test is_configured with missing required fields."""
         config_data = {
             "url": "https://dev.azure.com",
-            "organization": "test-org"
+            "organization": "test-org",
             # Missing project, pat, repoId
         }
         azure_config = AzureDevOpsConfig(config_data)
-        assert azure_config.is_configured() == False
+        assert not azure_config.is_configured()
 
     def test_is_configured_with_empty_fields(self):
         """Test is_configured with empty string fields."""
@@ -118,10 +119,10 @@ class TestAzureDevOpsConfigNew:
             "organization": "test-org",
             "project": "test-project",
             "pat": "test-token",
-            "repoId": "test-repo-id"
+            "repoId": "test-repo-id",
         }
         azure_config = AzureDevOpsConfig(config_data)
-        assert azure_config.is_configured() == False
+        assert not azure_config.is_configured()
 
     def test_legacy_format_extraction(self):
         """Test extracting config from old azure.devops.* format."""
@@ -135,13 +136,13 @@ azure:
     repoId: "test-repo-id"
     mock: false
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(config_content)
             temp_path = f.name
 
         try:
             base_config = BaseConfig(temp_path)
-            config_data = base_config.get_value('azure.devops', {})
+            config_data = base_config.get_value("azure.devops", {})
             azure_config = AzureDevOpsConfig(config_data)
 
             assert azure_config.get_url() == "https://dev.azure.com"
@@ -149,14 +150,14 @@ azure:
             assert azure_config.get_project() == "test-project"
             assert azure_config.get_pat() == "test-token"
             assert azure_config.get_repo_id() == "test-repo-id"
-            assert azure_config.get_use_mocks() == False
+            assert not azure_config.get_use_mocks()
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink()
 
     def test_with_env_vars(self):
         """Test configuration with environment variable resolution."""
-        os.environ['TEST_AZURE_URL'] = 'https://env.azure.com'
-        os.environ['TEST_AZURE_ORG'] = 'env-org'
+        os.environ["TEST_AZURE_URL"] = "https://env.azure.com"
+        os.environ["TEST_AZURE_ORG"] = "env-org"
 
         config_content = """
 azure:
@@ -168,31 +169,31 @@ azure:
     repoId: "config-repo"
     mock: false
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(config_content)
             temp_path = f.name
 
         try:
             base_config = BaseConfig(temp_path)
-            config_data = base_config.get_value('azure.devops', {})
+            config_data = base_config.get_value("azure.devops", {})
             azure_config = AzureDevOpsConfig(config_data)
 
             # These should come from environment variables via Jinja templates
-            assert azure_config.get_url() == 'https://env.azure.com'
-            assert azure_config.get_organization() == 'env-org'
+            assert azure_config.get_url() == "https://env.azure.com"
+            assert azure_config.get_organization() == "env-org"
 
             # These should come from config file
-            assert azure_config.get_project() == 'config-project'
-            assert azure_config.get_pat() == 'config-token'
-            assert azure_config.get_repo_id() == 'config-repo'
+            assert azure_config.get_project() == "config-project"
+            assert azure_config.get_pat() == "config-token"
+            assert azure_config.get_repo_id() == "config-repo"
 
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink()
             # Clean up environment variables
-            if 'TEST_AZURE_URL' in os.environ:
-                del os.environ['TEST_AZURE_URL']
-            if 'TEST_AZURE_ORG' in os.environ:
-                del os.environ['TEST_AZURE_ORG']
+            if "TEST_AZURE_URL" in os.environ:
+                del os.environ["TEST_AZURE_URL"]
+            if "TEST_AZURE_ORG" in os.environ:
+                del os.environ["TEST_AZURE_ORG"]
 
     def test_missing_section(self):
         """Test when azure.devops section is missing."""
@@ -200,13 +201,13 @@ azure:
 other_section:
   some_value: "test"
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(config_content)
             temp_path = f.name
 
         try:
             base_config = BaseConfig(temp_path)
-            config_data = base_config.get_value('azure.devops', {})
+            config_data = base_config.get_value("azure.devops", {})
             azure_config = AzureDevOpsConfig(config_data)
 
             # Should handle missing section gracefully
@@ -215,10 +216,10 @@ other_section:
             assert azure_config.get_project() is None
             assert azure_config.get_pat() is None
             assert azure_config.get_repo_id() is None
-            assert azure_config.get_use_mocks() == False
-            assert azure_config.is_configured() == False
+            assert not azure_config.get_use_mocks()
+            assert not azure_config.is_configured()
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink()
 
     def test_provider_usage_pattern(self):
         """Test the usage pattern expected by provider system."""
@@ -229,7 +230,7 @@ other_section:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": True
+            "mock": True,
         }
 
         # Provider factory would call this
@@ -240,4 +241,4 @@ other_section:
             # Provider would be created
             assert True  # This is the expected path
         else:
-            assert False, "Provider should be createable with this config"
+            raise AssertionError("Provider should be createable with this config")

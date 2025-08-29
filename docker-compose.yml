@@ -1,0 +1,10 @@
+services:
+  dev-agents:
+    image: dev-agents:latest
+    volumes:
+      - ./config/config.custom.yaml:/app/config/config.custom.yaml
+      - ./config/prompts.custom.yaml:/app/config/prompts.custom.yaml
+      - ./data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped

@@ -16,9 +16,10 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from .provider import GitLabMergeRequestProvider, GitLabIssueProvider
-from .config import GitLabConfig
 from core.integrations import get_provider_registry
+
+from .config import GitLabConfig
+from .provider import GitLabIssueProvider, GitLabMergeRequestProvider
 
 # Register GitLab providers with the global registry
 registry = get_provider_registry()

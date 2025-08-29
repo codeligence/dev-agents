@@ -16,14 +16,22 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from typing import Any, Optional
 import base64
 import urllib.parse
-from typing import Optional, Dict, Any, List
+
 import httpx
-from core.protocols.provider_protocols import PullRequestModel, IssueModel, IssueProvider, PullRequestProvider
+
+from core.protocols.provider_protocols import (
+    IssueModel,
+    IssueProvider,
+    PullRequestModel,
+    PullRequestProvider,
+)
+
 from .config import AzureDevOpsConfig
+from .mock_devops import mock_fetch_pull_request, mock_fetch_work_item
 from .models import PullRequest, WorkItem
-from .mock_devops import mock_fetch_work_item, mock_fetch_pull_request
 
 
 class AzureDevOpsPullRequestProvider(PullRequestProvider):
@@ -33,7 +41,9 @@ class AzureDevOpsPullRequestProvider(PullRequestProvider):
         self.config = config
 
     @staticmethod
-    def from_config(config_data: Dict[str, Any]) -> Optional['AzureDevOpsPullRequestProvider']:
+    def from_config(
+        config_data: dict[str, Any],
+    ) -> Optional["AzureDevOpsPullRequestProvider"]:
         """Create provider from configuration data.
 
         Args:
@@ -57,7 +67,7 @@ class AzureDevOpsPullRequestProvider(PullRequestProvider):
             PullRequestModel with id and context
         """
         if self.config.get_use_mocks():
-            pr_data = mock_fetch_pull_request(pull_request_id)
+            pr_data = mock_fetch_pull_request(int(pull_request_id))
             context = pr_data.get_composed_PR_info()
             source_branch = pr_data.get_source_branch()
             target_branch = pr_data.get_target_branch()
@@ -77,10 +87,10 @@ class AzureDevOpsPullRequestProvider(PullRequestProvider):
             source_branch=source_branch,
             target_branch=target_branch,
             source_refs=source_refs,
-            target_refs=target_refs
+            target_refs=target_refs,
         )
 
-    def _get_source_refs(self, pr_data: PullRequest) -> List[str]:
+    def _get_source_refs(self, pr_data: PullRequest) -> list[str]:
         """Get source refs including branch and commit hashes."""
         refs = []
         source_branch = pr_data.get_source_branch()
@@ -97,7 +107,7 @@ class AzureDevOpsPullRequestProvider(PullRequestProvider):
 
         return refs
 
-    def _get_target_refs(self, pr_data: PullRequest) -> List[str]:
+    def _get_target_refs(self, pr_data: PullRequest) -> list[str]:
         """Get target refs including branch and commit hashes."""
         refs = []
         target_branch = pr_data.get_target_branch()
@@ -121,12 +131,16 @@ class AzureDevOpsPullRequestProvider(PullRequestProvider):
         pr_url = f"{base_url}/{organization}/{project}/_apis/git/repositories/{repo_id}/pullRequests/{pull_request_id}?api-version=7.1"
         commits_url = f"{base_url}/{organization}/{project}/_apis/git/repositories/{repo_id}/pullRequests/{pull_request_id}/commits?api-version=7.1"
 
-        async with httpx.AsyncClient(auth=("", pat)) as client:
+        auth = ("", pat) if pat else None
+        async with httpx.AsyncClient(auth=auth) as client:
             # Make both requests concurrently
             response_pr_task = client.get(pr_url)
             response_commits_task = client.get(commits_url)
 
-            response_pr, response_commits = await response_pr_task, await response_commits_task
+            response_pr, response_commits = (
+                await response_pr_task,
+                await response_commits_task,
+            )
 
             response_pr.raise_for_status()
             response_commits.raise_for_status()
@@ -136,11 +150,12 @@ class AzureDevOpsPullRequestProvider(PullRequestProvider):
 
         return PullRequest(pr, commits)
 
-    async def download_image_as_base64(self, image_url: str) -> Optional[str]:
+    async def download_image_as_base64(self, image_url: str) -> str | None:
         """Download an image from the given URL and return it as a data URI with URL-encoded base64 content"""
         pat = self.config.get_pat()
 
-        async with httpx.AsyncClient(auth=("", pat)) as client:
+        auth = ("", pat) if pat else None
+        async with httpx.AsyncClient(auth=auth) as client:
             response = await client.get(image_url)
 
             if response.status_code == 200:
@@ -171,7 +186,9 @@ class AzureDevOpsIssueProvider(IssueProvider):
         self.config = config
 
     @staticmethod
-    def from_config(config_data: Dict[str, Any]) -> Optional['AzureDevOpsIssueProvider']:
+    def from_config(
+        config_data: dict[str, Any],
+    ) -> Optional["AzureDevOpsIssueProvider"]:
         """Create provider from configuration data.
 
         Args:
@@ -195,7 +212,7 @@ class AzureDevOpsIssueProvider(IssueProvider):
             IssueModel with id and context
         """
         if self.config.get_use_mocks():
-            work_item = mock_fetch_work_item(issue_id)
+            work_item = mock_fetch_work_item(int(issue_id))
             context = work_item.get_composed_work_item_info()
         else:
             work_item = await self._fetch_work_item(issue_id)
@@ -212,7 +229,8 @@ class AzureDevOpsIssueProvider(IssueProvider):
 
         url = f"{base_url}/{organization}/{project}/_apis/wit/workitems/{work_item_id}?$expand=Relations&api-version=7.1-preview.3"
 
-        async with httpx.AsyncClient(auth=("", pat)) as client:
+        auth = ("", pat) if pat else None
+        async with httpx.AsyncClient(auth=auth) as client:
             response = await client.get(url)
             response.raise_for_status()
             return WorkItem(response.json())

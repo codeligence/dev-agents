@@ -18,7 +18,6 @@
 
 """Configuration for the chatbot agent."""
 
-from typing import Optional
 
 from core.config import BaseConfig
 
@@ -35,7 +34,9 @@ class GitChatbotAgentConfig:
         Returns:
             Model identifier (e.g., 'openai:gpt-4o', 'google-gla:gemini-1.5-flash')
         """
-        return self._base_config.get_value('agents.gitchatbot.model', 'openai:gpt-4o')
+        return str(
+            self._base_config.get_value("agents.gitchatbot.model", "openai:gpt-4o")
+        )
 
     def get_max_tokens(self) -> int:
         """Get the maximum tokens for agent responses.
@@ -43,7 +44,7 @@ class GitChatbotAgentConfig:
         Returns:
             Maximum number of tokens
         """
-        return int(self._base_config.get_value('agents.gitchatbot.maxTokens', 1000))
+        return int(self._base_config.get_value("agents.gitchatbot.maxTokens", 1000))
 
     def get_temperature(self) -> float:
         """Get the temperature setting for response generation.
@@ -51,7 +52,7 @@ class GitChatbotAgentConfig:
         Returns:
             Temperature value between 0.0 and 1.0
         """
-        return float(self._base_config.get_value('agents.gitchatbot.temperature', 0.7))
+        return float(self._base_config.get_value("agents.gitchatbot.temperature", 0.7))
 
     def get_timeout_seconds(self) -> int:
         """Get the timeout for agent execution.
@@ -59,7 +60,7 @@ class GitChatbotAgentConfig:
         Returns:
             Timeout in seconds
         """
-        return int(self._base_config.get_value('agents.gitchatbot.timeoutSeconds', 60))
+        return int(self._base_config.get_value("agents.gitchatbot.timeoutSeconds", 60))
 
     def is_configured(self) -> bool:
         """Check if the chatbot agent is properly configured.

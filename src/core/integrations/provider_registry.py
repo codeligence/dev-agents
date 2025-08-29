@@ -16,28 +16,33 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import Dict, List, Optional, Type, Any, Callable, TypeVar
-from core.protocols.provider_protocols import PullRequestProvider, IssueProvider
-from core.project_config import ProjectConfig
-from core.exceptions import ConfigurationError
+from collections.abc import Callable
+from typing import Any, TypeVar
+
 from core.log import get_logger
+from core.project_config import ProjectConfig
+from core.protocols.provider_protocols import IssueProvider, PullRequestProvider
 
 logger = get_logger("ProviderRegistry")
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ProviderRegistry:
     """Registry for managing provider implementations and resolving them from configuration."""
 
-    def __init__(self):
-        self._pullrequest_providers: Dict[str, Callable[[Dict[str, Any]], Optional[PullRequestProvider]]] = {}
-        self._issue_providers: Dict[str, Callable[[Dict[str, Any]], Optional[IssueProvider]]] = {}
+    def __init__(self) -> None:
+        self._pullrequest_providers: dict[
+            str, Callable[[dict[str, Any]], PullRequestProvider | None]
+        ] = {}
+        self._issue_providers: dict[
+            str, Callable[[dict[str, Any]], IssueProvider | None]
+        ] = {}
 
     def register_pullrequest_provider(
         self,
         name: str,
-        factory: Callable[[Dict[str, Any]], Optional[PullRequestProvider]]
+        factory: Callable[[dict[str, Any]], PullRequestProvider | None],
     ) -> None:
         """Register a pull request provider factory.
 
@@ -49,9 +54,7 @@ class ProviderRegistry:
         logger.debug(f"Registered pull request provider: {name}")
 
     def register_issue_provider(
-        self,
-        name: str,
-        factory: Callable[[Dict[str, Any]], Optional[IssueProvider]]
+        self, name: str, factory: Callable[[dict[str, Any]], IssueProvider | None]
     ) -> None:
         """Register an issue provider factory.
 
@@ -62,7 +65,9 @@ class ProviderRegistry:
         self._issue_providers[name] = factory
         logger.debug(f"Registered issue provider: {name}")
 
-    def resolve_pullrequest_provider(self, project_config: ProjectConfig) -> Optional[PullRequestProvider]:
+    def resolve_pullrequest_provider(
+        self, project_config: ProjectConfig
+    ) -> PullRequestProvider | None:
         """Resolve a pull request provider from project configuration.
 
         Tries all registered providers in order until one matches the configuration.
@@ -75,12 +80,12 @@ class ProviderRegistry:
         """
         provider_configs = project_config.get_pullrequest_providers()
         return self._resolve_provider(
-            self._pullrequest_providers,
-            provider_configs,
-            "pull request"
+            self._pullrequest_providers, provider_configs, "pull request"
         )
 
-    def resolve_issue_provider(self, project_config: ProjectConfig) -> Optional[IssueProvider]:
+    def resolve_issue_provider(
+        self, project_config: ProjectConfig
+    ) -> IssueProvider | None:
         """Resolve an issue provider from project configuration.
 
         Tries all registered providers in order until one matches the configuration.
@@ -92,26 +97,22 @@ class ProviderRegistry:
             First matching provider or None if no provider matches
         """
         provider_configs = project_config.get_issue_providers()
-        return self._resolve_provider(
-            self._issue_providers,
-            provider_configs,
-            "issue"
-        )
+        return self._resolve_provider(self._issue_providers, provider_configs, "issue")
 
-    def get_registered_pullrequest_providers(self) -> List[str]:
+    def get_registered_pullrequest_providers(self) -> list[str]:
         """Get list of registered pull request provider names."""
         return list(self._pullrequest_providers.keys())
 
-    def get_registered_issue_providers(self) -> List[str]:
+    def get_registered_issue_providers(self) -> list[str]:
         """Get list of registered issue provider names."""
         return list(self._issue_providers.keys())
 
     def _resolve_provider(
         self,
-        providers_registry: Dict[str, Callable[[Dict[str, Any]], Optional[T]]],
-        provider_configs: Dict[str, Dict[str, Any]],
-        provider_type: str
-    ) -> Optional[T]:
+        providers_registry: dict[str, Callable[[dict[str, Any]], T | None]],
+        provider_configs: dict[str, dict[str, Any]],
+        provider_type: str,
+    ) -> T | None:
         """Generic provider resolution logic.
 
         Args:
@@ -128,12 +129,18 @@ class ProviderRegistry:
                 try:
                     provider = factory(provider_config)
                     if provider is not None:
-                        logger.info(f"Resolved {provider_type} provider: {provider_name}")
+                        logger.info(
+                            f"Resolved {provider_type} provider: {provider_name}"
+                        )
                         return provider
                 except Exception as e:
-                    logger.warning(f"Failed to create {provider_type} provider '{provider_name}': {e}")
+                    logger.warning(
+                        f"Failed to create {provider_type} provider '{provider_name}': {e}"
+                    )
 
-        logger.warning(f"No {provider_type} provider could be resolved from configuration")
+        logger.warning(
+            f"No {provider_type} provider could be resolved from configuration"
+        )
         return None
 
 
