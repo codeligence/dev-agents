@@ -8,6 +8,8 @@
   ·
   <a href="#quick-start">Quick start</a>
   ·
+  <a href="https://docs.dev-agents.ai">Docs</a>
+  ·
   <a href="#included-agents">Included agents</a>
   ·
   <a href="#license">License</a>

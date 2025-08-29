@@ -60,7 +60,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/codeligence/dev-agents"
 "Bug Tracker" = "https://github.com/codeligence/dev-agents/issues"
-"Documentation" = "https://dev-agents.ai"
+"Documentation" = "https://docs.dev-agents.ai"
 "Repository" = "https://github.com/codeligence/dev-agents"
 "Source Code" = "https://github.com/codeligence/dev-agents"
 
