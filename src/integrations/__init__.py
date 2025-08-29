@@ -17,5 +17,5 @@
 
 
 # Import providers to ensure they're registered
-import integrations.devops
-import integrations.gitlab
+import integrations.devops  # noqa: F401
+import integrations.gitlab  # noqa: F401

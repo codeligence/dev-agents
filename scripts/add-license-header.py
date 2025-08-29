@@ -17,6 +17,7 @@
 
 import os
 
+
 def add_license_header():
     header = """\
 # Copyright (C) 2025 Codeligence
@@ -45,11 +46,11 @@ def add_license_header():
             print(f"Directory {target_path} does not exist. Skipping.")
             continue
 
-        for dirpath, dirnames, filenames in os.walk(target_path):
+        for dirpath, _dirnames, filenames in os.walk(target_path):
             for filename in filenames:
                 if filename.endswith('.py'):
                     file_path = os.path.join(dirpath, filename)
-                    with open(file_path, 'r', encoding='utf-8') as f:
+                    with open(file_path, encoding='utf-8') as f:
                         content = f.read()
 
                     # Check if the header is already present

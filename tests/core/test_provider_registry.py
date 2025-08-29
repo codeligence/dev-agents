@@ -16,16 +16,14 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import pytest
+from pathlib import Path
+from typing import Any, Optional
 import tempfile
-import os
-from unittest.mock import Mock
-from typing import Optional, Dict, Any
 
 from core.config import BaseConfig
-from core.project_config import ProjectConfig, ProjectConfigFactory
 from core.integrations.provider_registry import ProviderRegistry, get_provider_registry
-from core.protocols.provider_protocols import PullRequestProvider, IssueProvider, PullRequestModel, IssueModel
+from core.project_config import ProjectConfig, ProjectConfigFactory
+from core.protocols.provider_protocols import IssueModel, PullRequestModel
 
 
 class MockPullRequestProvider:
@@ -35,7 +33,7 @@ class MockPullRequestProvider:
         self.name = name
 
     @staticmethod
-    def from_config(config_data: Dict[str, Any]) -> Optional['MockPullRequestProvider']:
+    def from_config(config_data: dict[str, Any]) -> Optional["MockPullRequestProvider"]:
         """Create provider from config data."""
         if config_data.get("enabled", True):
             return MockPullRequestProvider(config_data.get("name", "mock"))
@@ -47,7 +45,7 @@ class MockPullRequestProvider:
             id=pull_request_id,
             context=f"Mock PR {pull_request_id} from {self.name}",
             source_branch="feature/test",
-            target_branch="main"
+            target_branch="main",
         )
 
 
@@ -58,7 +56,7 @@ class MockIssueProvider:
         self.name = name
 
     @staticmethod
-    def from_config(config_data: Dict[str, Any]) -> Optional['MockIssueProvider']:
+    def from_config(config_data: dict[str, Any]) -> Optional["MockIssueProvider"]:
         """Create provider from config data."""
         if config_data.get("enabled", True):
             return MockIssueProvider(config_data.get("name", "mock"))
@@ -67,8 +65,7 @@ class MockIssueProvider:
     async def load(self, issue_id: str) -> IssueModel:
         """Load issue by ID."""
         return IssueModel(
-            id=issue_id,
-            context=f"Mock Issue {issue_id} from {self.name}"
+            id=issue_id, context=f"Mock Issue {issue_id} from {self.name}"
         )
 
 
@@ -76,7 +73,7 @@ class FailingProvider:
     """Provider that fails during creation for testing error handling."""
 
     @staticmethod
-    def from_config(config_data: Dict[str, Any]) -> Optional['FailingProvider']:
+    def from_config(_config_data: dict[str, Any]) -> Optional["FailingProvider"]:
         """Create provider that always fails."""
         raise Exception("Provider creation failed")
 
@@ -97,7 +94,9 @@ class TestProviderRegistry:
 
     def test_register_pullrequest_provider(self):
         """Test registering pull request providers."""
-        self.registry.register_pullrequest_provider("mock", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock", MockPullRequestProvider.from_config
+        )
 
         providers = self.registry.get_registered_pullrequest_providers()
         assert "mock" in providers
@@ -113,8 +112,12 @@ class TestProviderRegistry:
 
     def test_register_multiple_providers(self):
         """Test registering multiple providers."""
-        self.registry.register_pullrequest_provider("mock1", MockPullRequestProvider.from_config)
-        self.registry.register_pullrequest_provider("mock2", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock1", MockPullRequestProvider.from_config
+        )
+        self.registry.register_pullrequest_provider(
+            "mock2", MockPullRequestProvider.from_config
+        )
         self.registry.register_issue_provider("mock1", MockIssueProvider.from_config)
         self.registry.register_issue_provider("mock2", MockIssueProvider.from_config)
 
@@ -131,12 +134,12 @@ class TestProviderRegistry:
 
     def _create_test_project_config(self, config_content: str) -> ProjectConfig:
         """Helper to create a project config for testing."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(config_content)
             temp_path = f.name
 
         # Store path for cleanup
-        self._temp_files = getattr(self, '_temp_files', [])
+        self._temp_files = getattr(self, "_temp_files", [])
         self._temp_files.append(temp_path)
 
         base_config = BaseConfig(temp_path)
@@ -145,10 +148,10 @@ class TestProviderRegistry:
 
     def teardown_method(self):
         """Clean up temporary files after each test."""
-        if hasattr(self, '_temp_files'):
+        if hasattr(self, "_temp_files"):
             for temp_file in self._temp_files:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
+                if Path(temp_file).exists():
+                    Path(temp_file).unlink()
             self._temp_files = []
 
     def test_resolve_pullrequest_provider_success(self):
@@ -163,7 +166,9 @@ projects:
         enabled: true
         name: "test-mock"
 """
-        self.registry.register_pullrequest_provider("mock", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock", MockPullRequestProvider.from_config
+        )
         project_config = self._create_test_project_config(config_content)
 
         provider = self.registry.resolve_pullrequest_provider(project_config)
@@ -202,7 +207,9 @@ projects:
       unknown_provider:
         enabled: true
 """
-        self.registry.register_pullrequest_provider("mock", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock", MockPullRequestProvider.from_config
+        )
         project_config = self._create_test_project_config(config_content)
 
         provider = self.registry.resolve_pullrequest_provider(project_config)
@@ -220,7 +227,9 @@ projects:
         enabled: false
         name: "test-mock"
 """
-        self.registry.register_pullrequest_provider("mock", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock", MockPullRequestProvider.from_config
+        )
         project_config = self._create_test_project_config(config_content)
 
         provider = self.registry.resolve_pullrequest_provider(project_config)
@@ -237,7 +246,9 @@ projects:
       failing:
         enabled: true
 """
-        self.registry.register_pullrequest_provider("failing", FailingProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "failing", FailingProvider.from_config
+        )
         project_config = self._create_test_project_config(config_content)
 
         # Should handle the exception gracefully and return None
@@ -259,8 +270,12 @@ projects:
         enabled: true   # This one should be selected
         name: "selected-mock"
 """
-        self.registry.register_pullrequest_provider("mock1", MockPullRequestProvider.from_config)
-        self.registry.register_pullrequest_provider("mock2", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock1", MockPullRequestProvider.from_config
+        )
+        self.registry.register_pullrequest_provider(
+            "mock2", MockPullRequestProvider.from_config
+        )
         project_config = self._create_test_project_config(config_content)
 
         provider = self.registry.resolve_pullrequest_provider(project_config)
@@ -283,8 +298,12 @@ projects:
         enabled: true
         name: "second-mock"
 """
-        self.registry.register_pullrequest_provider("mock1", MockPullRequestProvider.from_config)
-        self.registry.register_pullrequest_provider("mock2", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock1", MockPullRequestProvider.from_config
+        )
+        self.registry.register_pullrequest_provider(
+            "mock2", MockPullRequestProvider.from_config
+        )
         project_config = self._create_test_project_config(config_content)
 
         # The order depends on dict iteration, but one should be selected
@@ -303,7 +322,9 @@ projects:
     pullrequests: {}
     issues: {}
 """
-        self.registry.register_pullrequest_provider("mock", MockPullRequestProvider.from_config)
+        self.registry.register_pullrequest_provider(
+            "mock", MockPullRequestProvider.from_config
+        )
         self.registry.register_issue_provider("mock", MockIssueProvider.from_config)
         project_config = self._create_test_project_config(config_content)
 
@@ -328,7 +349,9 @@ class TestGlobalProviderRegistry:
     def test_global_registry_persistence(self):
         """Test that registrations persist across calls."""
         registry1 = get_provider_registry()
-        registry1.register_pullrequest_provider("test", MockPullRequestProvider.from_config)
+        registry1.register_pullrequest_provider(
+            "test", MockPullRequestProvider.from_config
+        )
 
         registry2 = get_provider_registry()
         providers = registry2.get_registered_pullrequest_providers()
@@ -340,8 +363,12 @@ class TestGlobalProviderRegistry:
         global_registry = get_provider_registry()
         local_registry = ProviderRegistry()
 
-        global_registry.register_pullrequest_provider("global", MockPullRequestProvider.from_config)
-        local_registry.register_pullrequest_provider("local", MockPullRequestProvider.from_config)
+        global_registry.register_pullrequest_provider(
+            "global", MockPullRequestProvider.from_config
+        )
+        local_registry.register_pullrequest_provider(
+            "local", MockPullRequestProvider.from_config
+        )
 
         global_providers = global_registry.get_registered_pullrequest_providers()
         local_providers = local_registry.get_registered_pullrequest_providers()

@@ -17,24 +17,26 @@
 
 
 from abc import abstractmethod
-from typing import Protocol, Optional, Dict, Any, List
 from dataclasses import dataclass, field
+from typing import Any, Optional, Protocol
 
 
 @dataclass
 class PullRequestModel:
     """Model representing a pull request from any provider."""
+
     id: str
     context: str
-    source_branch: Optional[str] = None
-    target_branch: Optional[str] = None
-    source_refs: List[str] = field(default_factory=list)
-    target_refs: List[str] = field(default_factory=list)
+    source_branch: str | None = None
+    target_branch: str | None = None
+    source_refs: list[str] = field(default_factory=list)
+    target_refs: list[str] = field(default_factory=list)
 
 
 @dataclass
 class IssueModel:
     """Model representing an issue/work item from any provider."""
+
     id: str
     context: str
 
@@ -44,7 +46,7 @@ class PullRequestProvider(Protocol):
 
     @staticmethod
     @abstractmethod
-    def from_config(config: Dict[str, Any]) -> Optional['PullRequestProvider']:
+    def from_config(config: dict[str, Any]) -> Optional["PullRequestProvider"]:
         """Create provider instance from configuration.
 
         Args:
@@ -76,7 +78,7 @@ class IssueProvider(Protocol):
 
     @staticmethod
     @abstractmethod
-    def from_config(config: Dict[str, Any]) -> Optional['IssueProvider']:
+    def from_config(config: dict[str, Any]) -> Optional["IssueProvider"]:
         """Create provider instance from configuration.
 
         Args:

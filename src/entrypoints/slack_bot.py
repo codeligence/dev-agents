@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Copyright (C) 2025 Codeligence
 #
 # This file is part of Dev Agents.
@@ -16,15 +17,16 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-#!/usr/bin/env python3
+from pathlib import Path
 import traceback
 
 from dotenv import load_dotenv
 
-from core.config import BaseConfig, get_default_config
+from core.config import get_default_config
 from core.log import get_logger, setup_thread_logging
 from entrypoints.slack_models.agent_message_consumer import AgentMessageConsumer
 from entrypoints.slack_models.slack_bot_service import SlackBotService
+from integrations.slack.models import SlackBotConfig
 from integrations.slack.slack_client_service import SlackClientService
 
 # Load environment variables
@@ -36,37 +38,13 @@ setup_thread_logging(base_config)
 logger = get_logger("SlackBot", level="INFO")
 
 
-class SlackBotConfig:
-    """Configuration for Slack bot service."""
-
-    def __init__(self, base_config: BaseConfig):
-        self._base_config = base_config
-        self._config_data = base_config.get_config_data()
-
-    def get_bot_token(self) -> str:
-        return self._base_config.get_value('slack.bot.botToken', '')
-
-    def get_channel_id(self) -> str:
-        return self._base_config.get_value('slack.bot.channelId', '')
-
-    def get_app_token(self) -> str:
-        return self._base_config.get_value('slack.bot.appToken', '')
-
-    def get_processing_timeout(self) -> int:
-        return int(self._base_config.get_value('slack.bot.processingTimeout', 6000))
-
-    def is_configured(self) -> bool:
-        """Check if all required Slack configuration is present."""
-        return bool(self.get_bot_token() and self.get_channel_id() and self.get_app_token())
-
-
-def main():
+def main() -> None:
     """Main entry point for the Slack bot."""
     logger.info("Starting Slack Bot")
 
     # Print release information if available
     try:
-        with open("release.txt", "r") as f:
+        with Path("release.txt").open() as f:
             release_info = f.read().strip()
             logger.info(f"Release information:\n{release_info}")
     except Exception:
@@ -90,18 +68,14 @@ def main():
         return
 
     # Initialize Slack client for the agent consumer
-    slack_client = SlackClientService()
+    slack_client = SlackClientService(slack_config)
 
     # Initialize agent-based consumer
-    consumer = AgentMessageConsumer(
-        slack_client=slack_client,
-        config=base_config
-    )
+    consumer = AgentMessageConsumer(slack_client=slack_client, config=base_config)
 
     # Initialize and start bot service
     bot_service = SlackBotService(
-        consumer=consumer,
-        processing_timeout=slack_config.get_processing_timeout()
+        consumer=consumer, processing_timeout=slack_config.get_processing_timeout()
     )
 
     try:

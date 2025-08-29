@@ -19,7 +19,6 @@
 """Data models for the chatbot agent."""
 
 from dataclasses import dataclass
-from typing import Optional
 
 from core.storage import BaseStorage
 
@@ -30,14 +29,15 @@ class ChatbotContext:
 
     All fields are optional to support partial context updates.
     """
-    issue_id: Optional[str] = None
-    pull_request_id: Optional[str] = None
-    source_branch_name: Optional[str] = None
-    target_branch_name: Optional[str] = None
-    source_commit_hash: Optional[str] = None
-    target_commit_hash: Optional[str] = None
 
-    def __post_init__(self):
+    issue_id: str | None = None
+    pull_request_id: str | None = None
+    source_branch_name: str | None = None
+    target_branch_name: str | None = None
+    source_commit_hash: str | None = None
+    target_commit_hash: str | None = None
+
+    def __post_init__(self) -> None:
         """Auto-populate target_branch_name if only source is provided."""
         if self.source_branch_name and not self.target_branch_name:
             self.target_branch_name = self.source_branch_name
@@ -50,9 +50,10 @@ class PersistentAgentDeps:
     Contains all dependencies needed for state persistence across agent runs.
     This is used as the deps_type for the Pydantic AI agent.
     """
+
     execution_id: str
     storage: BaseStorage
-    context: Optional[ChatbotContext] = None
+    context: ChatbotContext | None = None
 
     def get_storage_key(self) -> str:
         """Get the storage key for this execution context.
@@ -81,12 +82,12 @@ class PersistentAgentDeps:
         """
         # Convert dataclass to dict for JSON serialization
         context_data = {
-            'issue_id': context.issue_id,
-            'pull_request_id': context.pull_request_id,
-            'source_branch_name': context.source_branch_name,
-            'target_branch_name': context.target_branch_name,
-            'source_commit_hash': context.source_commit_hash,
-            'target_commit_hash': context.target_commit_hash
+            "issue_id": context.issue_id,
+            "pull_request_id": context.pull_request_id,
+            "source_branch_name": context.source_branch_name,
+            "target_branch_name": context.target_branch_name,
+            "source_commit_hash": context.source_commit_hash,
+            "target_commit_hash": context.target_commit_hash,
         }
         self.storage.set(self.get_storage_key(), context_data)
         self.context = context

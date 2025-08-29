@@ -17,7 +17,7 @@
 
 
 from abc import abstractmethod
-from typing import Protocol
+from typing import Any, Protocol
 
 from core.config import BaseConfig
 from core.message import MessageList
@@ -102,9 +102,8 @@ class Agent(Protocol):
         ...
 
     @abstractmethod
-    async def run(self):
-        """Execute the agent.
-        """
+    async def run(self) -> Any:
+        """Execute the agent."""
         ...
 
 

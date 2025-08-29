@@ -18,9 +18,9 @@
 
 """Agent factory for creating and configuring agents."""
 
-from typing import Dict
+from collections.abc import Callable
 
-from core.exceptions import AgentNotFoundError, AgentConfigurationError
+from core.exceptions import AgentConfigurationError, AgentNotFoundError
 from core.log import get_logger
 from core.protocols.agent_protocols import Agent
 
@@ -34,10 +34,12 @@ class SimpleAgentFactory:
     Follows the Factory pattern for centralized agent creation.
     """
 
-    def __init__(self):
-        self._agent_registry: Dict[str, callable] = {}
+    def __init__(self) -> None:
+        self._agent_registry: dict[str, Callable[[], type[Agent]]] = {}
 
-    def register_agent(self, agent_type: str, factory_func: callable) -> None:
+    def register_agent(
+        self, agent_type: str, factory_func: Callable[[], type[Agent]]
+    ) -> None:
         """Register an agent factory function.
 
         Args:
@@ -67,7 +69,7 @@ class SimpleAgentFactory:
             available_types = list(self._agent_registry.keys())
             raise AgentNotFoundError(
                 f"Agent type '{agent_type}' not found. Available types: {available_types}",
-                agent_type
+                agent_type,
             )
 
         try:

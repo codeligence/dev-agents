@@ -19,16 +19,18 @@
 #!/usr/bin/env python3
 """AG-UI entrypoint for streaming agent events via HTTP."""
 
+from collections.abc import AsyncGenerator
+from pathlib import Path
+from typing import Any, cast
 import asyncio
 import traceback
-from typing import AsyncGenerator
 
 from ag_ui.core import (
     EventType,
-    RunStartedEvent,
-    RunFinishedEvent,
+    RunAgentInput,
     RunErrorEvent,
-    RunAgentInput
+    RunFinishedEvent,
+    RunStartedEvent,
 )
 from ag_ui.encoder import EventEncoder
 from dotenv import load_dotenv
@@ -38,7 +40,12 @@ from fastapi.responses import StreamingResponse
 from agents.agents.gitchatbot.agent import AGENT_NAME
 from core.agents.service import AgentService
 from core.config import BaseConfig, get_default_config
-from core.log import get_logger, setup_thread_logging, set_context_token, reset_context_token
+from core.log import (
+    get_logger,
+    reset_context_token,
+    set_context_token,
+    setup_thread_logging,
+)
 from core.prompts import get_default_prompts
 from entrypoints.ag_ui_models.agent_context import AGUIAgentContext
 from entrypoints.ag_ui_models.message import convert_agui_messages_to_message_list
@@ -57,16 +64,18 @@ app = FastAPI(title="Agent AI API", description="Streaming agent execution API")
 # Initialize agent service and register agents
 agent_service = AgentService()
 
+
 def _register_agents() -> None:
     """Register available agents with the service."""
     # Import and register the GitChatbot agent
     from agents.agents.gitchatbot.agent import GitChatbotAgent
 
-    def create_chatbot_agent():
+    def create_chatbot_agent() -> type[GitChatbotAgent]:
         return GitChatbotAgent
 
     agent_service.register_agent(AGENT_NAME, create_chatbot_agent)
     logger.info("Registered agents: " + AGENT_NAME)
+
 
 # Register agents at startup
 _register_agents()
@@ -80,22 +89,25 @@ class AGUIConfig:
         self._config_data = base_config.get_config_data()
 
     def get_default_timeout(self) -> int:
-        return int(self._base_config.get_value('agui.agent.defaultTimeout', 300))
+        return int(self._base_config.get_value("agui.agent.defaultTimeout", 300))
 
     def get_default_agent_type(self) -> str:
-        return self._base_config.get_value('agui.agent.defaultAgentType', AGENT_NAME)
+        return cast(
+            "str",
+            self._base_config.get_value("agui.agent.defaultAgentType", AGENT_NAME),
+        )
 
     def get_max_message_length(self) -> int:
-        return int(self._base_config.get_value('agui.agent.maxMessageLength', 10000))
+        return int(self._base_config.get_value("agui.agent.maxMessageLength", 10000))
 
     def get_server_host(self) -> str:
-        return self._base_config.get_value('agui.server.host', '0.0.0.0')
+        return cast("str", self._base_config.get_value("agui.server.host", "0.0.0.0"))
 
     def get_server_port(self) -> int:
-        return int(self._base_config.get_value('agui.server.port', 8000))
+        return int(self._base_config.get_value("agui.server.port", 8000))
 
     def get_server_reload(self) -> bool:
-        return bool(self._base_config.get_value('agui.server.reload', False))
+        return bool(self._base_config.get_value("agui.server.reload", False))
 
 
 @app.post("/agent")
@@ -110,7 +122,9 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
         StreamingResponse with Server-Sent Events containing agent execution progress
     """
 
-    logger.info(f"Received agent run request: thread_id={input_data.thread_id}, run_id={input_data.run_id}")
+    logger.info(
+        f"Received agent run request: thread_id={input_data.thread_id}, run_id={input_data.run_id}"
+    )
 
     # Get configuration
     config_instance = AGUIConfig(base_config)
@@ -118,23 +132,35 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
     if not input_data.thread_id or not input_data.run_id:
         logger.error("Missing required thread_id or run_id")
         from fastapi import HTTPException
-        raise HTTPException(status_code=400, detail="Missing required thread_id or run_id")
+
+        raise HTTPException(
+            status_code=400, detail="Missing required thread_id or run_id"
+        )
 
     if not input_data.messages:
         logger.error("No messages provided in request")
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail="At least one message is required")
 
     # Validate message length
     max_length = config_instance.get_max_message_length()
     for msg in input_data.messages:
-        if hasattr(msg, 'content') and len(getattr(msg, 'content', '')) > max_length:
-            logger.error(f"Message content exceeds maximum length: {len(msg.content)} > {max_length}")
+        content = getattr(msg, "content", "")
+        if content and len(content) > max_length:
+            logger.error(
+                f"Message content exceeds maximum length: {len(content)} > {max_length}"
+            )
             from fastapi import HTTPException
-            raise HTTPException(status_code=400, detail=f"Message content exceeds maximum length of {max_length} characters")
+
+            raise HTTPException(
+                status_code=400,
+                detail=f"Message content exceeds maximum length of {max_length} characters",
+            )
 
     # Create event encoder based on client Accept header
-    encoder = EventEncoder(accept=request.headers.get("accept"))
+    accept_header = request.headers.get("accept") or "text/plain"
+    encoder = EventEncoder(accept=accept_header)
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generator that yields AG-UI events as Server-Sent Events."""
@@ -144,19 +170,20 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
 
         try:
             # Start the run
-            yield encoder.encode(RunStartedEvent(
-                type=EventType.RUN_STARTED,
-                thread_id=input_data.thread_id,
-                run_id=input_data.run_id
-            ))
+            yield encoder.encode(
+                RunStartedEvent(
+                    type=EventType.RUN_STARTED,
+                    thread_id=input_data.thread_id,
+                    run_id=input_data.run_id,
+                )
+            )
 
             # Create event queue for agent context communication
-            event_queue = asyncio.Queue()
+            event_queue: asyncio.Queue[Any] = asyncio.Queue()
 
             # Convert AG-UI messages to our internal format
             message_list = convert_agui_messages_to_message_list(
-                input_data.messages,
-                input_data.thread_id
+                input_data.messages, input_data.thread_id
             )
 
             # Create AG-UI agent context
@@ -166,7 +193,7 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
                 prompts=get_default_prompts(),
                 thread_id=input_data.thread_id,
                 run_id=input_data.run_id,
-                event_queue=event_queue
+                event_queue=event_queue,
             )
 
             # Use existing config_instance
@@ -178,9 +205,7 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
             # Create task for agent execution
             agent_task = asyncio.create_task(
                 agent_service.execute_agent_by_type(
-                    agent_type=agent_type,
-                    context=agui_context,
-                    timeout_seconds=timeout
+                    agent_type=agent_type, context=agui_context, timeout_seconds=timeout
                 )
             )
 
@@ -190,7 +215,7 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
                     # Check for events with short timeout
                     event = await asyncio.wait_for(event_queue.get(), timeout=0.1)
                     yield encoder.encode(event)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # No events, continue checking if agent is done
                     continue
                 except Exception as e:
@@ -210,71 +235,84 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
                 await agent_task  # This will raise if there was an exception
             except Exception as agent_error:
                 logger.error(f"Agent execution failed: {str(agent_error)}")
-                yield encoder.encode(RunErrorEvent(
-                    type=EventType.RUN_ERROR,
-                    message=f"Agent execution failed: {str(agent_error)}",
-                    code="AGENT_EXECUTION_ERROR"
-                ))
+                yield encoder.encode(
+                    RunErrorEvent(
+                        type=EventType.RUN_ERROR,
+                        message=f"Agent execution failed: {str(agent_error)}",
+                        code="AGENT_EXECUTION_ERROR",
+                    )
+                )
                 return
 
             # Success - emit run finished event
-            yield encoder.encode(RunFinishedEvent(
-                type=EventType.RUN_FINISHED,
-                thread_id=input_data.thread_id,
-                run_id=input_data.run_id
-            ))
+            yield encoder.encode(
+                RunFinishedEvent(
+                    type=EventType.RUN_FINISHED,
+                    thread_id=input_data.thread_id,
+                    run_id=input_data.run_id,
+                )
+            )
 
             logger.info(f"Agent run completed successfully: {input_data.run_id}")
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"Agent run timed out: {input_data.run_id}")
-            yield encoder.encode(RunErrorEvent(
-                type=EventType.RUN_ERROR,
-                message="Agent execution timed out",
-                code="TIMEOUT_ERROR"
-            ))
+            yield encoder.encode(
+                RunErrorEvent(
+                    type=EventType.RUN_ERROR,
+                    message="Agent execution timed out",
+                    code="TIMEOUT_ERROR",
+                )
+            )
         except asyncio.CancelledError:
             logger.info(f"Agent run cancelled: {input_data.run_id}")
-            yield encoder.encode(RunErrorEvent(
-                type=EventType.RUN_ERROR,
-                message="Agent execution was cancelled",
-                code="CANCELLED_ERROR"
-            ))
+            yield encoder.encode(
+                RunErrorEvent(
+                    type=EventType.RUN_ERROR,
+                    message="Agent execution was cancelled",
+                    code="CANCELLED_ERROR",
+                )
+            )
         except ValueError as validation_error:
             logger.error(f"Invalid input data: {str(validation_error)}")
-            yield encoder.encode(RunErrorEvent(
-                type=EventType.RUN_ERROR,
-                message=f"Invalid input: {str(validation_error)}",
-                code="VALIDATION_ERROR"
-            ))
+            yield encoder.encode(
+                RunErrorEvent(
+                    type=EventType.RUN_ERROR,
+                    message=f"Invalid input: {str(validation_error)}",
+                    code="VALIDATION_ERROR",
+                )
+            )
         except Exception as unexpected_error:
             error_traceback = traceback.format_exc()
-            logger.error(f"Unexpected error in agent run: {str(unexpected_error)}\\n{error_traceback}")
-            yield encoder.encode(RunErrorEvent(
-                type=EventType.RUN_ERROR,
-                message=f"Unexpected error: {str(unexpected_error)}",
-                code="INTERNAL_ERROR"
-            ))
+            logger.error(
+                f"Unexpected error in agent run: {str(unexpected_error)}\\n{error_traceback}"
+            )
+            yield encoder.encode(
+                RunErrorEvent(
+                    type=EventType.RUN_ERROR,
+                    message=f"Unexpected error: {str(unexpected_error)}",
+                    code="INTERNAL_ERROR",
+                )
+            )
 
         finally:
             reset_context_token(context_token)
 
     return StreamingResponse(
         event_generator(),
-        media_type=encoder.get_content_type()  # "text/event-stream"
+        media_type=encoder.get_content_type(),  # "text/event-stream"
     )
 
 
-
-
-if __name__ == "__main__":
+def main() -> None:
+    """Main entry point for AG-UI service."""
     import uvicorn
 
     logger.info("Starting AG-UI service")
 
     # Print release information if available
     try:
-        with open("release.txt", "r") as f:
+        with Path("release.txt").open() as f:
             release_info = f.read().strip()
             logger.info(f"Release information:\\n{release_info}")
     except FileNotFoundError:
@@ -299,10 +337,14 @@ if __name__ == "__main__":
             host=host,
             port=port,
             reload=reload,
-            log_level="info"
+            log_level="info",
         )
     except KeyboardInterrupt:
         logger.info("Received interrupt signal, shutting down...")
     except Exception as startup_error:
         logger.error(f"Failed to start AG-UI service: {str(startup_error)}")
         raise
+
+
+if __name__ == "__main__":
+    main()

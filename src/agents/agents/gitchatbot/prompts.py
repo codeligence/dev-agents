@@ -27,4 +27,4 @@ class GitChatbotAgentPrompts:
 
     def get_chatbot_prompt(self) -> str:
         """Get the initial system prompt for the chatbot agent."""
-        return self._base_prompts.get_prompt('agents.chatbot.initial', '')
+        return self._base_prompts.get_prompt("agents.chatbot.initial", "")

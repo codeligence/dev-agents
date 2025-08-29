@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Git pre-commit hook to check for AGPLv3 license header in staged .py files within src/ and test/
+
+# Get list of staged .py files (added/modified, ignore deleted) that are in src/ or test/
+staged_py_files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(src|test)/.*\.py$' | grep -v '__init__\.py$')
+
+if [ -z "$staged_py_files" ]; then
+    # No relevant .py files staged, nothing to check
+    exit 0
+fi
+
+missing_header=false
+
+for file in $staged_py_files; do
+    if ! grep -q "GNU Affero General Public License" "$file"; then
+        echo "Error: $file is missing the AGPLv3 license header."
+        missing_header=true
+    fi
+done
+
+if $missing_header; then
+    echo "Commit aborted. Please add the license header to the affected files and stage them again."
+    exit 1
+fi
+
+exit 0
+

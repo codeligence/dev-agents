@@ -16,10 +16,10 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import Dict, Any
+from pathlib import Path
+from typing import Any, Optional, cast
 import os
 import threading
-from pathlib import Path
 
 from dotenv import load_dotenv
 from dynaconf import Dynaconf
@@ -33,7 +33,15 @@ logger = get_logger("BaseConfig")
 class BaseConfig:
     """Base configuration class that loads and resolves YAML config with environment variables using Dynaconf."""
 
-    def __init__(self, config_path: str = None, base_config: 'BaseConfig' = None):
+    _config_path: str
+    _settings: Any
+    _config_data: dict[str, Any]
+
+    def __init__(
+        self,
+        config_path: str | None = None,
+        base_config: Optional["BaseConfig"] = None,
+    ):
         if base_config is not None:
             # Copy constructor: copy fields from another BaseConfig instance
             self._config_path = base_config._config_path
@@ -44,7 +52,7 @@ class BaseConfig:
             if config_path is None:
                 # Default to config/config.yml relative to project root
                 project_root = Path(__file__).parent.parent.parent
-                config_path = project_root / "config" / "config.yaml"
+                config_path = str(project_root / "config" / "config.yaml")
 
             self._config_path = config_path
             self._settings = self._load_config()
@@ -52,18 +60,21 @@ class BaseConfig:
             try:
                 self._config_data = self._settings.to_dict()
             except Exception as e:
-                logger.exception("Failed to load config: {}".format(e))
+                logger.exception(f"Failed to load config: {e}")
                 # Fallback to basic dict if to_dict() fails
                 self._config_data = {}
 
     def _load_config(self) -> Dynaconf:
         """Load and resolve the YAML configuration file using Dynaconf."""
-        if not os.path.exists(self._config_path):
+        if not Path(self._config_path).exists():
             raise FileNotFoundError(f"Config file not found: {self._config_path}")
 
         # Use Dynaconf to load config with environment variable resolution
         settings = Dynaconf(
-            settings_files=[str(self._config_path), str(self._config_path).replace(".yaml", ".custom.yaml")],
+            settings_files=[
+                str(self._config_path),
+                str(self._config_path).replace(".yaml", ".custom.yaml"),
+            ],
             envvar_prefix="",  # Allow all environment variables
             envvar_default="",
             ignore_unknown_envvars=True,
@@ -77,10 +88,10 @@ class BaseConfig:
         )
         return settings
 
-    def get_config_data(self) -> Dict[str, Any]:
+    def get_config_data(self) -> dict[str, Any]:
         """Get the full resolved configuration data."""
         try:
-            return self._settings.to_dict()
+            return cast("dict[str, Any]", self._settings.to_dict())
         except Exception:
             # Fallback to cached data if to_dict() fails
             return self._config_data
@@ -104,13 +115,13 @@ class BaseConfig:
 
             # If not found, try environment variables
             # Convert dot notation to environment variable format
-            env_key = key_path.replace('.', '_').upper()
+            env_key = key_path.replace(".", "_").upper()
             env_value = os.getenv(env_key)
             if env_value is not None:
                 return env_value
 
             # Try Dynaconf's double underscore format
-            dynaconf_key = key_path.replace('.', '__').upper()
+            dynaconf_key = key_path.replace(".", "__").upper()
             dynaconf_value = os.getenv(dynaconf_key)
             if dynaconf_value is not None:
                 return dynaconf_value

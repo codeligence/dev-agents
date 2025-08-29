@@ -17,7 +17,6 @@
 
 
 from dataclasses import dataclass
-from typing import Dict
 
 from .changed_file import ChangedFileSet
 
@@ -25,8 +24,9 @@ from .changed_file import ChangedFileSet
 @dataclass
 class DiffMetadata:
     """Metadata about the diff loading operation."""
+
     total_files_changed: int
-    line_counts: Dict[str, int]  # keys: 'insertions', 'deletions', 'total'
+    line_counts: dict[str, int]  # keys: 'insertions', 'deletions', 'total'
 
 
 @dataclass
@@ -36,20 +36,21 @@ class GitDiffContext:
     This replaces both ChangedFileSet and DiffLoadResult from the old system,
     providing a single comprehensive model for git diff operations.
     """
+
     # Git data (from ChangedFileSet)
     changed_files: ChangedFileSet
-    file_diffs: Dict[str, str]  # file_path -> diff content
+    file_diffs: dict[str, str]  # file_path -> diff content
 
     # Branch info
     source_branch: str
     target_branch: str
 
     # Repository info
-    repo_path: str                      # Path to the git repository
+    repo_path: str  # Path to the git repository
 
     # Business context (from DiffLoadResult)
-    context: str                         # Work item context or default message
-    metadata: DiffMetadata              # Analysis metadata
+    context: str  # Work item context or default message
+    metadata: DiffMetadata  # Analysis metadata
 
     @property
     def has_changes(self) -> bool:

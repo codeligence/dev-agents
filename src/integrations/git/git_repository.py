@@ -16,26 +16,25 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from pathlib import Path
 import shlex
 import subprocess
 import threading
 import time
-from pathlib import Path
-from typing import Dict, Optional, List
 
 from core.log import get_logger
 from core.project_config import ProjectConfig
 from integrations.git.changed_file import ChangedFile, ChangedFileSet
 from integrations.git.config import GitRepositoryConfig
-from integrations.git.models import GitDiffContext, DiffMetadata
+from integrations.git.models import DiffMetadata, GitDiffContext
 
 logger = get_logger(logger_name="GitRepository", level="DEBUG")
 
 EMPTY_TREE_HASH = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 
 # Global tracking for per-repository pull rate limiting
-_last_pull_times: Dict[str, float] = {}
-_pull_locks: Dict[str, threading.Lock] = {}
+_last_pull_times: dict[str, float] = {}
+_pull_locks: dict[str, threading.Lock] = {}
 
 
 class GitRepository:
@@ -45,10 +44,7 @@ class GitRepository:
     Follows Repository Pattern with dependency injection for external services.
     """
 
-    def __init__(
-            self,
-            project_config: ProjectConfig
-    ) -> None:
+    def __init__(self, project_config: ProjectConfig) -> None:
         self.project_config = project_config
 
         # Use GitRepositoryConfig to get repository path
@@ -59,11 +55,11 @@ class GitRepository:
         self._auto_pull_if_needed(git_config)
 
     def get_diff_from_branches(
-            self,
-            source_branch: str,
-            target_branch: str,
-            context: str = "Direct branch comparison",
-            include_patch: bool = True
+        self,
+        source_branch: str,
+        target_branch: str,
+        context: str = "Direct branch comparison",
+        include_patch: bool = True,
     ) -> GitDiffContext:
         """Get diff context from direct branch comparison.
 
@@ -78,7 +74,9 @@ class GitRepository:
         -------
         GitDiffContext with git data and minimal business context
         """
-        changed_files = self._get_changed_file_set(source_branch, target_branch, include_patch=include_patch)
+        changed_files = self._get_changed_file_set(
+            source_branch, target_branch, include_patch=include_patch
+        )
         file_diffs = changed_files.get_file_diffs()
 
         # Calculate metadata
@@ -89,10 +87,10 @@ class GitRepository:
         metadata = DiffMetadata(
             total_files_changed=total_files,
             line_counts={
-                'insertions': total_insertions,
-                'deletions': total_deletions,
-                'total': total_insertions + total_deletions
-            }
+                "insertions": total_insertions,
+                "deletions": total_deletions,
+                "total": total_insertions + total_deletions,
+            },
         )
 
         return GitDiffContext(
@@ -102,15 +100,15 @@ class GitRepository:
             target_branch=target_branch,
             repo_path=str(self.repo_path),
             context=context,
-            metadata=metadata
+            metadata=metadata,
         )
 
     def _get_changed_file_set(
-            self,
-            source_branch: str,
-            target_branch: str,
-            *,
-            include_patch: bool = False,
+        self,
+        source_branch: str,
+        target_branch: str,
+        *,
+        include_patch: bool = False,
     ) -> ChangedFileSet:
         """Return a **ChangedFileSet** that mirrors a PR diff.
 
@@ -124,7 +122,8 @@ class GitRepository:
         tgt_ref = self._resolve_branch(target_branch)
 
         logger.debug(
-            f"Getting diff between target branch '{target_branch}' and source branch '{source_branch}' using three dots diff")
+            f"Getting diff between target branch '{target_branch}' and source branch '{source_branch}' using three dots diff"
+        )
 
         # Use the three dots syntax for git diff (shows changes between branches excluding common ancestors)
         name_status = self._parse_name_status_three_dots(tgt_ref, src_ref)
@@ -132,11 +131,13 @@ class GitRepository:
 
         logger.debug("Parsed name_status and numstat: %s, %s", name_status, numstat)
 
-        files: List[ChangedFile] = []
+        files: list[ChangedFile] = []
         for path, status in name_status.items():
             insertions, deletions, binary_flag = numstat.get(path, (None, None, False))
             patch = (
-                self._git_output(f"git diff {tgt_ref}...{src_ref} -- {shlex.quote(path)}")
+                self._git_output(
+                    f"git diff {tgt_ref}...{src_ref} -- {shlex.quote(path)}"
+                )
                 if include_patch and not binary_flag
                 else None
             )
@@ -156,7 +157,6 @@ class GitRepository:
             target_branch=target_branch,
             files=sorted(files, key=lambda f: f.path),
         )
-
 
     def _auto_pull_if_needed(self, git_config: GitRepositoryConfig) -> None:
         """Execute auto-pull with per-repository rate limiting if conditions are met.
@@ -193,16 +193,20 @@ class GitRepository:
                     logger.warning(f"Auto-pull failed for {repo_path_str}: {e}")
             else:
                 time_remaining = pull_interval - (current_time - last_pull_time)
-                logger.debug(f"Auto-pull rate limited for {repo_path_str}, {time_remaining:.1f}s remaining")
+                logger.debug(
+                    f"Auto-pull rate limited for {repo_path_str}, {time_remaining:.1f}s remaining"
+                )
 
     # --------------------- low‑level helpers ------------------------------
 
     def _git_output(self, cmd: str) -> str:
         """Run *cmd* in the repo and return **stdout** as *str* (strip tail newline)."""
         logger.debug("Running git command: %s", cmd)
-        return subprocess.check_output(
-            cmd, shell=True, cwd=self.repo_path
-        ).decode('utf-8').strip()
+        return (
+            subprocess.check_output(cmd, shell=True, cwd=self.repo_path)  # nosec B602
+            .decode("utf-8")
+            .strip()
+        )
 
     def pull(self) -> str:
         """Execute git pull in the repository to update it with remote changes."""
@@ -211,7 +215,7 @@ class GitRepository:
 
     # ------------------------------------------------------------------
 
-    def _resolve_branch_safe(self, branch: str) -> Optional[str]:
+    def _resolve_branch_safe(self, branch: str) -> str | None:
         """Return the first valid reference for *branch*, or None if not found."""
         for candidate in (branch, f"origin/{branch}", f"remotes/origin/{branch}"):
             try:
@@ -228,7 +232,7 @@ class GitRepository:
             raise ValueError(f"Branch ref '{branch}' not found (local or remote)")
         return result
 
-    def resolve_refs_to_branch(self, refs: List[str]) -> Optional[str]:
+    def resolve_refs_to_branch(self, refs: list[str]) -> str | None:
         """Resolve first valid reference from a list of refs (branches/commits)."""
         for ref in refs:
             resolved = self._resolve_branch_safe(ref)
@@ -240,17 +244,19 @@ class GitRepository:
 
     def _merge_base(self, src: str, tgt: str) -> str:
         try:
-            return self._git_output(f"git merge-base {shlex.quote(src)} {shlex.quote(tgt)}")
+            return self._git_output(
+                f"git merge-base {shlex.quote(src)} {shlex.quote(tgt)}"
+            )
         except subprocess.CalledProcessError:
             return EMPTY_TREE_HASH
 
     # ------------------------------------------------------------------
 
-    def _parse_name_status_three_dots(self, tgt: str, src: str) -> Dict[str, str]:
+    def _parse_name_status_three_dots(self, tgt: str, src: str) -> dict[str, str]:
         """Return mapping *path -> status letter* using a three dots git diff."""
         output = self._git_output(f"git diff --name-status -M -C {tgt}...{src}")
         logger.debug("Got name_status output: %s", output)
-        mapping: Dict[str, str] = {}
+        mapping: dict[str, str] = {}
         for line in output.splitlines():
             if not line.strip():
                 continue
@@ -265,10 +271,12 @@ class GitRepository:
                 mapping[path] = status
         return mapping
 
-    def _parse_numstat_three_dots(self, tgt: str, src: str) -> Dict[str, tuple[int | None, int | None, bool]]:
+    def _parse_numstat_three_dots(
+        self, tgt: str, src: str
+    ) -> dict[str, tuple[int | None, int | None, bool]]:
         """Return mapping *path -> (insertions, deletions, binary)* using three dots git diff."""
         output = self._git_output(f"git diff --numstat -M -C {tgt}...{src}")
-        result: Dict[str, tuple[int | None, int | None, bool]] = {}
+        result: dict[str, tuple[int | None, int | None, bool]] = {}
         for line in output.splitlines():
             if not line.strip():
                 continue

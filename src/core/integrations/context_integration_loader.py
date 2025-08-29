@@ -16,8 +16,10 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
+import logging
 
+from core.integrations.provider_registry import ProviderRegistry
 from core.project_config import ProjectConfig
 from integrations.git.git_repository import GitRepository
 
@@ -27,24 +29,26 @@ class ContextIntegrationLoader:
 
     def __init__(self, project_config: ProjectConfig):
         self.project_config = project_config
-        self._provider_registry = None
-        self._logger = None
+        self._provider_registry: ProviderRegistry | None = None
+        self._logger: logging.Logger | None = None
 
         # In-memory cache for loaded models
-        self._pr_cache: Dict[str, Any] = {}
-        self._issue_cache: Dict[str, Any] = {}
+        self._pr_cache: dict[str, Any] = {}
+        self._issue_cache: dict[str, Any] = {}
 
-    def _get_provider_registry(self):
+    def _get_provider_registry(self) -> ProviderRegistry:
         """Lazy initialization of provider registry to avoid circular imports."""
         if self._provider_registry is None:
             from core.integrations import get_provider_registry
+
             self._provider_registry = get_provider_registry()
         return self._provider_registry
 
-    def _get_logger(self):
+    def _get_logger(self) -> logging.Logger:
         """Lazy initialization of logger."""
         if self._logger is None:
             from core.log import get_logger
+
             self._logger = get_logger("ProjectLoader")
         return self._logger
 
@@ -66,9 +70,13 @@ class ContextIntegrationLoader:
             return self._pr_cache[pullrequest_id]
 
         # Load from provider
-        pr_provider = self._get_provider_registry().resolve_pullrequest_provider(self.project_config)
+        pr_provider = self._get_provider_registry().resolve_pullrequest_provider(
+            self.project_config
+        )
         if not pr_provider:
-            raise ValueError("No pull request provider available for current configuration")
+            raise ValueError(
+                "No pull request provider available for current configuration"
+            )
 
         self._get_logger().info(f"Loading PR #{pullrequest_id} from provider")
         pr_model = await pr_provider.load(pullrequest_id)
@@ -95,7 +103,9 @@ class ContextIntegrationLoader:
             return self._issue_cache[issue_id]
 
         # Load from provider
-        issue_provider = self._get_provider_registry().resolve_issue_provider(self.project_config)
+        issue_provider = self._get_provider_registry().resolve_issue_provider(
+            self.project_config
+        )
         if not issue_provider:
             raise ValueError("No issue provider available for current configuration")
 
@@ -106,7 +116,7 @@ class ContextIntegrationLoader:
         self._issue_cache[issue_id] = issue_model
         return issue_model
 
-    async def get_branches_from_pr(self, pullrequest_id: str) -> Tuple[str, str]:
+    async def get_branches_from_pr(self, pullrequest_id: str) -> tuple[str, str]:
         """Get source and target branch names from a pull request.
 
         Args:
@@ -125,11 +135,13 @@ class ContextIntegrationLoader:
         target_branch = self._resolve_refs_to_branch(pr_model.target_refs)
 
         if not source_branch or not target_branch:
-            raise ValueError(f"Pull request {pullrequest_id} - could not resolve valid source/target references")
+            raise ValueError(
+                f"Pull request {pullrequest_id} - could not resolve valid source/target references"
+            )
 
         return source_branch, target_branch
 
-    def _resolve_refs_to_branch(self, refs: List[str]) -> Optional[str]:
+    def _resolve_refs_to_branch(self, refs: list[str]) -> str | None:
         return GitRepository(self.project_config).resolve_refs_to_branch(refs)
 
     def clear_cache(self) -> None:

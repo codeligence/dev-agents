@@ -59,10 +59,10 @@ projects:
 
 slack:
   bot:
-    botToken: "@format {env[SLACK_BOT_TOKEN]}"
-    channelId: "@format {env[SLACK_CHANNEL_ID]}"
-    appToken: "@format {env[SLACK_APP_TOKEN]}"
-    processingTimeout: 6000
+    botToken:    "@jinja {{ env.SLACK_BOT_TOKEN or '' }}"
+    channelId:   "@jinja {{ env.SLACK_CHANNEL_ID or '' }}"
+    appToken:    "@jinja {{ env.SLACK_APP_TOKEN or '' }}"
+    processingTimeout: "@jinja {{ env.SLACK_PROCESSING_TIMEOUT or 6000 }}"
 
 agui:
   server:
@@ -80,8 +80,8 @@ cli:
 
 agents:
   gitchatbot:
-    model: "openai:gpt-4.1-mini"
-    maxTokens: 1000
+    model: "@jinja {{ this.models.large }}"
+    maxTokens: 2000
     temperature: 0.7
     timeoutSeconds: 60
 

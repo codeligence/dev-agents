@@ -22,25 +22,22 @@ This agent provides file search and content analysis capabilities
 for both UI and API impact analysis agents.
 """
 
-import os
-import shlex
-import subprocess
 from pathlib import Path
-from typing import List, Optional, Type, Any
+from typing import Any
+import subprocess
 
-from pydantic_ai import Agent as PydanticAgent, RunContext
+from pydantic_ai import Agent as PydanticAgent
+from pydantic_ai import RunContext
 
 from core.log import get_logger
+
 from .models import CodeResearchDependencies
 
 logger = get_logger(logger_name="CodeResearchAgent", level="DEBUG")
 
 
-def create_code_research_agent(
-    model: str,
-    system_prompt: str,
-    num_retries: int = 3,
-    output_type: type[Any] = str
+def create_code_research_subagent(
+    model: str, system_prompt: str, num_retries: int = 3, output_type: type[Any] = str
 ) -> PydanticAgent[CodeResearchDependencies, Any]:
     """Create a code research agent configured for file analysis tasks.
 
@@ -58,11 +55,15 @@ def create_code_research_agent(
         deps_type=CodeResearchDependencies,
         output_type=output_type,
         instructions=system_prompt,
-        retries=num_retries
+        retries=num_retries,
     )
 
     @agent.tool
-    async def ai_grep_files(ctx: RunContext[CodeResearchDependencies], keywords: List[str], search_path: Optional[str] = None) -> str:
+    async def ai_grep_files(
+        ctx: RunContext[CodeResearchDependencies],
+        keywords: list[str],
+        search_path: str | None = None,
+    ) -> str:
         """
         Search for files containing ALL the given keywords, always using the source branch from dependencies.
 
@@ -104,13 +105,15 @@ def create_code_research_agent(
                 logger.warning(f"git grep failed: {result.stderr.strip()}")
                 return f"Search failed: {result.stderr.strip()}"
 
-            files = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            files = result.stdout.strip().split("\n") if result.stdout.strip() else []
 
             # Limit results to avoid overwhelming the agent
             max_results = 30
             if len(files) > max_results:
                 files = files[:max_results]
-                files.append(f"... (showing first {max_results} of {len(files)} results)")
+                files.append(
+                    f"... (showing first {max_results} of {len(files)} results)"
+                )
 
             if not files:
                 return "No files found containing all keywords"
@@ -129,7 +132,11 @@ def create_code_research_agent(
             return f"Error searching files: {e}"
 
     @agent.tool
-    async def ai_list_files(ctx: RunContext[CodeResearchDependencies], keywords: List[str], search_path: Optional[str] = None) -> str:
+    async def ai_list_files(
+        ctx: RunContext[CodeResearchDependencies],
+        keywords: list[str],
+        search_path: str | None = None,
+    ) -> str:
         """
         Search for files by name (case-insensitive) containing ALL the given keywords, always using the source branch from dependencies.
 
@@ -146,7 +153,9 @@ def create_code_research_agent(
         git_ref = ctx.deps.git_ref
         repo_path = Path(ctx.deps.repo_path).resolve()
 
-        logger.debug(f"Searching for file names containing {keywords} in git ref {git_ref}")
+        logger.debug(
+            f"Searching for file names containing {keywords} in git ref {git_ref}"
+        )
 
         try:
             # Use git ls-tree to list files in the branch
@@ -167,12 +176,14 @@ def create_code_research_agent(
                 logger.warning(f"git ls-tree failed: {result.stderr.strip()}")
                 return f"File listing failed: {result.stderr.strip()}"
 
-            all_files = result.stdout.strip().split('\n') if result.stdout.strip() else []
+            all_files = (
+                result.stdout.strip().split("\n") if result.stdout.strip() else []
+            )
 
             # Filter files that contain all keywords (case-insensitive)
             matching_files = []
             for file_path in all_files:
-                file_name = os.path.basename(file_path).lower()
+                file_name = Path(file_path).name.lower()
                 if all(keyword.lower() in file_name for keyword in keywords):
                     matching_files.append(file_path)
 
@@ -192,7 +203,9 @@ def create_code_research_agent(
             return f"Error listing files: {e}"
 
     @agent.tool
-    async def ai_read_file(ctx: RunContext[CodeResearchDependencies], file_path: str) -> str:
+    async def ai_read_file(
+        ctx: RunContext[CodeResearchDependencies], file_path: str
+    ) -> str:
         """
         Read the contents of a file, always using the source branch from dependencies.
 
@@ -229,7 +242,10 @@ def create_code_research_agent(
             # Limit content size to avoid overwhelming the agent
             max_chars = 10000
             if len(content) > max_chars:
-                content = content[:max_chars] + f"\n... (file truncated at {max_chars} characters)"
+                content = (
+                    content[:max_chars]
+                    + f"\n... (file truncated at {max_chars} characters)"
+                )
 
             return content
 

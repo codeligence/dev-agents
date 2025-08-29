@@ -18,14 +18,15 @@
 
 """Slack implementation of AgentExecutionContext."""
 
+from typing import Any
+import contextlib
 import uuid
-from typing import Optional
 
-from core.protocols.agent_protocols import AgentExecutionContext
 from core.config import BaseConfig
 from core.log import get_logger
 from core.message import MessageList
 from core.prompts import BasePrompts
+from core.protocols.agent_protocols import AgentExecutionContext
 from integrations.slack.slack_client_service import SlackClientService
 
 logger = get_logger("SlackAgentContext")
@@ -42,10 +43,10 @@ class SlackAgentContext(AgentExecutionContext):
         self,
         slack_client: SlackClientService,
         channel_id: str,
-        thread_ts: Optional[str],
+        thread_ts: str | None,
         message_list: MessageList,
         config: BaseConfig,
-        prompts: BasePrompts
+        prompts: BasePrompts,
     ):
         self.slack_client = slack_client
         self.channel_id = channel_id
@@ -54,7 +55,7 @@ class SlackAgentContext(AgentExecutionContext):
         self.config = config
         self.prompts = prompts
         self.context_id = str(uuid.uuid4())
-        self.last_message_ts: Optional[str] = None
+        self.last_message_ts: str | None = None
 
         # Check if bot is mentioned in the last message
         self._bot_mentioned = False
@@ -62,11 +63,17 @@ class SlackAgentContext(AgentExecutionContext):
             messages = message_list.get_messages()
             if messages:
                 last_message = messages[-1]
-                self._bot_mentioned = slack_client.is_bot_mentioned(last_message.content)
+                self._bot_mentioned = slack_client.is_bot_mentioned(
+                    last_message.get_message_content()
+                )
 
-        logger.info(f"Created Slack agent context: channel={channel_id}, thread={thread_ts}, context_id={self.context_id}, bot_mentioned={self._bot_mentioned}")
+        logger.info(
+            f"Created Slack agent context: channel={channel_id}, thread={thread_ts}, context_id={self.context_id}, bot_mentioned={self._bot_mentioned}"
+        )
 
-    async def _send_or_update_message(self, text: str, is_status: bool = False) -> Optional[str]:
+    async def _send_or_update_message(
+        self, text: str, is_status: bool = False
+    ) -> str | None:
         """Send a new message or update the last message if it exists.
 
         Args:
@@ -84,15 +91,14 @@ class SlackAgentContext(AgentExecutionContext):
                 message_ts = self.slack_client.update_message(
                     thread_ts=self.thread_ts or self.channel_id,
                     message_ts=self.last_message_ts,
-                    text=text
+                    text=text,
                 )
                 action = "Updated"
             else:
                 # Send new message
                 logger.debug("Sending new message")
                 message_ts = self.slack_client.send_reply(
-                    thread_ts=self.thread_ts or self.channel_id,
-                    text=text
+                    thread_ts=self.thread_ts or self.channel_id, text=text
                 )
                 action = "Sent"
 
@@ -146,13 +152,11 @@ class SlackAgentContext(AgentExecutionContext):
         if not message_ts:
             logger.error("Failed to send response to Slack")
             # Try to send an error message
-            try:
+            with contextlib.suppress(Exception):
                 await self._send_or_update_message(
                     "❌ Sorry, I encountered an error while sending my response.",
-                    is_status=False
+                    is_status=False,
                 )
-            except:
-                pass  # Best effort
             raise Exception("Failed to send response to Slack")
 
     def get_message_list(self) -> MessageList:
@@ -198,7 +202,7 @@ class SlackAgentContext(AgentExecutionContext):
         """
         return self.thread_ts or self.channel_id
 
-    def get_slack_info(self) -> dict:
+    def get_slack_info(self) -> dict[str, Any]:
         """Get Slack-specific context information.
 
         Returns:
@@ -207,7 +211,7 @@ class SlackAgentContext(AgentExecutionContext):
         return {
             "channel_id": self.channel_id,
             "thread_ts": self.thread_ts,
-            "context_id": self.context_id
+            "context_id": self.context_id,
         }
 
     def is_bot_mentioned(self) -> bool:

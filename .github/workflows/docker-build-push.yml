@@ -1,0 +1,57 @@
+name: Build and Push Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Docker image version tag (default: latest)'
+        required: false
+        default: 'latest'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up environment variables
+        id: vars
+        run: |
+          VERSION="${{ inputs.version }}"
+          COMMIT_HASH="${{ github.sha }}"
+          BRANCH_NAME="${{ github.ref_name }}"
+          BUILD_DATE="$(date)"
+          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "BUILD_DATE=$BUILD_DATE" >> $GITHUB_ENV
+
+      - name: Create release.txt
+        run: |
+          echo "Commit Hash: ${{ env.COMMIT_HASH }}" > release.txt
+          echo "Branch Name: ${{ env.BRANCH_NAME }}" >> release.txt
+          echo "Build Date: ${{ env.BUILD_DATE }}" >> release.txt
+          echo "Version: ${{ env.VERSION }}" >> release.txt
+          
+          echo "Release information written to release.txt"
+          cat release.txt
+
+      - name: Log in to Docker registry
+        uses: docker/login-action@v3
+        with:
+          registry: docker.codeligence.ai
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: docker.codeligence.ai/betty:${{ env.VERSION }}
+
+      - name: Build and push completed
+        run: echo "Build and push completed successfully!"
