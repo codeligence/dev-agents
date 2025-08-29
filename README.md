@@ -39,9 +39,19 @@ Build using the elegant [Pydantic AI](https://ai.pydantic.dev/) framework.
 
 ## Quick start
 
-1. Option 1: **Run the Setup Wizard:** [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
+1. Option: **Run the Setup Wizard:** [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
    Generates your config and start instructions for local or server deployment.
-2. Option 2: **Clone and run** (example):
+2. Option: **Use Docker**:
+
+```bash
+# 1) Get example env and edit
+wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
+
+# 2) Run the CLI Chat in the docker container
+docker run --rm -it --env-file=.env -v ./code:/code -v ./data:/data codeligence/dev-agents
+```
+
+6. Option: **Clone and run**:
 
 ```bash
 # 1) Clone
@@ -54,12 +64,10 @@ cp .env.example .env
 # 3) See src/entrypoints for possible interfaces. Start with command line, try Slack or AG-UI next
 pip install -e .[all]
 python -m entrypoints.cli_chat
-
-# or use docker (coming soon)
 ```
 
 Then interact in your tools (e.g. Slack):
-`@BettySharp release notes for sprint 42`
+`@DevAgents release notes for pull request 123 please`
 
 ## Included agents
 
