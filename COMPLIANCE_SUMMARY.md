@@ -1,13 +1,13 @@
 # License Compliance Summary and Recommendations
 
-**Report Generated**: 2025-08-06  
-**Project**: dev-agents v0.1.0  
+**Report Generated**: 2025-08-26  
+**Project**: dev-agents v0.9.0  
 **Primary License**: GNU Affero General Public License v3 (AGPL v3)
 
 ## Executive Summary
 
 ✅ **Overall Status**: COMPLIANT  
-🔍 **Dependencies Analyzed**: 105 total packages  
+🔍 **Dependencies Analyzed**: 233 total packages  
 
 ## Dependencies License Analysis
 

@@ -16,12 +16,17 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import pytest
-from unittest.mock import patch, AsyncMock, Mock, MagicMock
+from unittest.mock import AsyncMock, Mock, patch
+
 import httpx
-from integrations.devops.provider import AzureDevOpsPullRequestProvider, AzureDevOpsIssueProvider
+import pytest
+
+from core.protocols.provider_protocols import IssueModel, PullRequestModel
 from integrations.devops.config import AzureDevOpsConfig
-from core.protocols.provider_protocols import PullRequestModel, IssueModel
+from integrations.devops.provider import (
+    AzureDevOpsIssueProvider,
+    AzureDevOpsPullRequestProvider,
+)
 
 
 class TestAzureDevOpsPullRequestProvider:
@@ -35,7 +40,7 @@ class TestAzureDevOpsPullRequestProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
 
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
@@ -51,13 +56,13 @@ class TestAzureDevOpsPullRequestProvider:
             "project": None,
             "pat": None,
             "repoId": None,
-            "mock": True
+            "mock": True,
         }
 
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
         assert provider is not None
         assert isinstance(provider, AzureDevOpsPullRequestProvider)
-        assert provider.config.get_use_mocks() == True
+        assert provider.config.get_use_mocks()
 
     def test_from_config_with_invalid_config(self):
         """Test provider creation with invalid configuration."""
@@ -67,7 +72,7 @@ class TestAzureDevOpsPullRequestProvider:
             "project": None,
             "pat": None,
             "repoId": None,
-            "mock": False  # Not configured and not mock mode
+            "mock": False,  # Not configured and not mock mode
         }
 
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
@@ -85,7 +90,9 @@ class TestAzureDevOpsPullRequestProvider:
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
         # Mock the mock functions
-        with patch('integrations.devops.provider.mock_fetch_pull_request') as mock_fetch:
+        with patch(
+            "integrations.devops.provider.mock_fetch_pull_request"
+        ) as mock_fetch:
             mock_pr = Mock()
             mock_pr.get_composed_PR_info.return_value = "Mock PR Info"
             mock_pr.get_source_branch.return_value = "feature/test"
@@ -104,7 +111,7 @@ class TestAzureDevOpsPullRequestProvider:
             assert result.target_branch == "main"
             assert result.source_refs == ["feature/test", "abc123", "ghi789"]
             assert result.target_refs == ["main", "def456"]
-            mock_fetch.assert_called_once_with("123")
+            mock_fetch.assert_called_once_with(123)
 
     @pytest.mark.asyncio
     async def test_load_with_real_mode(self):
@@ -115,12 +122,12 @@ class TestAzureDevOpsPullRequestProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
         # Mock the async fetch method
-        with patch.object(provider, '_fetch_pull_request') as mock_fetch_async:
+        with patch.object(provider, "_fetch_pull_request") as mock_fetch_async:
             mock_pr = Mock()
             mock_pr.get_composed_PR_info.return_value = "Real PR Info"
             mock_pr.get_source_branch.return_value = "feature/real"
@@ -150,7 +157,7 @@ class TestAzureDevOpsPullRequestProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
@@ -162,15 +169,13 @@ class TestAzureDevOpsPullRequestProvider:
             "pullRequestId": 123,
             "title": "Test PR",
             "sourceRefName": "refs/heads/feature",
-            "targetRefName": "refs/heads/main"
+            "targetRefName": "refs/heads/main",
         }
 
         mock_commits_response = Mock()
         mock_commits_response.status_code = 200
         mock_commits_response.raise_for_status = Mock()
-        mock_commits_response.json.return_value = {
-            "value": [{"commitId": "commit123"}]
-        }
+        mock_commits_response.json.return_value = {"value": [{"commitId": "commit123"}]}
 
         # Mock AsyncClient
         mock_client = AsyncMock()
@@ -178,7 +183,7 @@ class TestAzureDevOpsPullRequestProvider:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=mock_client):
             result = await provider._fetch_pull_request("123")
 
             # Verify client was called with correct URLs
@@ -191,8 +196,8 @@ class TestAzureDevOpsPullRequestProvider:
 
             # Verify result is PullRequest object
             assert result is not None
-            assert hasattr(result, 'pr')
-            assert hasattr(result, 'commit_data')
+            assert hasattr(result, "pr")
+            assert hasattr(result, "commit_data")
 
     @pytest.mark.asyncio
     async def test_fetch_pull_request_http_error(self):
@@ -203,7 +208,7 @@ class TestAzureDevOpsPullRequestProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
@@ -217,9 +222,11 @@ class TestAzureDevOpsPullRequestProvider:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
-            with pytest.raises(httpx.HTTPStatusError):
-                await provider._fetch_pull_request("999")
+        with (
+            patch("httpx.AsyncClient", return_value=mock_client),
+            pytest.raises(httpx.HTTPStatusError),
+        ):
+            await provider._fetch_pull_request("999")
 
     @pytest.mark.asyncio
     async def test_download_image_as_base64_success(self):
@@ -230,7 +237,7 @@ class TestAzureDevOpsPullRequestProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
@@ -246,8 +253,10 @@ class TestAzureDevOpsPullRequestProvider:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
-            result = await provider.download_image_as_base64("https://example.com/image.png")
+        with patch("httpx.AsyncClient", return_value=mock_client):
+            result = await provider.download_image_as_base64(
+                "https://example.com/image.png"
+            )
 
             # Verify client was called with correct URL and auth
             mock_client.get.assert_called_once_with("https://example.com/image.png")
@@ -265,7 +274,7 @@ class TestAzureDevOpsPullRequestProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
@@ -282,9 +291,11 @@ class TestAzureDevOpsPullRequestProvider:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
-            with pytest.raises(httpx.HTTPStatusError):
-                await provider.download_image_as_base64("https://example.com/notfound.png")
+        with (
+            patch("httpx.AsyncClient", return_value=mock_client),
+            pytest.raises(httpx.HTTPStatusError),
+        ):
+            await provider.download_image_as_base64("https://example.com/notfound.png")
 
     @pytest.mark.asyncio
     async def test_refs_with_empty_values(self):
@@ -292,7 +303,9 @@ class TestAzureDevOpsPullRequestProvider:
         config_data = {"mock": True}
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
-        with patch('integrations.devops.provider.mock_fetch_pull_request') as mock_fetch:
+        with patch(
+            "integrations.devops.provider.mock_fetch_pull_request"
+        ) as mock_fetch:
             mock_pr = Mock()
             mock_pr.get_composed_PR_info.return_value = "Mock PR Info"
             mock_pr.get_source_branch.return_value = "feature/test"
@@ -318,7 +331,7 @@ class TestAzureDevOpsPullRequestProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsPullRequestProvider.from_config(config_data)
 
@@ -340,14 +353,13 @@ class TestAzureDevOpsPullRequestProvider:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=mock_client):
             await provider._fetch_pull_request("123")
 
             # Both URLs should be called (verifies concurrent execution)
             assert len(call_order) == 2
             assert any("pullRequests/123?" in url for url in call_order)
             assert any("commits?" in url for url in call_order)
-
 
 
 class TestAzureDevOpsIssueProvider:
@@ -361,7 +373,7 @@ class TestAzureDevOpsIssueProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
 
         provider = AzureDevOpsIssueProvider.from_config(config_data)
@@ -377,13 +389,13 @@ class TestAzureDevOpsIssueProvider:
             "project": None,
             "pat": None,
             "repoId": None,
-            "mock": True
+            "mock": True,
         }
 
         provider = AzureDevOpsIssueProvider.from_config(config_data)
         assert provider is not None
         assert isinstance(provider, AzureDevOpsIssueProvider)
-        assert provider.config.get_use_mocks() == True
+        assert provider.config.get_use_mocks()
 
     def test_from_config_with_invalid_config(self):
         """Test provider creation with invalid configuration."""
@@ -393,7 +405,7 @@ class TestAzureDevOpsIssueProvider:
             "project": None,
             "pat": None,
             "repoId": None,
-            "mock": False  # Not configured and not mock mode
+            "mock": False,  # Not configured and not mock mode
         }
 
         provider = AzureDevOpsIssueProvider.from_config(config_data)
@@ -411,9 +423,11 @@ class TestAzureDevOpsIssueProvider:
         provider = AzureDevOpsIssueProvider.from_config(config_data)
 
         # Mock the mock functions
-        with patch('integrations.devops.provider.mock_fetch_work_item') as mock_fetch:
+        with patch("integrations.devops.provider.mock_fetch_work_item") as mock_fetch:
             mock_work_item = Mock()
-            mock_work_item.get_composed_work_item_info.return_value = "Mock Work Item Info"
+            mock_work_item.get_composed_work_item_info.return_value = (
+                "Mock Work Item Info"
+            )
             mock_fetch.return_value = mock_work_item
 
             result = await provider.load("123")
@@ -421,7 +435,7 @@ class TestAzureDevOpsIssueProvider:
             assert isinstance(result, IssueModel)
             assert result.id == "123"
             assert result.context == "Mock Work Item Info"
-            mock_fetch.assert_called_once_with("123")
+            mock_fetch.assert_called_once_with(123)
 
     @pytest.mark.asyncio
     async def test_load_with_real_mode(self):
@@ -432,14 +446,16 @@ class TestAzureDevOpsIssueProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsIssueProvider.from_config(config_data)
 
         # Mock the async fetch method
-        with patch.object(provider, '_fetch_work_item') as mock_fetch_async:
+        with patch.object(provider, "_fetch_work_item") as mock_fetch_async:
             mock_work_item = Mock()
-            mock_work_item.get_composed_work_item_info.return_value = "Real Work Item Info"
+            mock_work_item.get_composed_work_item_info.return_value = (
+                "Real Work Item Info"
+            )
             mock_fetch_async.return_value = mock_work_item
 
             result = await provider.load("456")
@@ -458,7 +474,7 @@ class TestAzureDevOpsIssueProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsIssueProvider.from_config(config_data)
 
@@ -468,10 +484,7 @@ class TestAzureDevOpsIssueProvider:
         mock_response.raise_for_status = Mock()
         mock_response.json.return_value = {
             "id": 123,
-            "fields": {
-                "System.Title": "Test Work Item",
-                "System.State": "Active"
-            }
+            "fields": {"System.Title": "Test Work Item", "System.State": "Active"},
         }
 
         # Mock AsyncClient
@@ -480,7 +493,7 @@ class TestAzureDevOpsIssueProvider:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
+        with patch("httpx.AsyncClient", return_value=mock_client):
             result = await provider._fetch_work_item("123")
 
             # Verify client was called with correct URL
@@ -489,7 +502,7 @@ class TestAzureDevOpsIssueProvider:
 
             # Verify result is WorkItem object
             assert result is not None
-            assert hasattr(result, 'data')
+            assert hasattr(result, "data")
 
     @pytest.mark.asyncio
     async def test_fetch_work_item_http_error(self):
@@ -500,7 +513,7 @@ class TestAzureDevOpsIssueProvider:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
         provider = AzureDevOpsIssueProvider.from_config(config_data)
 
@@ -514,10 +527,11 @@ class TestAzureDevOpsIssueProvider:
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
 
-        with patch('httpx.AsyncClient', return_value=mock_client):
-            with pytest.raises(httpx.HTTPStatusError):
-                await provider._fetch_work_item("999")
-
+        with (
+            patch("httpx.AsyncClient", return_value=mock_client),
+            pytest.raises(httpx.HTTPStatusError),
+        ):
+            await provider._fetch_work_item("999")
 
 
 class TestProviderRegistration:
@@ -526,9 +540,8 @@ class TestProviderRegistration:
     def test_providers_registered_on_import(self):
         """Test that Azure providers are registered when module is imported."""
         # Import the azure package to trigger registration
-        import integrations.devops
-
         from core.integrations import get_provider_registry
+
         registry = get_provider_registry()
 
         # Check that devops providers are registered
@@ -540,7 +553,6 @@ class TestProviderRegistration:
 
     def test_provider_factory_integration(self):
         """Test that registered providers work with the factory pattern."""
-        import integrations.devops
         from core.integrations import get_provider_registry
 
         registry = get_provider_registry()
@@ -552,7 +564,7 @@ class TestProviderRegistration:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
 
         pr_factory = registry._pullrequest_providers["devops"]
@@ -567,7 +579,7 @@ class TestProviderRegistration:
             "project": "test-project",
             "pat": "test-token",
             "repoId": "test-repo-id",
-            "mock": False
+            "mock": False,
         }
 
         issue_factory = registry._issue_providers["devops"]
@@ -577,7 +589,6 @@ class TestProviderRegistration:
 
     def test_provider_factory_with_invalid_config(self):
         """Test that factory returns None for invalid configs."""
-        import integrations.devops
         from core.integrations import get_provider_registry
 
         registry = get_provider_registry()

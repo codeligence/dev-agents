@@ -2,7 +2,7 @@
 
 This software is available under a **dual license**:
 
-1. **GNU Affero General Public License (AGPL) v3**
+1. **GNU Affero General Public License (AGPL) v3** (this repository)
 2. **Commercial proprietary license** 
 
 For commercial licensing (to use this software in closed-source or non-AGPL projects), contact:

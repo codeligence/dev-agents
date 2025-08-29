@@ -1,123 +1,84 @@
-# Dev Agents Documentation
+# Codeligence Dev Agents
 
-**AI-Powered Development Team Automation with PydanticAI**
+**You have your copilot, but what about the agile team work outside the IDE? Dev Agents handle the nasty grind outside your IDE: docs, reviews, debugging, logs & delivery, so you peacefully focus on building.**
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/codeligence/dev-agents/actions)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://pypi.org/project/dev-agents/)
+![Build Status](https://img.shields.io/badge/build-pass-brightgreen.svg)
+[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](https://pypi.org/project/dev-agents/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code Quality](https://img.shields.io/badge/code%20quality-black%20%7C%20%20ruff%20%7C%20mypy%20%7C%20bandit-brightgreen.svg)](https://shields.io)
 
----
 
-## Welcome to Dev Agents
+[Setup Wizard](https://setup.codeligence.com) **·** [Quick start](#quick-start) **·** [Use Cases](#use-cases)  
 
-Dev Agents is an enterprise-grade Python framework that revolutionizes development workflows by using AI agents to analyze code changes, generate testing insights, and provide intelligent assistance through Slack integration.
+**Core idea:** one consistent, named AI teammate (e.g. “Betty Sharp”) embedded into Slack, GitHub, DevOps, Jira, Console & more - automating tedious, repeatable tasks around your codebase.
 
-Built on the elegant [PydanticAI](https://docs.pydantic.ai/) framework, Dev Agents provides a protocol-based, type-safe architecture for creating sophisticated AI-powered development tools.
+Build using the elegant [Pydantic AI](https://ai.pydantic.dev/) framework.
 
-## Key Features
+## Why use Dev Agents
 
-### 🤖 **AI-Powered Development Assistance**
-- **Impact Analysis**: Intelligent assessment of code changes and their potential effects
-- **Code Research Agent**: AI-driven exploration and analysis of your codebase
-- **Git Integration**: Automatic repository monitoring and change detection
-- **Test Generation**: AI-powered testing notes and recommendations
+* **Dev AI Avatar** – one persona, many skills; shows up across your stack with a single voice.
+* **Open-source** – free under **AGPLv3**; commercial license available for closed-source deployments & enterprise support.
+* **LLM-flexible** – works with major hosted or local models.
+* **Ready now** – 4 production agents live; more being ported from customer projects.
+* **Easily Customizable** – Easily add more use cases or customizations by extending base classes and implementing protocols.
+* **Fast setup** – guided onboarding at **setup.codeligence.com**; run locally or on your server.
+* **Built for teams** – shines with **5+ devs** and complex, evolving codebases where docs, compliance & handovers matter.
+* **Context and Integrations for Dev Teams.** While it works similarly to Claude Code or Gemini CLI, Dev Agents provide you with pre-engineered, dev specific contexts, prompts, and integrations for reproducible, cost-efficient results and a quick start.
 
-### 🏗️ **Enterprise Architecture**
-- **Protocol-Based Design**: Type-safe, extensible architecture using Python Protocols
-- **Clean Architecture**: Clear separation between framework, agents, and integrations
-- **SOLID Principles**: Maintainable, testable, and scalable codebase
-- **Full Type Safety**: mypy-compliant with comprehensive typing
+## Quick start
 
-### 🔌 **Seamless Integrations**
-- **Slack Bot**: Real-time message processing with dual-thread architecture
-- **Azure DevOps**: Work item tracking and pull request analysis
-- **Git Repository**: Intelligent git operations and change tracking
-- **Multi-LLM Support**: OpenAI GPT-4, Gemini, and extensible model support
-
-## Quick Start
-
-Get up and running with Dev Agents in minutes:
+1. Option: **Run the Setup Wizard:** [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
+   Generates your config and start instructions for local or server deployment.
+2. Option: **Use Docker**:
 
 ```bash
-# Install Dev Agents
-pip install dev-agents[all]
+# 1) Get example env and edit
+wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
 
-# Configure your environment
+# 2) Run the CLI Chat in the docker container
+docker run --rm -it --env-file=.env -v ./code:/code -v ./data:/data codeligence/dev-agents
+```
+
+6. Option: **Clone and run**:
+
+```bash
+# 1) Clone
+git clone https://github.com/codeligence/dev-agents.git
+cd dev-agents
+
+# 2) Copy example env and edit
 cp .env.example .env
-# Edit .env with your API keys and configuration
 
-# Run the Slack bot
-dev-agents-slack-bot
+# 3) See src/entrypoints for possible interfaces. Start with command line, try Slack or AG-UI next
+pip install -e .[all]
+python -m entrypoints.cli_chat
 ```
 
-!!! tip "New to Dev Agents?"
-    Start with our [Installation Guide](installation.md) and [Quick Start](quick-start.md) to get your first agent running in under 10 minutes.
+Then interact in your tools (e.g. Slack):
+`@DevAgents release notes for pull request 123 please`
 
-## Architecture Overview
+## Who it’s for
 
-```mermaid
-flowchart TB
-    subgraph "User Interface"
-        A[Slack Bot] 
-        B[CLI Tools]
-    end
+* Engineering teams **5+ devs** on long-lived, multi-gen codebases
+* Teams with **documentation/compliance/support** overhead
+* CTOs who want to **multiply output** while protecting developer focus
+
+## Interfaces & Integrations
+
+**Interfaces**
+
+- **Slack** • **Teams** • **AG-UI** • **MCP** • **CLI** • **A2A**
+- Add more easily
     
-    subgraph "Agent Framework"
-        C[Agent Factory]
-        D[Agent Service]
-        E[Message Queue]
-    end
-    
-    subgraph "AI Agents"
-        F[GitChatbot Agent]
-        G[Impact Analysis]
-        H[Code Research]
-    end
-    
-    subgraph "Integration Layer"
-        I[Azure DevOps]
-        J[Git Repository]
-        K[Slack Client]
-        L[LLM Providers]
-    end
-    
-    subgraph "Core Framework"
-        M[Configuration System]
-        N[Protocol Layer]
-        O[Storage & Logging]
-    end
-    
-    A --> C
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    E --> G
-    E --> H
-    F --> I
-    F --> J
-    G --> J
-    H --> J
-    A --> K
-    F --> L
-    G --> L
-    H --> L
-    C --> M
-    D --> N
-    E --> O
-```
+**Integrations**
 
-## What Makes Dev Agents Different?
+- **Git providers:** GitHub / GitLab / Azure DevOps
+- **Issues/PM:** Jira, GitHub Issues, GitLab Issues
+- **Observability:** ELK / Loki / Files (others via MCP/tools)
+- **Models:** All major providers and local LLMs
+- Add more easily
 
-### **Protocol-Based Architecture**
-Unlike traditional frameworks, Dev Agents uses Python Protocols to define type-safe interfaces, making it easy to extend and test while maintaining enterprise-grade reliability.
-
-### **PydanticAI Integration** 
-Built on PydanticAI, the framework provides structured outputs, automatic validation, and seamless integration with modern LLM providers.
-
-### **Real-World Focus**
-Designed for actual development workflows, not toy examples. Handle complex codebases, integrate with existing tools, and scale to enterprise environments.
 
 ## Use Cases
 
@@ -152,15 +113,6 @@ Designed for actual development workflows, not toy examples. Handle complex code
 - **💬 Discussions**: [GitHub Discussions](https://github.com/codeligence/dev-agents/discussions)
 - **🔒 Security**: [Security Policy](https://github.com/codeligence/dev-agents/security/policy)
 
-## License & Compliance
-
-Dev Agents is licensed under the [GNU Affero General Public License v3.0](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md), ensuring the project remains open source while enabling commercial use.
-
-- **GDPR Compliant**: Privacy-by-design architecture
-- **SOC2 Patterns**: Enterprise-grade security practices
-- **Audit Trail**: Comprehensive logging and activity tracking
-
----
 
 ## Next Steps
 
@@ -180,7 +132,7 @@ Dev Agents is licensed under the [GNU Affero General Public License v3.0](https:
 
     Configure Slack, Azure DevOps, and AI models
 
-    [:octicons-arrow-right-24: Configuration Guide](configuration/)
+    [:octicons-arrow-right-24: Configuration Guide](configuration/config-yaml.md)
 
 -   :material-code-tags:{ .lg .middle } **Developer Guide**
 
@@ -188,18 +140,8 @@ Dev Agents is licensed under the [GNU Affero General Public License v3.0](https:
 
     Build custom agents and extend the framework
 
-    [:octicons-arrow-right-24: Developer Documentation](developer/)
+[//]: # (    [:octicons-arrow-right-24: Developer Documentation]&#40;developer/&#41;)
 
--   :material-school:{ .lg .middle } **Examples**
-
-    ---
-
-    Working examples and integration patterns
-
-    [:octicons-arrow-right-24: Code Examples](examples/)
-
+    Coming soon
 </div>
 
----
-
-*Built with ❤️ using [PydanticAI](https://docs.pydantic.ai/)*

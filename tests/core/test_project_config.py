@@ -16,12 +16,14 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import pytest
+from pathlib import Path
 import tempfile
-import os
+
+import pytest
+
 from core.config import BaseConfig
-from core.project_config import ProjectConfig, ProjectConfigFactory
 from core.exceptions import ConfigurationError
+from core.project_config import ProjectConfig, ProjectConfigFactory
 
 
 class TestProjectConfig:
@@ -29,22 +31,22 @@ class TestProjectConfig:
 
     def _create_test_config(self, config_content: str) -> BaseConfig:
         """Helper method to create a test config from string content."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(config_content)
             temp_path = f.name
 
         # Store path for cleanup
-        self._temp_files = getattr(self, '_temp_files', [])
+        self._temp_files = getattr(self, "_temp_files", [])
         self._temp_files.append(temp_path)
 
         return BaseConfig(temp_path)
 
     def teardown_method(self):
         """Clean up temporary files after each test."""
-        if hasattr(self, '_temp_files'):
+        if hasattr(self, "_temp_files"):
             for temp_file in self._temp_files:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
+                if Path(temp_file).exists():
+                    Path(temp_file).unlink()
             self._temp_files = []
 
     def test_project_config_initialization(self):
@@ -90,7 +92,7 @@ projects:
         assert isinstance(git_config, dict)
         assert git_config["path"] == "/test/repo"
         assert git_config["defaultBranch"] == "develop"
-        assert git_config["autoPull"] == True
+        assert git_config["autoPull"]
 
     def test_get_git_config_missing(self):
         """Test getting git config when it's missing."""
@@ -184,7 +186,9 @@ projects:
         assert jira_config["token"] == "jira_token"
 
         # Test non-existent provider
-        missing_config = project_config.get_provider_config("pullrequests", "nonexistent")
+        missing_config = project_config.get_provider_config(
+            "pullrequests", "nonexistent"
+        )
         assert missing_config is None
 
     def test_is_configured(self):
@@ -198,7 +202,7 @@ projects:
 """
         base_config = self._create_test_config(config_content)
         project_config = ProjectConfig("test_project", base_config)
-        assert project_config.is_configured() == True
+        assert project_config.is_configured()
 
         # Test project without git config
         config_content = """
@@ -210,7 +214,7 @@ projects:
 """
         base_config = self._create_test_config(config_content)
         project_config = ProjectConfig("test_project", base_config)
-        assert project_config.is_configured() == False
+        assert not project_config.is_configured()
 
         # Test project with empty git path
         config_content = """
@@ -221,7 +225,7 @@ projects:
 """
         base_config = self._create_test_config(config_content)
         project_config = ProjectConfig("test_project", base_config)
-        assert project_config.is_configured() == False
+        assert not project_config.is_configured()
 
 
 class TestProjectConfigFactory:
@@ -229,22 +233,22 @@ class TestProjectConfigFactory:
 
     def _create_test_config(self, config_content: str) -> BaseConfig:
         """Helper method to create a test config from string content."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(config_content)
             temp_path = f.name
 
         # Store path for cleanup
-        self._temp_files = getattr(self, '_temp_files', [])
+        self._temp_files = getattr(self, "_temp_files", [])
         self._temp_files.append(temp_path)
 
         return BaseConfig(temp_path)
 
     def teardown_method(self):
         """Clean up temporary files after each test."""
-        if hasattr(self, '_temp_files'):
+        if hasattr(self, "_temp_files"):
             for temp_file in self._temp_files:
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
+                if Path(temp_file).exists():
+                    Path(temp_file).unlink()
             self._temp_files = []
 
     def test_factory_initialization(self):
@@ -395,6 +399,6 @@ projects:
         # Should have provider configurations
         pr_providers = default_config.get_pullrequest_providers()
         assert isinstance(pr_providers, dict)
-        
+
         issue_providers = default_config.get_issue_providers()
         assert isinstance(issue_providers, dict)
