@@ -16,6 +16,7 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from pathlib import Path
 import os
 import tempfile
 import threading
@@ -47,7 +48,7 @@ test_section:
   value: "test_value"
   number: 42
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(test_config)
             temp_path = f.name
 
@@ -55,15 +56,15 @@ test_section:
             config = BaseConfig(temp_path)
             assert config._config_data is not None
             # Test that we can access the values
-            assert config.get_value('core.log.dir') == '/tmp/logs'
-            assert config.get_value('test_section.number') == 42
+            assert config.get_value("core.log.dir") == "/tmp/logs"
+            assert config.get_value("test_section.number") == 42
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink()
 
     def test_init_with_nonexistent_path(self):
         """Test BaseConfig initialization with non-existent config path."""
         with pytest.raises(FileNotFoundError):
-            BaseConfig('/nonexistent/path/config.yaml')
+            BaseConfig("/nonexistent/path/config.yaml")
 
     def test_get_config_data(self):
         """Test getting full config data."""
@@ -80,7 +81,7 @@ section:
     key: test_value
   simple_key: simple_value
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(test_config)
             temp_path = f.name
 
@@ -88,39 +89,39 @@ section:
             config = BaseConfig(temp_path)
 
             # Test nested key access
-            assert config.get_value('section.subsection.key') == 'test_value'
+            assert config.get_value("section.subsection.key") == "test_value"
 
             # Test simple key access
-            assert config.get_value('section.simple_key') == 'simple_value'
+            assert config.get_value("section.simple_key") == "simple_value"
 
             # Test section access
-            section_data = config.get_value('section')
+            section_data = config.get_value("section")
             assert isinstance(section_data, dict)
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink()
 
     def test_get_value_nonexistent_key(self):
         """Test getting value for non-existent key."""
         config = BaseConfig()
 
         # Test with default value
-        assert config.get_value('nonexistent.key', 'default') == 'default'
+        assert config.get_value("nonexistent.key", "default") == "default"
 
         # Test without default value
-        assert config.get_value('nonexistent.key') is None
+        assert config.get_value("nonexistent.key") is None
 
     def test_get_value_with_env_var_resolution(self):
         """Test getting value with Dynaconf environment variable resolution."""
         # Set environment variables using Dynaconf naming convention
-        os.environ['TEST_SECTION_ENV_VALUE'] = 'resolved_from_env'
-        os.environ['DYNACONF_TEST_SECTION_OVERRIDE'] = 'dynaconf_override'
+        os.environ["TEST_SECTION_ENV_VALUE"] = "resolved_from_env"
+        os.environ["DYNACONF_TEST_SECTION_OVERRIDE"] = "dynaconf_override"
 
         test_config = """
 test_section:
   static_value: "static_content"
   number: 42
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yml", delete=False) as f:
             f.write(test_config)
             temp_path = f.name
 
@@ -129,21 +130,24 @@ test_section:
 
             # Test environment variable resolution
             # Dynaconf should pick up TEST_SECTION_ENV_VALUE
-            env_value = config.get_value('test_section.env_value')
-            assert env_value == 'resolved_from_env'
+            env_value = config.get_value("test_section.env_value")
+            assert env_value == "resolved_from_env"
 
             # Test that static values still work
-            assert config.get_value('test_section.static_value') == 'static_content'
-            assert config.get_value('test_section.number') == 42
+            assert config.get_value("test_section.static_value") == "static_content"
+            assert config.get_value("test_section.number") == 42
 
             # Test undefined value returns default
-            assert config.get_value('test_section.undefined', 'default_value') == 'default_value'
+            assert (
+                config.get_value("test_section.undefined", "default_value")
+                == "default_value"
+            )
         finally:
-            os.unlink(temp_path)
-            if 'TEST_SECTION_ENV_VALUE' in os.environ:
-                del os.environ['TEST_SECTION_ENV_VALUE']
-            if 'DYNACONF_TEST_SECTION_OVERRIDE' in os.environ:
-                del os.environ['DYNACONF_TEST_SECTION_OVERRIDE']
+            Path(temp_path).unlink()
+            if "TEST_SECTION_ENV_VALUE" in os.environ:
+                del os.environ["TEST_SECTION_ENV_VALUE"]
+            if "DYNACONF_TEST_SECTION_OVERRIDE" in os.environ:
+                del os.environ["DYNACONF_TEST_SECTION_OVERRIDE"]
 
     def test_integration_with_real_config(self):
         """Test integration with the actual project config file."""
@@ -151,56 +155,60 @@ test_section:
 
         # Test that we can access values using get_value method
         # This should work regardless of how Dynaconf normalizes keys
-        core_log_dir = config.get_value('core.log.dir')
+        core_log_dir = config.get_value("core.log.dir")
         assert core_log_dir is not None
 
         # Test accessing projects section with new structure
-        projects = config.get_value('projects')
+        projects = config.get_value("projects")
         assert projects is not None
         assert isinstance(projects, dict)
 
         # Test accessing azure devops config in new project structure
-        azure_mock = config.get_value('projects.default.pullrequests.devops.mock')
+        azure_mock = config.get_value("projects.default.pullrequests.devops.mock")
         assert azure_mock is not None
 
     def test_env_var_resolution(self):
         """Test that environment variables override config values."""
         # Test with environment variable set
-        os.environ['SLACK_BOT_PROCESSING_TIMEOUT'] = '600'
-        os.environ['SLACK__BOT__PROCESSING_TIMEOUT'] = '700'
+        os.environ["SLACK_BOT_PROCESSING_TIMEOUT"] = "600"
+        os.environ["SLACK__BOT__PROCESSING_TIMEOUT"] = "700"
 
         try:
             config = BaseConfig()
 
             # Test that environment variables override config defaults
-            timeout = config.get_value('slack.bot.processingTimeout')
-            assert timeout == 6000 or timeout == 600 or timeout == 700  # Config default (6000) or env override
+            timeout = config.get_value("slack.bot.processingTimeout")
+            # Handle both string and integer values from environment/config
+            timeout_int = int(timeout) if isinstance(timeout, str) else timeout
+            assert (
+                timeout_int == 6000 or timeout_int == 600 or timeout_int == 700
+            )  # Config default (6000) or env override
 
             # Test dot notation fallback
-            timeout_alt = config.get_value('slack.bot.processingTimeout')
+            timeout_alt = config.get_value("slack.bot.processingTimeout")
             assert timeout_alt is not None
 
         finally:
             # Clean up
-            if 'SLACK_BOT_PROCESSING_TIMEOUT' in os.environ:
-                del os.environ['SLACK_BOT_PROCESSING_TIMEOUT']
-            if 'SLACK__BOT__PROCESSING_TIMEOUT' in os.environ:
-                del os.environ['SLACK__BOT__PROCESSING_TIMEOUT']
+            if "SLACK_BOT_PROCESSING_TIMEOUT" in os.environ:
+                del os.environ["SLACK_BOT_PROCESSING_TIMEOUT"]
+            if "SLACK__BOT__PROCESSING_TIMEOUT" in os.environ:
+                del os.environ["SLACK__BOT__PROCESSING_TIMEOUT"]
 
     def test_env_var_fallback_behavior(self):
         """Test fallback behavior for environment variables."""
         config = BaseConfig()
 
         # Test that non-existent keys return defaults
-        assert config.get_value('nonexistent.key', 'default') == 'default'
+        assert config.get_value("nonexistent.key", "default") == "default"
 
         # Test environment variable fallback
-        os.environ['NONEXISTENT_KEY'] = 'env_value'
+        os.environ["NONEXISTENT_KEY"] = "env_value"
         try:
             # Should pick up env var using our fallback logic
-            assert config.get_value('nonexistent.key') == 'env_value'
+            assert config.get_value("nonexistent.key") == "env_value"
         finally:
-            del os.environ['NONEXISTENT_KEY']
+            del os.environ["NONEXISTENT_KEY"]
 
 
 class TestDefaultConfigSingleton:
@@ -210,6 +218,7 @@ class TestDefaultConfigSingleton:
         """Reset the singleton instance before each test."""
         # Clear the singleton instance for testing
         import core.config
+
         core.config._default_config_instance = None
 
     def test_get_default_config_returns_baseconfig_instance(self):
@@ -287,6 +296,7 @@ class TestDefaultConfigSingleton:
 
         # Only one BaseConfig instance should exist
         import gc
+
         gc.collect()  # Force garbage collection
 
         # Verify all references point to the same object
@@ -296,19 +306,19 @@ class TestDefaultConfigSingleton:
     def test_get_default_config_preserves_environment_resolution(self):
         """Test that singleton preserves environment variable resolution."""
         # Set a test environment variable
-        test_key = 'TEST_SINGLETON_VAR'
-        test_value = 'singleton_test_value'
+        test_key = "TEST_SINGLETON_VAR"
+        test_value = "singleton_test_value"
         os.environ[test_key] = test_value
 
         try:
             config = get_default_config()
 
             # Should be able to get environment variables using various formats
-            assert config.get_value('test.singleton.var') == test_value
+            assert config.get_value("test.singleton.var") == test_value
 
             # Multiple calls should still work
             config2 = get_default_config()
-            assert config2.get_value('test.singleton.var') == test_value
+            assert config2.get_value("test.singleton.var") == test_value
             assert config is config2
 
         finally:
@@ -332,13 +342,13 @@ class TestDefaultConfigSingleton:
         assert singleton_config is not direct_config
 
         # Both should resolve environment variables the same way
-        test_key = 'COMPARISON_TEST_VAR'
-        test_value = 'comparison_value'
+        test_key = "COMPARISON_TEST_VAR"
+        test_value = "comparison_value"
         os.environ[test_key] = test_value
 
         try:
-            singleton_result = singleton_config.get_value('comparison.test.var')
-            direct_result = direct_config.get_value('comparison.test.var')
+            singleton_result = singleton_config.get_value("comparison.test.var")
+            direct_result = direct_config.get_value("comparison.test.var")
 
             assert singleton_result == test_value
             assert direct_result == test_value

@@ -61,10 +61,11 @@ fi
 # NOTE: Keep keys as installed distribution names (what pip-licenses prints in "Name").
 # For names that are sometimes hyphen/underscore, include both forms.
 
-cat > "$PROJECT_ROOT/license_map.json" <<'JSON'
+cat > "$PROJECT_ROOT/licenses_map.json" <<'JSON'
 {
   "ag-ui-protocol": "MIT License",
   "attrs": "MIT License",
+  "build": "MIT License",
   "click": "BSD 3-Clause License",
   "griffe": "ISC License",
   "jsonschema": "MIT License",
@@ -84,16 +85,31 @@ cat > "$PROJECT_ROOT/license_map.json" <<'JSON'
   "typing-extensions": "Python Software Foundation License",
   "typing_extensions": "Python Software Foundation License",
   "urllib3": "MIT License",
-  "zipp": "MIT License"
+  "zipp": "MIT License",
+  "CacheControl": "Apache License 2.0",
+  "Markdown": "BSD License",
+  "anyio": "MIT License",
+  "cz-conventional-gitmoji": "MIT License",
+  "hf-xet": "Apache License 2.0",
+  "mkdocs-autorefs": "ISC License",
+  "mkdocs-social-plugin": "MIT License",
+  "mkdocstrings": "ISC License",
+  "mkdocstrings-python": "ISC License",
+  "mypy_extensions": "MIT License",
+  "pillow": "HPND",
+  "pytest-xdist": "MIT License",
+  "pyyaml_env_tag": "MIT License",
+  "rpds-py": "MIT License"
 }
 JSON
 
 # Create a resolved report where any "UNKNOWN" licenses are replaced from the map
-jq --slurpfile map "$PROJECT_ROOT/license_map.json" \
+# Also filter out the project itself (dev-agents)
+jq --slurpfile map "$PROJECT_ROOT/licenses_map.json" \
   'map( if .License == "UNKNOWN" and $map[0][.Name]
         then .License = $map[0][.Name]
         else .
-        end )' \
+        end ) | map(select(.Name != "dev-agents"))' \
   "$PROJECT_ROOT/licenses_report.json" > "$PROJECT_ROOT/licenses_report_resolved.json"
 
 REPORT_JSON="$PROJECT_ROOT/licenses_report_resolved.json"
@@ -113,6 +129,7 @@ COMPATIBLE_LICENSES=(
     "Apache-2.0 AND MIT"
     "Apache Software License; BSD License"
     "Apache Software License; MIT License"
+    "HPND"
 )
 
 # Potentially problematic licenses
@@ -146,7 +163,7 @@ if [ "$GPL_COUNT" -gt 0 ]; then
 fi
 
 # Check for MPL licenses - separate known-compatible from others
-KNOWN_COMPATIBLE_MPL=("certifi" "tqdm")
+KNOWN_COMPATIBLE_MPL=("certifi" "tqdm" "pathspec" "pytest-metadata")
 MPL_DEPS=$(jq -r '.[] | select(.License | contains("Mozilla Public License")) | .Name' "$REPORT_JSON")
 UNKNOWN_MPL_DEPS=()
 KNOWN_MPL_DEPS=()

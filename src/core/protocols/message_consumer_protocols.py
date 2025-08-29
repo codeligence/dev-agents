@@ -39,7 +39,7 @@ class MessageConsumer(Protocol):
 class DummyMessageConsumer:
     """Dummy consumer that prints received messages."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = get_logger("DummyMessageConsumer")
 
     async def consume(self, messages: MessageList) -> None:

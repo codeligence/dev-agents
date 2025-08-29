@@ -16,20 +16,26 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from pathlib import Path
 import json
 import unittest
-from pathlib import Path
 
-from integrations.devops.models import WorkItem, Person
+from integrations.devops.models import Person, WorkItem
 
 
 class TestWorkItem(unittest.TestCase):
-
     @classmethod
     def setUpClass(self):
         """Load the mock data before each test."""
-        mock_path = Path(__file__).parent.parent.parent.parent / "src" / "integrations" / "devops" / "mocks" / "devops_workitem.json"
-        with open(mock_path, "r") as f:
+        mock_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "src"
+            / "integrations"
+            / "devops"
+            / "mocks"
+            / "devops_workitem.json"
+        )
+        with mock_path.open() as f:
             self.response_json = json.load(f)
         self.workitem = WorkItem(self.response_json)
 
@@ -43,11 +49,15 @@ class TestWorkItem(unittest.TestCase):
 
     def test_get_system_reason(self):
         """Test retrieving the reason."""
-        self.assertEqual(self.workitem.get_system_reason(), "Updated for general review")
+        self.assertEqual(
+            self.workitem.get_system_reason(), "Updated for general review"
+        )
 
     def test_get_system_created_date(self):
         """Test retrieving the creation date."""
-        self.assertEqual(self.workitem.get_system_created_date(), "2025-04-16T14:23:16.797Z")
+        self.assertEqual(
+            self.workitem.get_system_created_date(), "2025-04-16T14:23:16.797Z"
+        )
 
     def test_get_system_created_by(self):
         """Test retrieving the creator."""
@@ -59,7 +69,9 @@ class TestWorkItem(unittest.TestCase):
 
     def test_get_system_changed_date(self):
         """Test retrieving the last changed date."""
-        self.assertEqual(self.workitem.get_system_changed_date(), "2025-04-28T04:17:00.723Z")
+        self.assertEqual(
+            self.workitem.get_system_changed_date(), "2025-04-28T04:17:00.723Z"
+        )
 
     def test_get_system_changed_by(self):
         """Test retrieving who last changed the item."""
@@ -71,7 +83,10 @@ class TestWorkItem(unittest.TestCase):
 
     def test_get_system_title(self):
         """Test retrieving the title."""
-        self.assertEqual(self.workitem.get_system_title(), "General Task Issue: Minor UI Inconsistency")
+        self.assertEqual(
+            self.workitem.get_system_title(),
+            "General Task Issue: Minor UI Inconsistency",
+        )
 
     def test_get_custom_application(self):
         """Test retrieving the custom application field."""
@@ -100,7 +115,9 @@ class TestWorkItem(unittest.TestCase):
         urls = self.workitem.get_relation_urls()
         self.assertEqual(len(urls), 2)
         self.assertIn("https://example.com/apis/wit/workItems/10002", urls)
-        self.assertIn("vstfs:///Git/PullRequestId/EXAMPLE-GUID-PR/NEW-PR-GUID/54321", urls)
+        self.assertIn(
+            "vstfs:///Git/PullRequestId/EXAMPLE-GUID-PR/NEW-PR-GUID/54321", urls
+        )
 
     def test_get_pull_request_ids(self):
         """Test retrieving pull request IDs."""

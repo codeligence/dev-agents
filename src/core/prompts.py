@@ -16,9 +16,8 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import os
-import threading
 from pathlib import Path
+import threading
 
 from dotenv import load_dotenv
 from dynaconf import Dynaconf
@@ -33,23 +32,27 @@ logger = get_logger("BasePrompts")
 class BasePrompts:
     """Base prompts class that loads and resolves YAML prompts with environment variables using Dynaconf."""
 
-    def __init__(self, prompts_path: str = None):
+    def __init__(self, prompts_path: str | None = None):
         if prompts_path is None:
             # Default to config/prompts.yaml relative to project root
             project_root = Path(__file__).parent.parent.parent
-            prompts_path = project_root / "config" / "prompts.yaml"
+            prompts_path = str(project_root / "config" / "prompts.yaml")
 
         self._prompts_path = prompts_path
         self._settings = self._load_prompts()
 
     def _load_prompts(self) -> Dynaconf:
         """Load and resolve the YAML prompts file using Dynaconf."""
-        if not os.path.exists(self._prompts_path):
+        assert self._prompts_path is not None
+        if not Path(self._prompts_path).exists():
             raise FileNotFoundError(f"Prompts file not found: {self._prompts_path}")
 
         # Use Dynaconf to load prompts with environment variable resolution
         settings = Dynaconf(
-            settings_files=[str(self._prompts_path), str(self._prompts_path).replace(".yaml", ".custom.yaml")],
+            settings_files=[
+                str(self._prompts_path),
+                str(self._prompts_path).replace(".yaml", ".custom.yaml"),
+            ],
             envvar_prefix="",
             envvar_default="",
             ignore_unknown_envvars=True,
@@ -59,7 +62,7 @@ class BasePrompts:
         )
         return settings
 
-    def get_prompt(self, key_path: str, default: str = None) -> str:
+    def get_prompt(self, key_path: str, default: str = "") -> str:
         """
         Get a prompt from the prompts using dot notation.
 
@@ -72,7 +75,8 @@ class BasePrompts:
         """
         try:
             # Dynaconf supports dot notation natively
-            return self._settings.get(key_path, default)
+            result = self._settings.get(key_path, default)
+            return str(result) if result is not None else default
         except Exception as e:
             logger.warning(f"Error Prompt key '{key_path}' not found: {str(e)}")
             return default

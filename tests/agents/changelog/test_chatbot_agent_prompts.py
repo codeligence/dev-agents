@@ -16,12 +16,13 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-import pytest
-import tempfile
-import os
+from pathlib import Path
 from unittest.mock import Mock
-from core.prompts import BasePrompts
+import os
+import tempfile
+
 from agents.agents.gitchatbot.prompts import GitChatbotAgentPrompts
+from core.prompts import BasePrompts
 
 
 class TestChangelogAgentPrompts:
@@ -45,7 +46,9 @@ class TestChangelogAgentPrompts:
         result = agent_prompts.get_chatbot_prompt()
 
         # Verify the correct method was called with expected parameters
-        mock_base_prompts.get_prompt.assert_called_once_with('agents.chatbot.initial', '')
+        mock_base_prompts.get_prompt.assert_called_once_with(
+            "agents.chatbot.initial", ""
+        )
         assert result == "Test initial prompt"
 
     def test_integration_with_real_prompts(self):
@@ -56,7 +59,7 @@ agents:
   chatbot:
     initial: "You are a changelog AI assistant. Help analyze changes."
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(test_prompts)
             temp_path = f.name
 
@@ -71,19 +74,21 @@ agents:
             assert "changelog AI assistant" in initial
 
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink()
 
     def test_integration_with_env_var_substitution(self):
         """Test integration with environment variable substitution in Dynaconf."""
         # Set environment variables for testing using Dynaconf naming convention
-        os.environ['AGENTS__CHATBOT__INITIAL'] = 'Test Changelog Bot (AI), an AI assistant.'
+        os.environ["AGENTS__CHATBOT__INITIAL"] = (
+            "Test Changelog Bot (AI), an AI assistant."
+        )
 
         # Create a temporary prompts file
         test_prompts = """
 other_section:
   value: "some content"
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(test_prompts)
             temp_path = f.name
 
@@ -96,12 +101,14 @@ other_section:
 
             # Environment variable resolution may not work as expected in this test setup
             # Just check that it returns either the default or the environment value
-            assert initial == '' or initial == 'Test Changelog Bot (AI), an AI assistant.'
+            assert (
+                initial == "" or initial == "Test Changelog Bot (AI), an AI assistant."
+            )
 
         finally:
-            os.unlink(temp_path)
-            if 'AGENTS__CHATBOT__INITIAL' in os.environ:
-                del os.environ['AGENTS__CHATBOT__INITIAL']
+            Path(temp_path).unlink()
+            if "AGENTS__CHATBOT__INITIAL" in os.environ:
+                del os.environ["AGENTS__CHATBOT__INITIAL"]
 
     def test_prompts_with_missing_config(self):
         """Test behavior when prompts are missing from config."""
@@ -110,7 +117,7 @@ other_section:
 other_section:
   value: "some content"
 """
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(test_prompts)
             temp_path = f.name
 
@@ -122,16 +129,16 @@ other_section:
             initial = agent_prompts.get_chatbot_prompt()
 
             # Should return empty string as default
-            assert initial == ''
+            assert initial == ""
 
         finally:
-            os.unlink(temp_path)
+            Path(temp_path).unlink()
 
     def test_avatar_name_substitution_with_real_prompts(self):
         """Test that avatar name environment variables work with the real prompts file."""
         # Set avatar environment variables
-        os.environ['AVATAR_FULL_NAME'] = 'Kira Draft'
-        os.environ['AVATAR_SHORT_NAME'] = 'Kira'
+        os.environ["AVATAR_FULL_NAME"] = "Kira Draft"
+        os.environ["AVATAR_SHORT_NAME"] = "Kira"
 
         try:
             # Load the actual prompts file from config/prompts.yaml (default behavior)
@@ -141,12 +148,16 @@ other_section:
             # Get the followup prompt (where avatar variables are used)
             followup_prompt = agent_prompts.get_chatbot_prompt()
 
-            assert "Kira" in followup_prompt, f"Expected 'Kira' to be in prompt: {followup_prompt[:200]}..."
-            assert "Kira Draft" in followup_prompt, f"Expected 'Kira Draft' to be in prompt: {followup_prompt[:200]}..."
+            assert (
+                "Kira" in followup_prompt
+            ), f"Expected 'Kira' to be in prompt: {followup_prompt[:200]}..."
+            assert (
+                "Kira Draft" in followup_prompt
+            ), f"Expected 'Kira Draft' to be in prompt: {followup_prompt[:200]}..."
 
         finally:
             # Clean up environment variables
-            if 'AVATAR_FULL_NAME' in os.environ:
-                del os.environ['AVATAR_FULL_NAME']
-            if 'AVATAR_SHORT_NAME' in os.environ:
-                del os.environ['AVATAR_SHORT_NAME']
+            if "AVATAR_FULL_NAME" in os.environ:
+                del os.environ["AVATAR_FULL_NAME"]
+            if "AVATAR_SHORT_NAME" in os.environ:
+                del os.environ["AVATAR_SHORT_NAME"]

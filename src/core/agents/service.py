@@ -18,15 +18,16 @@
 
 """Agent orchestration service for managing agent execution."""
 
+from collections.abc import Callable
+from typing import cast
 import asyncio
 import time
 import uuid
-from typing import Any, Optional
 
-from core.protocols.agent_protocols import Agent, AgentExecutionContext
 from core.agents.factory import SimpleAgentFactory
-from core.exceptions import AgentExecutionError, AgentTimeoutError, AgentGracefulExit
+from core.exceptions import AgentExecutionError, AgentGracefulExit, AgentTimeoutError
 from core.log import get_logger
+from core.protocols.agent_protocols import Agent, AgentExecutionContext
 
 logger = get_logger("AgentService")
 
@@ -38,7 +39,9 @@ class AgentService:
         self.default_timeout_seconds = default_timeout_seconds
         self.agent_factory = SimpleAgentFactory()
 
-    def register_agent(self, agent_type: str, factory_func: callable) -> None:
+    def register_agent(
+        self, agent_type: str, factory_func: Callable[[], type[Agent]]
+    ) -> None:
         """Register an agent factory function.
 
         Args:
@@ -56,8 +59,8 @@ class AgentService:
         self,
         agent_type: str,
         context: AgentExecutionContext,
-        timeout_seconds: Optional[int] = None
-    ):
+        timeout_seconds: int | None = None,
+    ) -> str:
         """Create and execute an agent by type.
 
         Args:
@@ -79,15 +82,15 @@ class AgentService:
         agent_class = self.agent_factory.create_agent(agent_type)
         agent = agent_class(context)
 
-        await self.execute_agent(agent, context, agent_type, timeout_seconds)
+        return await self.execute_agent(agent, context, agent_type, timeout_seconds)
 
     async def execute_agent(
         self,
         agent: Agent,
         context: AgentExecutionContext,
         agent_type: str = "unknown",
-        timeout_seconds: Optional[int] = None
-    ):
+        timeout_seconds: int | None = None,
+    ) -> str:
         """Execute an agent with proper orchestration, monitoring, and error handling.
 
         Args:
@@ -107,35 +110,46 @@ class AgentService:
         timeout = timeout_seconds or self.default_timeout_seconds
         start_time = time.time()
 
-        logger.info(f"Starting agent execution: type={agent_type}, execution_id={execution_id}")
+        logger.info(
+            f"Starting agent execution: type={agent_type}, execution_id={execution_id}"
+        )
 
         try:
             # Execute agent with timeout - agents get context in constructor, run() takes no params
-            await asyncio.wait_for(
-                agent.run(),
-                timeout=timeout
-            )
+            result = await asyncio.wait_for(agent.run(), timeout=timeout)
 
             execution_time_ms = int((time.time() - start_time) * 1000)
-            logger.info(f"Agent execution completed: type={agent_type}, time={execution_time_ms}ms")
+            logger.info(
+                f"Agent execution completed: type={agent_type}, time={execution_time_ms}ms"
+            )
+            return cast("str", result)
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             execution_time_ms = int((time.time() - start_time) * 1000)
             error_msg = f"Agent execution timed out after {timeout} seconds"
-            logger.error(f"Agent timeout: type={agent_type}, time={execution_time_ms}ms")
+            logger.error(
+                f"Agent timeout: type={agent_type}, time={execution_time_ms}ms"
+            )
 
-            await context.send_status(f"Agent execution timed out after {timeout} seconds")
+            await context.send_status(
+                f"Agent execution timed out after {timeout} seconds"
+            )
             raise AgentTimeoutError(error_msg, agent_type)
 
-        except AgentGracefulExit as e:
+        except AgentGracefulExit:
             execution_time_ms = int((time.time() - start_time) * 1000)
-            logger.info(f"Agent graceful exit: type={agent_type}, time={execution_time_ms}ms")
+            logger.info(
+                f"Agent graceful exit: type={agent_type}, time={execution_time_ms}ms"
+            )
             # Silently finish - no error raised, no status sent
+            return "Agent completed gracefully"
 
         except Exception as e:
             execution_time_ms = int((time.time() - start_time) * 1000)
             error_msg = f"Agent execution failed: {str(e)}"
-            logger.error(f"Agent execution error: type={agent_type}, error={error_msg}, time={execution_time_ms}ms")
+            logger.error(
+                f"Agent execution error: type={agent_type}, error={error_msg}, time={execution_time_ms}ms"
+            )
 
             await context.send_status(f"Agent execution failed: {str(e)}")
             raise AgentExecutionError(error_msg, agent_type) from e

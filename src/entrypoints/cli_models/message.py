@@ -20,7 +20,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from core.message import BaseMessage
 
@@ -28,16 +27,16 @@ from core.message import BaseMessage
 @dataclass
 class CLIMessage(BaseMessage):
     """Message implementation for CLI interactions.
-    
+
     Simple message structure for command-line user input and agent responses.
     """
-    
+
     message_id: str
     role: str  # "user" or "assistant"
     content: str
     timestamp: datetime
     thread_id: str = "cli-session"
-    
+
     def get_user_name(self) -> str:
         """Get the display name of the message sender."""
         if self.role == "user":

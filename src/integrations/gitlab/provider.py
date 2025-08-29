@@ -16,14 +16,22 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from typing import Any, Optional
 import base64
 import urllib.parse
-from typing import Optional, Dict, Any, List
+
 import httpx
-from core.protocols.provider_protocols import PullRequestModel, IssueModel, PullRequestProvider, IssueProvider
+
+from core.protocols.provider_protocols import (
+    IssueModel,
+    IssueProvider,
+    PullRequestModel,
+    PullRequestProvider,
+)
+
 from .config import GitLabConfig
-from .models import MergeRequest, Issue
-from .mock_gitlab import mock_fetch_merge_request, mock_fetch_issue
+from .mock_gitlab import mock_fetch_issue, mock_fetch_merge_request
+from .models import Issue, MergeRequest
 
 
 class GitLabMergeRequestProvider(PullRequestProvider):
@@ -33,7 +41,9 @@ class GitLabMergeRequestProvider(PullRequestProvider):
         self.config = config
 
     @staticmethod
-    def from_config(config_data: Dict[str, Any]) -> Optional['GitLabMergeRequestProvider']:
+    def from_config(
+        config_data: dict[str, Any],
+    ) -> Optional["GitLabMergeRequestProvider"]:
         """Create provider from configuration data.
 
         Args:
@@ -77,10 +87,10 @@ class GitLabMergeRequestProvider(PullRequestProvider):
             source_branch=source_branch,
             target_branch=target_branch,
             source_refs=source_refs,
-            target_refs=target_refs
+            target_refs=target_refs,
         )
 
-    def _get_source_refs(self, mr_data: MergeRequest) -> List[str]:
+    def _get_source_refs(self, mr_data: MergeRequest) -> list[str]:
         """Get source refs including branch and commit hashes."""
         refs = []
         source_branch = mr_data.get_source_branch()
@@ -97,7 +107,7 @@ class GitLabMergeRequestProvider(PullRequestProvider):
 
         return refs
 
-    def _get_target_refs(self, mr_data: MergeRequest) -> List[str]:
+    def _get_target_refs(self, mr_data: MergeRequest) -> list[str]:
         """Get target refs including branch and commit hashes."""
         refs = []
         target_branch = mr_data.get_target_branch()
@@ -117,19 +127,21 @@ class GitLabMergeRequestProvider(PullRequestProvider):
         token = self.config.get_token()
 
         mr_url = f"{api_url}/projects/{project_id}/merge_requests/{merge_request_id}"
-        commits_url = f"{api_url}/projects/{project_id}/merge_requests/{merge_request_id}/commits"
+        commits_url = (
+            f"{api_url}/projects/{project_id}/merge_requests/{merge_request_id}/commits"
+        )
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
         async with httpx.AsyncClient() as client:
             # Make both requests concurrently
             response_mr_task = client.get(mr_url, headers=headers)
             response_commits_task = client.get(commits_url, headers=headers)
 
-            response_mr, response_commits = await response_mr_task, await response_commits_task
+            response_mr, response_commits = (
+                await response_mr_task,
+                await response_commits_task,
+            )
 
             response_mr.raise_for_status()
             response_commits.raise_for_status()
@@ -139,14 +151,11 @@ class GitLabMergeRequestProvider(PullRequestProvider):
 
         return MergeRequest(mr, commits)
 
-    async def download_image_as_base64(self, image_url: str) -> Optional[str]:
+    async def download_image_as_base64(self, image_url: str) -> str | None:
         """Download an image from the given URL and return it as a data URI with URL-encoded base64 content"""
         token = self.config.get_token()
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
         async with httpx.AsyncClient() as client:
             response = await client.get(image_url, headers=headers)
@@ -179,7 +188,7 @@ class GitLabIssueProvider(IssueProvider):
         self.config = config
 
     @staticmethod
-    def from_config(config_data: Dict[str, Any]) -> Optional['GitLabIssueProvider']:
+    def from_config(config_data: dict[str, Any]) -> Optional["GitLabIssueProvider"]:
         """Create provider from configuration data.
 
         Args:
@@ -219,10 +228,7 @@ class GitLabIssueProvider(IssueProvider):
 
         url = f"{api_url}/projects/{project_id}/issues/{issue_id}"
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json"
-        }
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
 
         async with httpx.AsyncClient() as client:
             response = await client.get(url, headers=headers)
