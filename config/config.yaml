@@ -1,9 +1,9 @@
 core:
   log:
-    dir: "@jinja {{env.CORE_LOG_DIR or './logs'}}"
+    dir: "@jinja {{env.CORE_LOG_DIR or '/data/logs'}}"
   storage:
     file:
-      dir: "@jinja {{env.CORE_STORAGE_FILE_DIR or './storage'}}"
+      dir: "@jinja {{env.CORE_STORAGE_FILE_DIR or '/data/storage'}}"
 
 models:
   large: "@jinja {{env.LLM_MODEL_LARGE or 'openai:gpt-4.1'}}"
@@ -26,7 +26,7 @@ providers:
 projects:
   default:
     git:
-      path: "@jinja {{env.GIT_REPO_PATH or '.'}}"
+      path: "@jinja {{env.GIT_REPO_PATH or '/code'}}"
       defaultBranch: "main"
       autoPull: "@jinja {{env.GIT_AUTOPULL or 'false'}}"
       pullIntervalSeconds: "@jinja {{env.GIT_PULL_INTERVAL_SECONDS or 120}}"
