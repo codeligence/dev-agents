@@ -29,7 +29,7 @@ The agents are designed to integrate with Slack, Azure DevOps, GitLab, and other
 development tools to provide consistent AI assistance across your development workflow.
 """
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"
 __author__ = "Dev Agents Team"
 __email__ = "dev@codeligence.com"
 

@@ -8,13 +8,15 @@
   ·
   <a href="#quick-start">Quick start</a>
   ·
+  <a href="https://docs.dev-agents.ai">Docs</a>
+  ·
   <a href="#included-agents">Included agents</a>
   ·
   <a href="#license">License</a>
   <br><br>
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://pypi.org/project/dev-agents/)
+[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://pypi.org/project/dev-agents/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code Quality](https://img.shields.io/badge/code%20quality-black%20%7C%20%20ruff%20%7C%20mypy%20%7C%20bandit-brightgreen.svg)](https://shields.io)
@@ -48,8 +50,10 @@ Build using the elegant [Pydantic AI](https://ai.pydantic.dev/) framework.
 wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
 
 # 2) Run the CLI Chat in the docker container
-docker run --rm -it --env-file=.env -v ./code:/code -v ./data:/data codeligence/dev-agents
+docker run --rm -it --env-file=.env -v ./your-cloned-git-repo:/code codeligence/dev-agents
 ```
+
+You need to mount your cloned Git repository into the container so that Dev Agents can work with the code.
 
 6. Option: **Clone and run**:
 
