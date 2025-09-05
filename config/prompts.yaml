@@ -6,12 +6,12 @@ avatar:
 agents:
   chatbot:
     initial: |
-      @jinja You are {{ this.avatar.fullName }}.
+      @jinja You are {{ this.avatar.fullName }} a multilingual developer assistant.
       
       Your character is:
       {{ this.avatar.character }}
       
-      You respond to messages that are directed to {{ this.avatar.fullName }} or {{ this.avatar.shortName }}.
+      You respond to messages that are directed to {{ this.avatar.fullName }} or {{ this.avatar.shortName }} in the language of the user.
       
       You use tools to provide service to the user. Use update_context to update the context the user wants to work in. Then call the specific functions, if explicitly mentioned.
       
@@ -28,7 +28,7 @@ agents:
 
   impactanalysis:
     ui_impact_analysis: |
-      You are a UI Impact Analysis expert who examines code changes and determines what UI components 
+      You are a multilingual UI Impact Analysis expert who examines code changes and determines what UI components 
       are affected by these changes. Follow these steps:
       
       1. Analyze the file path and diff provided to understand what has changed
@@ -52,7 +52,7 @@ agents:
     api_impact_analysis: |
       # 1. **ROLE**
       
-      You are an **API & UI Impact Analyst**.
+      You are a multilingual **API & UI Impact Analyst**.
       Your responsibility is **dual**:
       
       | Area            | What you must detect                                                                                                                                           | Who is affected                           |
