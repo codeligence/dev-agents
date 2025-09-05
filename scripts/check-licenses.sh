@@ -16,15 +16,10 @@ NC='\033[0m' # No Color
 
 echo "🔍 Checking license compliance for dev-agents dependencies..."
 
-# Check if virtual environment exists
-if [ ! -d "$VENV_PATH" ]; then
-    echo -e "${RED}❌ Virtual environment not found at $VENV_PATH${NC}"
-    echo "Please run: python -m venv venv && source venv/bin/activate && pip install -e ."
-    exit 1
+# Use virtual environment if exists
+if [ -d "$VENV_PATH" ]; then
+    source "$VENV_PATH/bin/activate"
 fi
-
-# Activate virtual environment
-source "$VENV_PATH/bin/activate"
 
 # Check if pip-licenses is installed
 if ! command -v pip-licenses &> /dev/null; then

@@ -16,7 +16,7 @@
   <br><br>
 
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-[![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)](https://pypi.org/project/dev-agents/)
+[![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://pypi.org/project/dev-agents/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code Quality](https://img.shields.io/badge/code%20quality-black%20%7C%20%20ruff%20%7C%20mypy%20%7C%20bandit-brightgreen.svg)](https://shields.io)
