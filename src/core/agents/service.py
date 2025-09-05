@@ -35,7 +35,7 @@ logger = get_logger("AgentService")
 class AgentService:
     """Service for orchestrating agent execution with proper error handling and monitoring."""
 
-    def __init__(self, default_timeout_seconds: int = 300):
+    def __init__(self, default_timeout_seconds: int = 600):
         self.default_timeout_seconds = default_timeout_seconds
         self.agent_factory = SimpleAgentFactory()
 

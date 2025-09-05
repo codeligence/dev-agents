@@ -1,7 +1,7 @@
 # License Compliance Summary and Recommendations
 
 **Report Generated**: 2025-08-26  
-**Project**: dev-agents v0.9.1  
+**Project**: dev-agents v0.9.2  
 **Primary License**: GNU Affero General Public License v3 (AGPL v3)
 
 ## Executive Summary
