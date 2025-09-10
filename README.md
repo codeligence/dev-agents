@@ -65,14 +65,14 @@ Build using the elegant [Pydantic AI](https://ai.pydantic.dev/) framework.
    git clone your/repo/URL
    ```
    OR
-   * Copy URL of your local repository
+   * Copy path of your local repository
 
    **IV. Mount repository and start container:**
    ```bash
    # Mount cloned repository and configuration
    docker run --rm -it --env-file=.env -v ./your-cloned-git-repo:/code codeligence/dev-agents
    # or
-   docker run --rm -it --env-file=.env -v your/cloned/repo/url:/code codeligence/dev-agents
+   docker run --rm -it --env-file=.env -v your/cloned/repo/path:/code codeligence/dev-agents
    ```
 
 2. Option: **Clone and run** (requires Python 3.11+):
