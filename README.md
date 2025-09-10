@@ -41,34 +41,70 @@ Build using the elegant [Pydantic AI](https://ai.pydantic.dev/) framework.
 
 ## Quick start
 
-1. Option: **Run the Setup Wizard:** [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
-   Generates your config and start instructions for local or server deployment.
-2. Option: **Use Docker**:
+1. Option: **Use Docker**:
 
-```bash
-# 1) Get example env and edit
-wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
+   **I. Get configuration:**
+   * Run the Setup Wizard: [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
+     * Select version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), UI (CLI, Slack), and optionally Jira/DevOps to reference work items/tickets
 
-# 2) Run the CLI Chat in the docker container
-docker run --rm -it --env-file=.env -v ./your-cloned-git-repo:/code codeligence/dev-agents
-```
+   OR
 
-You need to mount your cloned Git repository into the container so that Dev Agents can work with the code.
+   * Download example configuration:
+   ```bash
+   wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
+   cp .env.example .env
+   ```
 
-6. Option: **Clone and run**:
+   **II. Edit environment variables:**
+   * Fill in credentials for your version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), and optional integrations (Jira/DevOps)
+   * Choose LLM model (OpenAI/Anthropic) - see [https://ai.pydantic.dev/api/models/base/](https://ai.pydantic.dev/api/models/base/) for supported models
 
-```bash
-# 1) Clone
-git clone https://github.com/codeligence/dev-agents.git
-cd dev-agents
+   **III. Reference your repository:**
+   * Clone repository:
+   ```bash
+   git clone your/repo/URL
+   ```
+   OR
+   * Copy path of your local repository
 
-# 2) Copy example env and edit
-cp .env.example .env
+   **IV. Mount repository and start container:**
+   ```bash
+   # Mount cloned repository and configuration
+   docker run --rm -it --env-file=.env -v ./your-cloned-git-repo:/code codeligence/dev-agents
+   # or
+   docker run --rm -it --env-file=.env -v your/cloned/repo/path:/code codeligence/dev-agents
+   ```
 
-# 3) See src/entrypoints for possible interfaces. Start with command line, try Slack or AG-UI next
-pip install -e .[all]
-python -m entrypoints.cli_chat
-```
+2. Option: **Clone and run** (requires Python 3.11+):
+
+   **I. Clone Dev Agents:**
+   ```bash
+   git clone https://github.com/codeligence/dev-agents.git
+   cd dev-agents
+   ```
+
+   **II. Get and edit configuration:**
+   * Run the Setup Wizard: [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
+     * Select version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), UI (CLI, Slack), and optionally Jira/DevOps to reference work items/tickets
+     * Copy configuration
+   ```bash
+   cp .env.example .env
+   ```
+
+   **III. Edit environment variables:**
+   * Fill in credentials for your version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), and optional integrations (Jira/DevOps)
+   * Choose LLM model (OpenAI/Anthropic) - see [https://ai.pydantic.dev/api/models/base/](https://ai.pydantic.dev/api/models/base/) for supported models
+
+   **IV. Install dependencies:**
+   ```bash
+   pip install -e .[all]
+   ```
+
+   **V. Start Dev Agents:**
+   * See `src/entrypoints` for possible interfaces. Start with command line, try Slack or AG-UI next
+   ```bash
+   python -m entrypoints.cli_chat  # for CLI
+   ```
 
 Then interact in your tools (e.g. Slack):
 `@DevAgents release notes for pull request 123 please`
