@@ -213,6 +213,34 @@ class GitRepository:
         logger.debug("Pulling latest changes from remote")
         return self._git_output("git pull")
 
+    def get_latest_tags(self, limit: int = 20) -> list[str]:
+        """Get the latest git tags sorted by version in descending order.
+
+        Parameters
+        ----------
+        limit: maximum number of tags to return (defaults to 20)
+
+        Returns
+        -------
+        List of tag names sorted by version (most recent first)
+        """
+        # Use GitRepositoryConfig to check if auto-pull is needed
+        git_config = GitRepositoryConfig.from_project_config(self.project_config)
+        self._auto_pull_if_needed(git_config)
+
+        logger.debug(f"Getting latest {limit} git tags")
+        try:
+            # Get tags sorted by version (descending) and limit the output
+            output = self._git_output(
+                f"git tag --sort=-version:refname -l | head -n {limit}"
+            )
+            if not output:
+                return []
+            return [tag.strip() for tag in output.splitlines() if tag.strip()]
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to get git tags: {e}")
+            return []
+
     # ------------------------------------------------------------------
 
     def _resolve_branch_safe(self, branch: str) -> str | None:

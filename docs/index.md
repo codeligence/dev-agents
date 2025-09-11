@@ -3,7 +3,7 @@
 **You have your copilot, but what about the agile team work outside the IDE? Dev Agents handle the nasty grind outside your IDE: docs, reviews, debugging, logs & delivery, so you peacefully focus on building.**
 
 ![Build Status](https://img.shields.io/badge/build-pass-brightgreen.svg)
-[![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://pypi.org/project/dev-agents/)
+[![Version](https://img.shields.io/badge/version-0.9.3-blue.svg)](https://pypi.org/project/dev-agents/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code Quality](https://img.shields.io/badge/code%20quality-black%20%7C%20%20ruff%20%7C%20mypy%20%7C%20bandit-brightgreen.svg)](https://shields.io)
@@ -36,7 +36,7 @@ Build using the elegant [Pydantic AI](https://ai.pydantic.dev/) framework.
 # 1) Get example env and edit
 wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
 
-# 2) Run the CLI Chat in the docker container
+# 2) Run Dev Agents in the docker container
 docker run --rm -it --env-file=.env -v ./your-cloned-git-repo:/code codeligence/dev-agents
 ```
 
@@ -52,32 +52,32 @@ cd dev-agents
 # 2) Copy example env and edit
 cp .env.example .env
 
-# 3) See src/entrypoints for possible interfaces. Start with command line, try Slack or AG-UI next
+# 3) Install and run Dev Agents
 pip install -e .[all]
-python -m entrypoints.cli_chat
+python -m entrypoints.main
 ```
 
 Then interact in your tools (e.g. Slack):
 `@DevAgents release notes for pull request 123 please`
 
-## Who it’s for
-
-* Engineering teams **5+ devs** on long-lived, multi-gen codebases
-* Teams with **documentation/compliance/support** overhead
-* CTOs who want to **multiply output** while protecting developer focus
-
-## Included agents
+## Use Cases
 
 * **Release Notes & Changelog** – turns merged PRs into clear notes for products/libs.
-* **PR Review & Guideline Checker** – design patterns, conventions, risk flags.
-* **UI Impact / Test-Notes** – maps diffs to flows; creates actionable test notes.
-* **User Story Writer** – improves stories with concrete, testable detail.
+* **PR Review & Compliance Check** – design patterns, conventions, risk flags.
+* **Test-Notes** – maps diffs to flows; creates actionable test notes.
+* **User Story Refining** – improves stories with concrete, testable detail.
 
 _We’re currently porting more use cases from our customer deployments:_
 
 * **Prod Log Root-Cause Analysis** – surfaces likely cause, links to code, suggests fixes.
 * **Support Reply Drafts** – proposes informed responses from logs/context.
 * **Code Migration Assistant** – highlights cross-repo impacts for framework/library jumps.
+
+## Who it’s for
+
+* Engineering teams **5+ devs** on long-lived, multi-gen codebases
+* Teams with **documentation/compliance/support** overhead
+* CTOs who want to **multiply output** while protecting developer focus
 
 ## Interfaces & Integrations
 
@@ -147,6 +147,7 @@ _We’re currently porting more use cases from our customer deployments:_
 - **📚 Documentation**: Comprehensive guides and API reference
 - **🐛 Issues**: [GitHub Issues](https://github.com/codeligence/dev-agents/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/codeligence/dev-agents/discussions)
+- **💬 Discord**: [Join Discord Server](https://discord.gg/xJvfaPb8)
 - **🔒 Security**: [Security Policy](https://github.com/codeligence/dev-agents/security/policy)
 
 

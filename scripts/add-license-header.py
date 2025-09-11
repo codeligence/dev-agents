@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
+from pathlib import Path
 import os
 
 
@@ -37,21 +38,20 @@ def add_license_header():
 # You should have received a copy of the GNU Affero General Public License
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 """
-    current_dir = os.getcwd()
+    current_dir = Path.cwd()
     target_dirs = ['src', 'tests']
 
     for target in target_dirs:
-        target_path = os.path.join(current_dir, target)
-        if not os.path.exists(target_path):
+        target_path = current_dir / target
+        if not target_path.exists():
             print(f"Directory {target_path} does not exist. Skipping.")
             continue
 
         for dirpath, _dirnames, filenames in os.walk(target_path):
             for filename in filenames:
                 if filename.endswith('.py'):
-                    file_path = os.path.join(dirpath, filename)
-                    with open(file_path, encoding='utf-8') as f:
-                        content = f.read()
+                    file_path = Path(dirpath) / filename
+                    content = file_path.read_text(encoding='utf-8')
 
                     # Check if the header is already present
                     if 'GNU Affero General Public License' in content:
@@ -61,8 +61,7 @@ def add_license_header():
                     # Prepend the header
                     new_content = header + '\n\n' + content.strip()
 
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(new_content)
+                    file_path.write_text(new_content, encoding='utf-8')
 
                     print(f"Added header to {file_path}")
 
