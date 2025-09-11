@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
-
-"""Models and data structures for Slack integration."""
+"""Slack entrypoint package."""
 
 from .agent_context import SlackAgentContext
 from .agent_message_consumer import AgentMessageConsumer

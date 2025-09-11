@@ -4,40 +4,55 @@ Get your first Dev Agent running in minutes with these simple steps.
 
 ## Installation Options
 
-### Option 1: Setup Wizard (Recommended)
+### Option 1: **Docker**
 
-Run the **Setup Wizard** at [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
+   **I. Get and edit configuration:**
+   * Run the Setup Wizard: [https://setup.dev-agents.ai](https://setup.dev-agents.ai) to create a configuration for your setup.
+   * Alternatively, download example configuration:
+     ```bash
+     wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
+     ```
+   * For LLM config, see also [https://ai.pydantic.dev/api/models/base/](https://ai.pydantic.dev/api/models/base/) for supported models.
 
-The wizard generates your configuration and start instructions for local or server deployment.
+   **II. Mount repository and start container:**
+   * Your repository needs to be already cloned locally.
+     ```bash
+     # Mount cloned repository and configuration
+     docker run --rm -it --env-file=.env -v your/local/repo/path:/code codeligence/dev-agents
+     ```
+     
+     Add `-v` argument to see verbose logs.
 
-### Option 2: Manual Setup
+### Option 2: **Clone and run** (requires Python 3.11+):
 
-Clone and configure the repository manually:
+   **I. Clone Dev Agents:**
+   * Clone the repository:
+      ```bash
+      git clone https://github.com/codeligence/dev-agents.git
+      cd dev-agents
+      ```
 
-```bash
-# 1) Clone the repository
-git clone https://github.com/codeligence/dev-agents.git
-cd dev-agents
+   **II. Get and edit configuration:**
+   * Run the Setup Wizard: [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
+   * Or use example .env:
+      ```bash
+      cp .env.example .env
+      ```
+   * Fill in credentials for your version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), and optional integrations (Jira/DevOps)
+   * Choose LLM model (OpenAI/Anthropic) - see [https://ai.pydantic.dev/api/models/base/](https://ai.pydantic.dev/api/models/base/) for supported models
 
-# 2) Copy example environment file and edit
-cp .env.example .env
+   **III. Install dependencies and run Dev Agents**
 
-# 3) Install dependencies
-pip install -e .[all]
-
-# 4) Start with command line interface
-python -m entrypoints.cli_chat
-
-# or use docker (coming soon)
-```
+      ```bash
+      pip install -e .[all]     
+      python -m entrypoints.main
+      ```
 
 ## First Interaction
 
 Once running, interact with your agent in your tools (e.g. Slack):
 
-```
-@BettySharp release notes for sprint 42
-```
+`@DevAgents release notes for pull request 123 please`
 
 ## Next Steps
 

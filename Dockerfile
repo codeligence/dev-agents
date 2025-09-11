@@ -48,7 +48,7 @@ FROM python:3.11-slim AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
-ARG VERSION=0.9.2
+ARG VERSION=0.9.3
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
@@ -59,6 +59,7 @@ ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         git \
+        gosu \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -77,6 +78,10 @@ WORKDIR /app
 COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
+# Copy entrypoint script
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 # Copy application files
 COPY --chown=appuser:appuser src/ ./src/
 COPY --chown=appuser:appuser config/ ./config/
@@ -85,12 +90,6 @@ COPY --chown=appuser:appuser README.md LICENSE pyproject.toml ./
 # Create logs directory structure
 RUN mkdir -p logs data/logs data/storage \
     && chown -R appuser:appuser logs data
-
-# Switch to non-root user
-USER appuser
-
-# Configure git for safe directory
-RUN git config --global --add safe.directory /code
 
 # Add version label
 LABEL version="${VERSION}" \
@@ -106,5 +105,8 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD pytho
 ENV CORE_LOG_DIR=/data/logs
 ENV CORE_STORAGE_FILE_DIR=/data/storage
 
-# Default command - run the CLI chat entrypoint
-CMD ["python", "-m", "entrypoints.cli_chat"]
+# Set entrypoint script
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+
+# Default command - run the unified entrypoint with auto-detection
+CMD ["python", "-m", "entrypoints.main"]
