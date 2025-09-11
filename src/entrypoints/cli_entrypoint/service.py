@@ -38,7 +38,7 @@ from core.log import (
 )
 from core.message import MessageList
 from core.prompts import get_default_prompts
-from entrypoints.cli_models.agent_context import CLIAgentContext
+from entrypoints.cli_entrypoint.agent_context import CLIAgentContext
 
 
 def _supports_color() -> bool:

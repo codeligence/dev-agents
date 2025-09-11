@@ -27,7 +27,7 @@ from core.log import get_logger
 from core.message import MessageList
 from core.prompts import BasePrompts
 from core.protocols.agent_protocols import AgentExecutionContext
-from entrypoints.cli_models.message import CLIMessage
+from entrypoints.cli_entrypoint.message import CLIMessage
 
 logger = get_logger("CLIAgentContext")
 

@@ -62,6 +62,7 @@ cat > "$PROJECT_ROOT/licenses_map.json" <<'JSON'
   "attrs": "MIT License",
   "build": "MIT License",
   "click": "BSD 3-Clause License",
+  "fsspec": "BSD 3-Clause License",
   "griffe": "ISC License",
   "jsonschema": "MIT License",
   "jsonschema-specifications": "MIT License",

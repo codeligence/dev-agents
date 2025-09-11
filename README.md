@@ -10,13 +10,13 @@
   ·
   <a href="https://docs.dev-agents.ai">Docs</a>
   ·
-  <a href="#included-agents">Included agents</a>
+  <a href="#use-cases">Use Cases</a>
   ·
   <a href="#license">License</a>
   <br><br>
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
-[![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)](https://pypi.org/project/dev-agents/)
+![Build Status](https://img.shields.io/badge/build-pass-brightgreen.svg)
+[![Version](https://img.shields.io/badge/version-0.9.3-blue.svg)](https://pypi.org/project/dev-agents/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code Quality](https://img.shields.io/badge/code%20quality-black%20%7C%20%20ruff%20%7C%20mypy%20%7C%20bandit-brightgreen.svg)](https://shields.io)
@@ -35,86 +35,65 @@ Build using the elegant [Pydantic AI](https://ai.pydantic.dev/) framework.
 * **LLM-flexible** – works with major hosted or local models.
 * **Ready now** – 4 production agents live; more being ported from customer projects.
 * **Easily Customizable** – Easily add more use cases or customizations by extending base classes and implementing protocols.
-* **Fast setup** – guided onboarding at **[setup.dev-agents.ai](setup.dev-agents.ai)**; run locally or on your server.
+* **Fast setup** – guided onboarding at **[setup.dev-agents.ai](https://setup.dev-agents.ai)**; run locally or on your server.
 * **Built for teams** – shines with **5+ devs** and complex, evolving codebases where docs, compliance & handovers matter.
 * **Context and Integrations for Dev Teams.** While it works similarly to Claude Code or Gemini CLI, Dev Agents provide you with pre-engineered, dev specific contexts, prompts, and integrations for reproducible, cost-efficient results and a quick start.
 
 ## Quick start
 
-1. Option: **Use Docker**:
+### Option 1: **Docker**
 
-   **I. Get configuration:**
-   * Run the Setup Wizard: [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
-     * Select version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), UI (CLI, Slack), and optionally Jira/DevOps to reference work items/tickets
+   **I. Get and edit configuration:**
+   * Run the Setup Wizard: [https://setup.dev-agents.ai](https://setup.dev-agents.ai) to create a configuration for your setup.
+   * Alternatively, download example configuration:
+     ```bash
+     wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
+     ```
+   * For LLM config, see also [https://ai.pydantic.dev/api/models/base/](https://ai.pydantic.dev/api/models/base/) for supported models.
 
-   OR
+   **II. Mount repository and start container:**
+   * Your repository needs to be already cloned locally.
+     ```bash
+     # Mount cloned repository and configuration
+     docker run --rm -it --env-file=.env -v your/local/repo/path:/code codeligence/dev-agents
+     ```
+     
+     Add `-v` argument to see verbose logs.
 
-   * Download example configuration:
-   ```bash
-   wget -O .env https://raw.githubusercontent.com/codeligence/dev-agents/refs/heads/main/.env.example
-   cp .env.example .env
-   ```
-
-   **II. Edit environment variables:**
-   * Fill in credentials for your version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), and optional integrations (Jira/DevOps)
-   * Choose LLM model (OpenAI/Anthropic) - see [https://ai.pydantic.dev/api/models/base/](https://ai.pydantic.dev/api/models/base/) for supported models
-
-   **III. Reference your repository:**
-   * Clone repository:
-   ```bash
-   git clone your/repo/URL
-   ```
-   OR
-   * Copy path of your local repository
-
-   **IV. Mount repository and start container:**
-   ```bash
-   # Mount cloned repository and configuration
-   docker run --rm -it --env-file=.env -v ./your-cloned-git-repo:/code codeligence/dev-agents
-   # or
-   docker run --rm -it --env-file=.env -v your/cloned/repo/path:/code codeligence/dev-agents
-   ```
-
-2. Option: **Clone and run** (requires Python 3.11+):
+### Option 2: **Clone and run** (requires Python 3.11+):
 
    **I. Clone Dev Agents:**
-   ```bash
-   git clone https://github.com/codeligence/dev-agents.git
-   cd dev-agents
-   ```
+   * Clone the repository:
+      ```bash
+      git clone https://github.com/codeligence/dev-agents.git
+      cd dev-agents
+      ```
 
    **II. Get and edit configuration:**
    * Run the Setup Wizard: [https://setup.dev-agents.ai](https://setup.dev-agents.ai)
-     * Select version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), UI (CLI, Slack), and optionally Jira/DevOps to reference work items/tickets
-     * Copy configuration
-   ```bash
-   cp .env.example .env
-   ```
-
-   **III. Edit environment variables:**
+   * Or use example .env:
+      ```bash
+      cp .env.example .env
+      ```
    * Fill in credentials for your version control provider (Gitlab/Github), LLM provider (Anthropic/OpenAI), and optional integrations (Jira/DevOps)
    * Choose LLM model (OpenAI/Anthropic) - see [https://ai.pydantic.dev/api/models/base/](https://ai.pydantic.dev/api/models/base/) for supported models
 
-   **IV. Install dependencies:**
-   ```bash
-   pip install -e .[all]
-   ```
+   **III. Install dependencies and run Dev Agents**
 
-   **V. Start Dev Agents:**
-   * See `src/entrypoints` for possible interfaces. Start with command line, try Slack or AG-UI next
-   ```bash
-   python -m entrypoints.cli_chat  # for CLI
-   ```
+      ```bash
+      pip install -e .[all]     
+      python -m entrypoints.main
+      ```
 
 Then interact in your tools (e.g. Slack):
 `@DevAgents release notes for pull request 123 please`
 
-## Included agents
+## Use Cases
 
 * **Release Notes & Changelog** – turns merged PRs into clear notes for products/libs.
-* **PR Review & Guideline Checker** – design patterns, conventions, risk flags.
-* **UI Impact / Test-Notes** – maps diffs to flows; creates actionable test notes.
-* **User Story Writer** – improves stories with concrete, testable detail.
+* **PR Review & Compliance Check** – design patterns, conventions, risk flags.
+* **Test-Notes** – maps diffs to flows; creates actionable test notes.
+* **User Story Refining** – improves stories with concrete, testable detail.
 
 _We’re currently porting more use cases from our customer deployments:_
 

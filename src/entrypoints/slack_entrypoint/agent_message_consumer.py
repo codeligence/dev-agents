@@ -24,7 +24,7 @@ from core.log import get_logger, reset_context_token, set_context_token
 from core.message import MessageList
 from core.prompts import get_default_prompts
 from core.protocols.message_consumer_protocols import MessageConsumer
-from entrypoints.slack_models.agent_context import SlackAgentContext
+from entrypoints.slack_entrypoint.agent_context import SlackAgentContext
 from integrations.slack.slack_client_service import SlackClientService
 
 logger = get_logger("AgentMessageConsumer")
@@ -76,7 +76,7 @@ class AgentMessageConsumer(MessageConsumer):
             if messages:
                 first_message = messages.get_messages()[0]
                 # Cast to SlackMessage to access channel_id
-                from entrypoints.slack_models.slack_bot_service import SlackMessage
+                from entrypoints.slack_entrypoint.slack_bot_service import SlackMessage
 
                 slack_message = first_message
                 if isinstance(slack_message, SlackMessage):
