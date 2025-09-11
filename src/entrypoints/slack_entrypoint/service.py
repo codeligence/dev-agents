@@ -18,14 +18,15 @@
 
 
 from pathlib import Path
+import os
 import traceback
 
 from dotenv import load_dotenv
 
 from core.config import get_default_config
 from core.log import get_logger, setup_thread_logging
-from entrypoints.slack_models.agent_message_consumer import AgentMessageConsumer
-from entrypoints.slack_models.slack_bot_service import SlackBotService
+from entrypoints.slack_entrypoint.agent_message_consumer import AgentMessageConsumer
+from entrypoints.slack_entrypoint.slack_bot_service import SlackBotService
 from integrations.slack.models import SlackBotConfig
 from integrations.slack.slack_client_service import SlackClientService
 
@@ -34,7 +35,9 @@ load_dotenv()
 
 # Set up logging
 base_config = get_default_config()
-setup_thread_logging(base_config)
+# Check for verbose logging from main entrypoint
+enable_console = bool(os.environ.get("DEV_AGENTS_CONSOLE_LOGGING"))
+setup_thread_logging(base_config, enable_console_logging=enable_console)
 logger = get_logger("SlackBot", level="INFO")
 
 

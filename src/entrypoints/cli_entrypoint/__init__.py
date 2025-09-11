@@ -15,5 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
+"""CLI entrypoint package."""
 
-"""CLI models for command-line interface entrypoint."""
+from .agent_context import CLIAgentContext
+
+__all__ = [
+    "CLIAgentContext",
+]

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dev-agents"
-version = "0.9.2"
+version = "0.9.3"
 description = "AI Agents for Agile Dev Teams"
 readme = "README.md"
 license = 'AGPL-3.0'
@@ -67,6 +67,7 @@ Homepage = "https://github.com/codeligence/dev-agents"
 [project.optional-dependencies]
 slack = [
     "slack_sdk>=3.19.5,<4.0.0",
+    "markdown_to_mrkdwn~=0.2.0",
 ]
 azure = [
     "azure-devops>=7.1.0b4,<8.0.0",
@@ -101,7 +102,6 @@ dev = [
     "bandit[toml]>=1.7.5,<2.0.0",
     "safety>=3.0.0,<4.0.0",
     "pip-audit>=2.6.0,<3.0.0",
-    "semgrep>=1.45.0,<2.0.0",
 
     # Documentation Quality
     "docformatter>=1.7.0,<2.0.0",
@@ -157,9 +157,7 @@ include = ["*"]
 "*" = ["tests", "tests.*", "*.tests", "*.tests.*"]
 
 [project.scripts]
-dev-agents-slack-bot = "entrypoints.slack_bot:main"
-dev-agents-cli-chat = "entrypoints.cli_chat:main"
-dev-agents-ag-ui-server = "entrypoints.ag_ui_server:main"
+dev-agents = "entrypoints.main:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -380,19 +378,10 @@ cache = true
 # Ignore specific vulnerability IDs if needed (use sparingly)
 # ignore = ["12345", "67890"]
 
-[tool.semgrep]
-# Semgrep static analysis configuration
-config = ["auto", "p/security-audit", "p/secrets"]
-# Exclude paths from scanning
-exclude = ["tests/", "venv/", "build/", "dist/", ".git/"]
-# Output format: json, sarif, text
-output_format = "sarif"
-# Disable specific rules if needed
-# disable = ["python.lang.security.audit.dangerous-system-call.dangerous-system-call"]
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.9.2"
+version = "0.9.3"
 tag_format = "v$major.$minor.$patch"
 version_files = [
     "pyproject.toml:version",

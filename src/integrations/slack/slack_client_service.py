@@ -17,12 +17,11 @@
 
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from datetime import UTC
 from typing import Any, cast
-import json
 import threading
 
+from markdown_to_mrkdwn import SlackMarkdownConverter  # type: ignore[import-untyped]
 from slack_sdk import WebClient
 from slack_sdk.errors import SlackApiError
 from slack_sdk.socket_mode import SocketModeClient
@@ -34,20 +33,15 @@ from core.log import get_logger
 from integrations.slack.models import SlackBotConfig
 
 
-@dataclass
-class Attachment:
-    """Class representing a file attachment to be sent to Slack."""
-
-    filename: str
-    content: str
-
-
 class SlackClientService:
     def __init__(self, slack_config: SlackBotConfig):
         # Setup logging using centralized log file path utility
         self.log = get_logger(logger_name="SlackClientService", level="INFO")
         # Logging configuration is now DRY and managed in one place via get_log_file_path.
         self.user_info_cache: dict[str, dict[str, Any]] = {}  # Cache for user info
+
+        # Initialize markdown converter for proper Slack formatting
+        self.markdown_converter = SlackMarkdownConverter()
 
         # Load Slack tokens from config
         if not slack_config:
@@ -170,7 +164,7 @@ class SlackClientService:
         """
         from datetime import datetime
 
-        from entrypoints.slack_models.slack_bot_service import SlackMessage
+        from entrypoints.slack_entrypoint.slack_bot_service import SlackMessage
 
         message_id = slack_msg.get("ts", "")
         timestamp = (
@@ -205,81 +199,31 @@ class SlackClientService:
             is_from_bot=user_id == self.bot_id,
         )
 
-    def _upload_attachment(
-        self, attachment: Any, thread_ts: str | None = None
-    ) -> dict[str, Any] | None:
-        """Upload a file attachment to Slack.
-
-        Args:
-            attachment (Attachment): The attachment to upload
-            thread_ts (str, optional): Thread timestamp if uploading to a thread
-
-        Returns:
-            dict or None: File info if upload successful, None otherwise
-        """
-        try:
-            upload_params = {
-                "channel": self.channel_id,
-                "content": attachment.content,
-                "filename": attachment.filename,
-            }
-
-            # Add thread_ts if provided
-            if thread_ts:
-                upload_params["thread_ts"] = thread_ts
-
-            file_upload_response = self.client.files_upload_v2(**upload_params)
-            file_info = file_upload_response["file"]
-            self.log.info(f"File uploaded successfully: {file_info['url_private']}")
-            return cast("dict[str, Any]", file_info)
-        except SlackApiError as e:
-            self.log.error(f"Error uploading file: {e.response['error']}")
-            return None
-
-    def _create_message_blocks(
-        self, text: str, _file_info: dict[str, Any], _attachment: Any
-    ) -> list[dict[str, Any]]:
-        """Create message blocks with text and file attachment reference.
-
-        Args:
-            text (str): Message text
-            file_info (dict): File information from upload
-            attachment (Attachment): The attachment object
-
-        Returns:
-            list: List of block elements for Slack message
-        """
-        return [
-            {"type": "section", "text": {"type": "mrkdwn", "text": text}},
-        ]
-
-    def send_reply(
-        self, thread_ts: str, text: str, attachment: Any = None
-    ) -> str | None:
-        """Send a reply in a thread.
+    def send_reply(self, thread_ts: str, text: str) -> str | None:
+        """Send a reply in a thread with markdown formatting support.
 
         Args:
             thread_ts (str): The timestamp of the thread to reply to
-            text (str): The text content of the reply
-            attachment (Attachment, optional): File attachment to include with the message
+            text (str): The text content of the reply (supports standard markdown)
 
         Returns:
             str or None: The timestamp of the sent message if successful, None otherwise
         """
         try:
-            # Prepare message parameters
+            # Convert markdown to Slack's mrkdwn format
+            mrkdwn_text = self.markdown_converter.convert(text)
+
+            # Always use blocks structure with mrkdwn for proper markdown formatting
+            blocks = [
+                {"type": "section", "text": {"type": "mrkdwn", "text": mrkdwn_text}}
+            ]
+
             message_params: dict[str, Any] = {
                 "channel": self.channel_id,
-                "text": text,
+                "text": text,  # Fallback for notifications (original text)
+                "blocks": blocks,
                 "thread_ts": thread_ts,
             }
-
-            # Handle attachment if provided
-            if attachment:
-                file_info = self._upload_attachment(attachment, thread_ts)
-                if file_info:
-                    blocks = self._create_message_blocks(text, file_info, attachment)
-                    message_params["blocks"] = json.dumps(blocks)
 
             # Send the message
             response = self.client.chat_postMessage(**message_params)
@@ -291,34 +235,36 @@ class SlackClientService:
         except SlackApiError as e:
             error = e.response["error"]
             self.log.error(f"Error sending message: {error}")
-            # Optionally, log the problematic blocks for debugging
-            if message_params and "blocks" in message_params:
-                self.log.error(f"Blocks sent: {message_params['blocks']}")
             return None
 
     def update_message(
-        self, thread_ts: str, message_ts: str, text: str, attachment: Any = None
+        self, thread_ts: str, message_ts: str, text: str  # noqa: ARG002
     ) -> str | None:
-        """Update an existing message.
+        """Update an existing message with markdown formatting support.
+
+        Args:
+            thread_ts (str): The timestamp of the thread (unused but kept for compatibility)
+            message_ts (str): The timestamp of the message to update
+            text (str): The new text content (supports standard markdown)
 
         Returns:
             str or None: The timestamp of the updated message if successful, None otherwise
         """
         try:
-            # Prepare update parameters
+            # Convert markdown to Slack's mrkdwn format
+            mrkdwn_text = self.markdown_converter.convert(text)
+
+            # Always use blocks structure with mrkdwn for proper markdown formatting
+            blocks = [
+                {"type": "section", "text": {"type": "mrkdwn", "text": mrkdwn_text}}
+            ]
+
             update_params: dict[str, Any] = {
                 "channel": self.channel_id,
                 "ts": message_ts,
-                "text": text,
+                "text": text,  # Fallback for notifications (original text)
+                "blocks": blocks,
             }
-
-            # Handle attachment if provided
-            if attachment:
-                file_info = self._upload_attachment(attachment, thread_ts)
-                if file_info:
-                    update_params["blocks"] = json.dumps(
-                        self._create_message_blocks(text, file_info, attachment)
-                    )
 
             # Update the message
             response = self.client.chat_update(**update_params)

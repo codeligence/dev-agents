@@ -32,7 +32,7 @@ from core.integrations.context_integration_loader import ContextIntegrationLoade
 from core.project_config import ProjectConfigFactory
 from core.protocols.agent_protocols import AgentExecutionContext
 from core.storage import get_storage
-from entrypoints.slack_models.agent_context import SlackAgentContext
+from entrypoints.slack_entrypoint.agent_context import SlackAgentContext
 from integrations.git.git_repository import GitRepository
 
 AGENT_NAME = "gitchatbot"
@@ -380,3 +380,52 @@ class GitChatbotAgent(PydanticAIAgent):
             except Exception as e:
                 self.logger.error(f"Error during impact analysis: {e}", exc_info=True)
                 return f"Impact analysis failed: {str(e)}"
+
+        @self.agent.tool
+        async def list_recent_tags(
+            ctx: RunContext[PersistentAgentDeps], limit: int = 20
+        ) -> str:
+            """
+            List the most recent git tags from the repository.
+
+            This tool retrieves git tags sorted by version in descending order (most recent first).
+
+            Args:
+                limit: Maximum number of tags to retrieve (defaults to 20, max 50)
+
+            Returns:
+                Formatted list of recent git tags to be used in the response for the user.
+            """
+            await self.send_toolcall_message(ctx, "👋🚀")
+            self.logger.info(f"list_recent_tags tool called with limit={limit}")
+
+            try:
+                # Validate limit parameter
+                if limit <= 0:
+                    return "Invalid limit: must be greater than 0"
+                if limit > 50:
+                    limit = 50  # Cap at reasonable maximum
+
+                # Create GitRepository instance
+                git_repo = GitRepository(project_config=self.project_config)
+
+                # Get latest tags
+                tags = git_repo.get_latest_tags(limit=limit)
+
+                if not tags:
+                    return "No git tags found in the repository."
+
+                # Format the response
+                tag_list = []
+                for i, tag in enumerate(tags, 1):
+                    tag_list.append(f"{i:2d}. {tag}")
+
+                response = f"Recent git tags (showing {len(tags)} of up to {limit}) for further processing:\n\n"
+                response += "\n".join(tag_list)
+
+                self.logger.info(f"Retrieved {len(tags)} git tags successfully")
+                return response
+
+            except Exception as e:
+                self.logger.error(f"Error retrieving git tags: {e}", exc_info=True)
+                return f"Failed to retrieve git tags: {str(e)}"

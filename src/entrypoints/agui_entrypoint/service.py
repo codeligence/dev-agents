@@ -23,6 +23,7 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import Any, cast
 import asyncio
+import os
 import traceback
 
 from ag_ui.core import (
@@ -47,15 +48,17 @@ from core.log import (
     setup_thread_logging,
 )
 from core.prompts import get_default_prompts
-from entrypoints.ag_ui_models.agent_context import AGUIAgentContext
-from entrypoints.ag_ui_models.message import convert_agui_messages_to_message_list
+from entrypoints.agui_entrypoint.agent_context import AGUIAgentContext
+from entrypoints.agui_entrypoint.message import convert_agui_messages_to_message_list
 
 # Load environment variables
 load_dotenv()
 
 # Set up logging
 base_config = get_default_config()
-setup_thread_logging(base_config)
+# Check for verbose logging from main entrypoint
+enable_console = bool(os.environ.get("DEV_AGENTS_CONSOLE_LOGGING"))
+setup_thread_logging(base_config, enable_console_logging=enable_console)
 logger = get_logger("AGUIEntrypoint", level="INFO")
 
 # Create FastAPI app
@@ -108,6 +111,11 @@ class AGUIConfig:
 
     def get_server_reload(self) -> bool:
         return bool(self._base_config.get_value("agui.server.reload", False))
+
+    def is_configured(self) -> bool:
+        """Check if AGUI service is configured and enabled."""
+        # Check if AGUI is explicitly enabled via configuration
+        return bool(self._base_config.get_value("agui.server.enabled", False))
 
 
 @app.post("/agent")
