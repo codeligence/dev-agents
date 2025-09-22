@@ -48,7 +48,7 @@ FROM python:3.11-slim AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
-ARG VERSION=0.9.3
+ARG VERSION=0.10.0
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
@@ -107,6 +107,3 @@ ENV CORE_STORAGE_FILE_DIR=/data/storage
 
 # Set entrypoint script
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-
-# Default command - run the unified entrypoint with auto-detection
-CMD ["python", "-m", "entrypoints.main"]

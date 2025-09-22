@@ -16,27 +16,13 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""Dev Agents - AI Agents for Agile Dev Teams.
+from core.integrations import get_provider_registry
 
-This package provides AI agents for common development workflow automation including:
-- Release notes generation from PRs
-- PR review and guideline checking
-- UI impact analysis and test note generation
-- Code research and analysis
-- and more
+from .config import JiraConfig
+from .provider import JiraIssueProvider
 
-The agents are designed to integrate with Slack, Azure DevOps, GitLab, and other
-development tools to provide consistent AI assistance across your development workflow.
-"""
+# Register Jira providers with the global registry
+registry = get_provider_registry()
+registry.register_issue_provider("jira", JiraIssueProvider.from_config)
 
-__version__ = "0.10.0"
-__author__ = "Dev Agents Team"
-__email__ = "dev@codeligence.com"
-
-from core.config import BaseConfig
-from core.prompts import BasePrompts
-
-__all__ = [
-    "BaseConfig",
-    "BasePrompts",
-]
+__all__ = ["JiraIssueProvider", "JiraConfig"]

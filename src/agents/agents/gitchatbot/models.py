@@ -32,15 +32,13 @@ class ChatbotContext:
 
     issue_id: str | None = None
     pull_request_id: str | None = None
-    source_branch_name: str | None = None
-    target_branch_name: str | None = None
-    source_commit_hash: str | None = None
-    target_commit_hash: str | None = None
+    source_git_ref: str | None = None
+    target_git_ref: str | None = None
 
     def __post_init__(self) -> None:
-        """Auto-populate target_branch_name if only source is provided."""
-        if self.source_branch_name and not self.target_branch_name:
-            self.target_branch_name = self.source_branch_name
+        """Auto-populate target_git_ref if only source is provided."""
+        if self.source_git_ref and not self.target_git_ref:
+            self.target_git_ref = self.source_git_ref
 
 
 @dataclass
@@ -84,10 +82,8 @@ class PersistentAgentDeps:
         context_data = {
             "issue_id": context.issue_id,
             "pull_request_id": context.pull_request_id,
-            "source_branch_name": context.source_branch_name,
-            "target_branch_name": context.target_branch_name,
-            "source_commit_hash": context.source_commit_hash,
-            "target_commit_hash": context.target_commit_hash,
+            "source_git_ref": context.source_git_ref,
+            "target_git_ref": context.target_git_ref,
         }
         self.storage.set(self.get_storage_key(), context_data)
         self.context = context

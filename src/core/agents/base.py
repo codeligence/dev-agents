@@ -24,9 +24,10 @@ from typing import Any, cast
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import RunContext
 
+from core.agents.context import get_current_agent_execution_context
 from core.exceptions import AgentGracefulExit
 from core.log import get_logger
-from core.protocols.agent_protocols import Agent, AgentExecutionContext
+from core.protocols.agent_protocols import Agent
 
 
 class PydanticAIAgent(Agent):
@@ -40,13 +41,7 @@ class PydanticAIAgent(Agent):
     Maintains protocol compatibility while reducing code duplication.
     """
 
-    def __init__(self, context: AgentExecutionContext) -> None:
-        """Initialize the agent with execution context.
-
-        Args:
-            context: Execution context providing access to messages, config, and communication
-        """
-        self.context = context
+    def __init__(self) -> None:
         self.result: str | None = None
         self.logger = get_logger(self.__class__.__name__)
 
@@ -93,9 +88,9 @@ class PydanticAIAgent(Agent):
         )
         if text_part:
             response_text = text_part.content
-            await self.context.send_status(response_text)
+            await get_current_agent_execution_context().send_response(response_text)
         elif fallback_message:
-            await self.context.send_status(fallback_message)
+            await get_current_agent_execution_context().send_status(fallback_message)
 
     async def run(self) -> str:
         """Execute the agent using standard PydanticAI flow.
@@ -123,14 +118,14 @@ class PydanticAIAgent(Agent):
 
         try:
             # Get messages from context
-            message_list = self.context.get_message_list()
+            message_list = get_current_agent_execution_context().get_message_list()
 
             if not message_list:
                 self.logger.warning("No messages to respond to")
                 response = (
                     "I don't see any messages to respond to. Please send me a message!"
                 )
-                await self.context.send_response(response)
+                await get_current_agent_execution_context().send_response(response)
                 return response
 
             # Get chat history for processing
@@ -144,10 +139,19 @@ class PydanticAIAgent(Agent):
 
             # Get dependencies if the agent uses them
             deps = self.get_dependencies()
+
+            # Run agent without pre-allocated usage tracking
             if deps is not None:
                 result = await self.agent.run(message_history=chat_history, deps=deps)
             else:
                 result = await self.agent.run(message_history=chat_history)
+
+            # Track usage after agent execution
+            context = get_current_agent_execution_context()
+            model_name = (
+                self.agent.model if self.agent and self.agent.model else "unknown"
+            )
+            context.track_usage(model_name, result.usage())
 
             response = result.output
 
@@ -156,7 +160,7 @@ class PydanticAIAgent(Agent):
                 if len(response) > 100
                 else f"Generated response: {response}"
             )
-            await self.context.send_response(response)
+            await get_current_agent_execution_context().send_response(response)
 
             self.result = response
             return cast("str", response)
@@ -168,5 +172,7 @@ class PydanticAIAgent(Agent):
         except Exception as e:
             error_msg = f"Error in {self.__class__.__name__}: {str(e)}"
             self.logger.error(error_msg)
-            await self.context.send_response(f"Sorry, I encountered an error: {str(e)}")
+            await get_current_agent_execution_context().send_response(
+                f"Sorry, I encountered an error: {str(e)}"
+            )
             raise

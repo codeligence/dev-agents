@@ -20,7 +20,7 @@
 
 from core.agents.service import AgentService
 from core.config import BaseConfig
-from core.log import get_logger, reset_context_token, set_context_token
+from core.log import get_logger
 from core.message import MessageList
 from core.prompts import get_default_prompts
 from core.protocols.message_consumer_protocols import MessageConsumer
@@ -88,9 +88,6 @@ class AgentMessageConsumer(MessageConsumer):
 
                 thread_id = first_message.get_thread_id()
 
-                # Set logging context for this thread
-                context_token = set_context_token(thread_id)
-
                 try:
                     logger.info(
                         f"Processing thread: {thread_id} with {len(messages)} messages"
@@ -119,7 +116,9 @@ class AgentMessageConsumer(MessageConsumer):
                     )
 
                 except Exception as e:
-                    logger.error(f"Error processing thread {thread_id}: {str(e)}")
+                    logger.error(
+                        f"Error processing thread {thread_id}: {str(e)}", exc_info=True
+                    )
 
                     # Try to send error message to Slack if we have context
                     try:
@@ -131,9 +130,6 @@ class AgentMessageConsumer(MessageConsumer):
                         pass  # Best effort  # nosec B110
 
                     raise
-                finally:
-                    # Always reset the logging context
-                    reset_context_token(context_token)
 
         except Exception as e:
             logger.error(f"Error in AgentMessageConsumer: {str(e)}")

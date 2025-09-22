@@ -1,0 +1,77 @@
+{
+  "number": 2001,
+  "title": "Authentication fails when password contains special characters",
+  "state": "open",
+  "created_at": "2025-08-09T10:24:35Z",
+  "updated_at": "2025-08-10T08:45:12Z",
+  "closed_at": null,
+  "user": {
+    "login": "bugreporter",
+    "name": "Bug Reporter",
+    "id": 5,
+    "node_id": "MDQ6VXNlcjU=",
+    "avatar_url": "https://github.com/images/error/bugreporter_happy.gif",
+    "html_url": "https://github.com/bugreporter"
+  },
+  "body": "## Description\nWhen trying to log in with a password that contains special characters like `!@#$%^&*()`, the authentication fails with a 500 error.\n\n## Steps to Reproduce\n1. Go to login page\n2. Enter a valid username\n3. Enter a password with special characters\n4. Click login button\n\n## Expected Result\nSuccessful login\n\n## Actual Result\nServer error 500\n\n## Environment\n- Browser: Chrome 98.0.4758.102\n- OS: Windows 11",
+  "labels": [
+    {
+      "id": 1,
+      "node_id": "MDU6TGFiZWwx",
+      "url": "https://api.github.com/repos/octocat/Hello-World/labels/bug",
+      "name": "bug",
+      "color": "d73a4a",
+      "default": true
+    },
+    {
+      "id": 3,
+      "node_id": "MDU6TGFiZWwz",
+      "url": "https://api.github.com/repos/octocat/Hello-World/labels/high-priority",
+      "name": "high-priority",
+      "color": "b60205",
+      "default": false
+    }
+  ],
+  "assignee": {
+    "login": "octocat",
+    "name": "Octo Cat",
+    "id": 1,
+    "node_id": "MDQ6VXNlcjE=",
+    "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+    "html_url": "https://github.com/octocat"
+  },
+  "assignees": [
+    {
+      "login": "octocat",
+      "name": "Octo Cat",
+      "id": 1,
+      "node_id": "MDQ6VXNlcjE=",
+      "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+      "html_url": "https://github.com/octocat"
+    }
+  ],
+  "milestone": {
+    "id": 1,
+    "node_id": "MDk6TWlsZXN0b25lMQ==",
+    "title": "Sprint 42",
+    "description": "Sprint focused on security features",
+    "state": "open",
+    "created_at": "2025-07-28T10:00:00Z",
+    "updated_at": "2025-07-28T10:00:00Z",
+    "due_on": "2025-08-15T23:59:59Z",
+    "closed_at": null
+  },
+  "comments": 3,
+  "pull_request": null,
+  "_links": {
+    "self": {
+      "href": "https://api.github.com/repos/octocat/Hello-World/issues/2001"
+    },
+    "html": {
+      "href": "https://github.com/octocat/Hello-World/issues/2001"
+    },
+    "comments": {
+      "href": "https://api.github.com/repos/octocat/Hello-World/issues/2001/comments"
+    }
+  }
+}

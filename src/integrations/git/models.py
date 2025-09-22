@@ -17,8 +17,19 @@
 
 
 from dataclasses import dataclass
+from datetime import datetime
 
 from .changed_file import ChangedFileSet
+
+
+@dataclass
+class Commit:
+    """Represents a git commit with essential metadata."""
+
+    commit_hash: str
+    author: str
+    date: datetime
+    message: str
 
 
 @dataclass

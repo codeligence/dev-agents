@@ -30,10 +30,14 @@ from agents.subagents.code_research import (
     CodeResearchDependencies,
     create_code_research_subagent,
 )
-from core.config import BaseConfig, get_default_config
+from core.agents.context import (
+    get_current_agent_execution_context,
+    get_current_config,
+    get_current_prompts,
+)
+from core.config import BaseConfig
 from core.log import get_logger
-from core.prompts import BasePrompts, get_default_prompts
-from core.protocols.agent_protocols import AgentExecutionContext
+from core.prompts import BasePrompts
 from integrations.git.models import GitDiffContext
 
 from .models import (
@@ -56,16 +60,12 @@ class ImpactAnalysisSubagent:
 
     def __init__(
         self,
-        context: AgentExecutionContext,
         base_config: BaseConfig | None = None,
         base_prompts: BasePrompts | None = None,
     ):
-        # Store the execution context
-        self.context = context
-
-        # Use defaults if not provided
-        base_config = base_config or get_default_config()
-        base_prompts = base_prompts or get_default_prompts()
+        # Use context-local access or defaults
+        base_config = base_config or get_current_config()
+        base_prompts = base_prompts or get_current_prompts()
 
         # Create typed wrappers
         self.config = ImpactAnalysisConfig(base_config)
@@ -225,7 +225,14 @@ class ImpactAnalysisSubagent:
         )
 
         # Run the analysis
-        result = await agent.run(prompt, deps=deps)
+        result = await agent.run(
+            prompt,
+            deps=deps,
+        )
+
+        # Track usage after agent execution
+        get_current_agent_execution_context().track_usage(model, result.usage())
+
         return cast("str", result.output)
 
     async def _process_files_with_progress(
@@ -249,19 +256,21 @@ class ImpactAnalysisSubagent:
             processed_files: List to track processed files (modified in-place)
             total_files: Total number of files that will be processed for progress calculation
         """
+
+        # Set up progress tracker
+        progress_tracker = get_current_agent_execution_context().get_progress_tracker()
+        progress_tracker.reset(total_files)
+
         for file_path in files_to_process:
             if len(processed_files) >= self.config.get_max_files():
                 break
 
             try:
                 # Send progress update
-                current_index = len(processed_files) + 1
-                await self.context.send_status(
-                    f"🔎 {current_index}/{total_files}: {file_path}"
-                )
+                await progress_tracker.async_update()
 
                 logger.debug(
-                    f"Analyzing {file_type_name} file {current_index}: {file_path}"
+                    f"Analyzing {file_type_name} file {len(processed_files) + 1}: {file_path}"
                 )
                 file_diff = git_diff_context.file_diffs[file_path]
 

@@ -24,7 +24,9 @@ import threading
 from dotenv import load_dotenv
 from dynaconf import Dynaconf
 
+from core.exceptions import ConfigurationError
 from core.log import get_logger
+from core.project_config import ProjectConfig
 
 load_dotenv()
 logger = get_logger("BaseConfig")
@@ -129,6 +131,37 @@ class BaseConfig:
             return default
         except Exception:
             return default
+
+    def get_available_projects(self) -> list[str]:
+        """Get list of configured project names."""
+        projects = self.get_value("projects", {})
+        return list(projects.keys())
+
+    def get_project_config(self, project_name: str) -> ProjectConfig:
+        """Get configuration for a specific project.
+
+        Args:
+            project_name: Name of the project
+
+        Returns:
+            ProjectConfig instance
+
+        Raises:
+            ConfigurationError: If project is not found
+        """
+        projects = self.get_value("projects", {})
+        if project_name not in projects:
+            available = ", ".join(self.get_available_projects())
+            raise ConfigurationError(
+                f"Project '{project_name}' not found in configuration. "
+                f"Available projects: {available}"
+            )
+
+        return ProjectConfig(project_name, self)
+
+    def get_default_project_config(self) -> ProjectConfig:
+        """Get the default project configuration."""
+        return self.get_project_config("default")
 
 
 # Global default config instance - thread-safe singleton

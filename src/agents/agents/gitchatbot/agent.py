@@ -23,14 +23,17 @@ from pydantic_ai.tools import ToolDefinition
 from agents.agents.gitchatbot.config import GitChatbotAgentConfig
 from agents.agents.gitchatbot.models import ChatbotContext, PersistentAgentDeps
 from agents.agents.gitchatbot.prompts import GitChatbotAgentPrompts
+from agents.subagents.changelog import ChangelogSubagent
 from agents.subagents.impact_analysis.impact_analysis_subagent import (
     ImpactAnalysisSubagent,
 )
 from core.agents.base import PydanticAIAgent
+from core.agents.context import (
+    get_current_agent_execution_context,
+    get_current_config,
+    get_current_prompts,
+)
 from core.exceptions import AgentGracefulExit
-from core.integrations.context_integration_loader import ContextIntegrationLoader
-from core.project_config import ProjectConfigFactory
-from core.protocols.agent_protocols import AgentExecutionContext
 from core.storage import get_storage
 from entrypoints.slack_entrypoint.agent_context import SlackAgentContext
 from integrations.git.git_repository import GitRepository
@@ -41,21 +44,22 @@ AGENT_NAME = "gitchatbot"
 class GitChatbotAgent(PydanticAIAgent):
     """Chatbot agent that responds to user messages using AI and subagents."""
 
-    def __init__(self, context: AgentExecutionContext) -> None:
-        super().__init__(context)
+    def __init__(self) -> None:
+        super().__init__()
 
-        # Get configuration from context
-        base_config = context.get_config()
+        # Get configuration from context-local access
+        base_config = get_current_config()
         self.config = GitChatbotAgentConfig(base_config)
 
         # Get prompts
-        base_prompts = context.get_prompts()
+        base_prompts = get_current_prompts()
         self.prompts = GitChatbotAgentPrompts(base_prompts)
 
         # Setup project loader for PR/Issue loading with caching
-        project_factory = ProjectConfigFactory(base_config)
-        self.project_config = project_factory.get_default_project_config()
-        self.project_loader = ContextIntegrationLoader(self.project_config)
+        self.project_config = base_config.get_default_project_config()
+        self.project_loader = (
+            get_current_agent_execution_context().get_context_integration_loader()
+        )
 
         # Set up the PydanticAI agent
         self.setup_agent()
@@ -69,10 +73,10 @@ class GitChatbotAgent(PydanticAIAgent):
             PersistentAgentDeps with storage and execution_id configured
         """
         # Get global storage instance
-        storage = get_storage(self.context.get_config())
+        storage = get_storage(get_current_config())
 
         # Get execution ID from context
-        execution_id = self.context.get_execution_id()
+        execution_id = get_current_agent_execution_context().get_execution_id()
 
         # Create persistent dependencies
         deps = PersistentAgentDeps(execution_id=execution_id, storage=storage)
@@ -96,9 +100,10 @@ class GitChatbotAgent(PydanticAIAgent):
             _ctx: RunContext[PersistentAgentDeps], tool_def: ToolDefinition
         ) -> ToolDefinition | None:
             # Only enable skip_reply tool if bot is NOT mentioned in Slack contexts - this allows the bot to reply without mentions
+            context = get_current_agent_execution_context()
             if (
-                isinstance(self.context, SlackAgentContext)
-                and not self.context.is_bot_mentioned()
+                isinstance(context, SlackAgentContext)
+                and not context.is_bot_mentioned()
             ):
                 return tool_def
             return None
@@ -125,6 +130,10 @@ class GitChatbotAgent(PydanticAIAgent):
             """
             Update the conversation context with issue, PR, branch, or commit information. Set all available values at once
 
+            When setting git refs:
+            - source ref is the one with new changes, i.e. feature branch or a recent tag
+            - target ref is the one that does not have the changes yet, i.e. main branch or old tagGene
+
             Args:
                 context: ChatbotContext instance with optional context fields
 
@@ -134,10 +143,8 @@ class GitChatbotAgent(PydanticAIAgent):
             self.logger.info(
                 f"update_context tool called with: issue_id={context.issue_id}, "
                 f"pull_request_id={context.pull_request_id}, "
-                f"source_branch_name={context.source_branch_name}, "
-                f"target_branch_name={context.target_branch_name}, "
-                f"source_commit_hash={context.source_commit_hash}, "
-                f"target_commit_hash={context.target_commit_hash}"
+                f"source_git_ref={context.source_git_ref}, "
+                f"target_git_ref={context.target_git_ref}"
             )
 
             ctx.deps.save_context(context)
@@ -147,10 +154,8 @@ class GitChatbotAgent(PydanticAIAgent):
                 f"Context updated and saved. Current context: "
                 f"issue_id={context.issue_id}, "
                 f"pull_request_id={context.pull_request_id}, "
-                f"source_branch_name={context.source_branch_name}, "
-                f"target_branch_name={context.target_branch_name}, "
-                f"source_commit_hash={context.source_commit_hash}, "
-                f"target_commit_hash={context.target_commit_hash}"
+                f"source_git_ref={context.source_git_ref}, "
+                f"target_git_ref={context.target_git_ref}"
             )
 
             # Create a summary of what was updated
@@ -159,22 +164,10 @@ class GitChatbotAgent(PydanticAIAgent):
                 updated_fields.append(f"issue_id: {context.issue_id}")
             if context.pull_request_id:
                 updated_fields.append(f"pull_request_id: {context.pull_request_id}")
-            if context.source_branch_name:
-                updated_fields.append(
-                    f"source_branch_name: {context.source_branch_name}"
-                )
-            if context.target_branch_name:
-                updated_fields.append(
-                    f"target_branch_name: {context.target_branch_name}"
-                )
-            if context.source_commit_hash:
-                updated_fields.append(
-                    f"source_commit_hash: {context.source_commit_hash}"
-                )
-            if context.target_commit_hash:
-                updated_fields.append(
-                    f"target_commit_hash: {context.target_commit_hash}"
-                )
+            if context.source_git_ref:
+                updated_fields.append(f"source_git_ref: {context.source_git_ref}")
+            if context.target_git_ref:
+                updated_fields.append(f"target_git_ref: {context.target_git_ref}")
 
             # Fetch additional context from project loader
             additional_context_parts = []
@@ -203,8 +196,10 @@ class GitChatbotAgent(PydanticAIAgent):
                         f"Issue #{context.issue_id}: {issue_model.context}"
                     )
                 except Exception as e:
+                    import traceback
+
                     self.logger.warning(
-                        f"Could not load issue #{context.issue_id}: {e}"
+                        f"Could not load issue #{context.issue_id}: {e}\nFull traceback:\n{traceback.format_exc()}"
                     )
 
             # Build the response message
@@ -242,23 +237,19 @@ class GitChatbotAgent(PydanticAIAgent):
             if not any(
                 [
                     current_context.pull_request_id,
-                    current_context.source_commit_hash,
-                    current_context.target_commit_hash,
+                    current_context.source_git_ref,
+                    current_context.target_git_ref,
                 ]
             ):
-                return "No pull request or commit information available in context. Please use update_context tool first to provide PR or commit details."
+                return "No pull request or git reference information available in context. Please use update_context tool first to provide PR or git ref details."
 
             context_info = []
             if current_context.pull_request_id:
                 context_info.append(f"PR: {current_context.pull_request_id}")
-            if current_context.source_commit_hash:
-                context_info.append(
-                    f"Source commit: {current_context.source_commit_hash}"
-                )
-            if current_context.target_commit_hash:
-                context_info.append(
-                    f"Target commit: {current_context.target_commit_hash}"
-                )
+            if current_context.source_git_ref:
+                context_info.append(f"Source ref: {current_context.source_git_ref}")
+            if current_context.target_git_ref:
+                context_info.append(f"Target ref: {current_context.target_git_ref}")
 
             return f"Tool called successfully with context: {', '.join(context_info)}. File analysis implementation will follow."
 
@@ -285,11 +276,11 @@ class GitChatbotAgent(PydanticAIAgent):
                 if not any(
                     [
                         current_context.pull_request_id,
-                        current_context.source_branch_name
-                        and current_context.target_branch_name,
+                        current_context.source_git_ref
+                        and current_context.target_git_ref,
                     ]
                 ):
-                    return "No pull request or branch information available in context. Please use update_context tool first to provide PR ID or branch names."
+                    return "No pull request or git reference information available in context. Please use update_context tool first to provide PR ID or git refs."
 
                 # Create GitRepository instance
                 git_repo = GitRepository(project_config=self.project_config)
@@ -341,16 +332,13 @@ class GitChatbotAgent(PydanticAIAgent):
                         include_patch=True,
                     )
 
-                elif (
-                    current_context.source_branch_name
-                    and current_context.target_branch_name
-                ):
-                    # Use direct branch comparison
-                    context_description = f"Branch comparison: {current_context.source_branch_name} -> {current_context.target_branch_name}"
+                elif current_context.source_git_ref and current_context.target_git_ref:
+                    # Use direct git ref comparison
+                    context_description = f"Git ref comparison: {current_context.source_git_ref} -> {current_context.target_git_ref}"
                     self.logger.info(f"Loading diff for {context_description}")
                     git_diff_context = git_repo.get_diff_from_branches(
-                        current_context.source_branch_name,
-                        current_context.target_branch_name,
+                        current_context.source_git_ref,
+                        current_context.target_git_ref,
                         context_description,
                         include_patch=True,
                     )
@@ -359,11 +347,7 @@ class GitChatbotAgent(PydanticAIAgent):
                     return "Unable to build diff context from available information."
 
                 # Create ImpactAnalysisSubagent
-                subagent = ImpactAnalysisSubagent(
-                    context=self.context,
-                    base_config=self.context.get_config(),
-                    base_prompts=self.context.get_prompts(),
-                )
+                subagent = ImpactAnalysisSubagent()
 
                 # Run impact analysis
                 self.logger.info("Starting impact analysis...")
@@ -382,19 +366,155 @@ class GitChatbotAgent(PydanticAIAgent):
                 return f"Impact analysis failed: {str(e)}"
 
         @self.agent.tool
+        async def create_changelog_report(
+            ctx: RunContext[PersistentAgentDeps],
+            user_instructions: str = "",
+        ) -> str:
+            """
+            Generate automated changelog from code changes.
+
+            Creates a structured changelog with Fixed/Changed/Added/Removed sections
+            based on file changes, commit history, and related issue context.
+
+            Args:
+                user_instructions: Optional user-specific instructions for changelog generation
+
+            Returns:
+                Formatted changelog ready for release notes
+            """
+            await self.send_toolcall_message(ctx, "📝🚀")
+            self.logger.info("create_changelog_report tool called")
+
+            try:
+                # Access current context from persistent storage
+                current_context = ctx.deps.load_context()
+
+                # Validate we have required context information
+                if not any(
+                    [
+                        current_context.pull_request_id,
+                        current_context.source_git_ref
+                        and current_context.target_git_ref,
+                    ]
+                ):
+                    return "No pull request or git reference information available in context. Please use update_context tool first to provide PR ID or git refs."
+
+                # Create GitRepository instance
+                git_repo = GitRepository(project_config=self.project_config)
+
+                # Build GitDiffContext based on available information
+                git_diff_context = None
+                context_description = None
+
+                if current_context.pull_request_id:
+                    # Use PR-based diff loading via ContextIntegrationLoader (most complete context)
+                    self.logger.info(
+                        f"Loading diff for PR #{current_context.pull_request_id}"
+                    )
+
+                    # Get branch information from PR using ContextIntegrationLoader
+                    (
+                        source_branch,
+                        target_branch,
+                    ) = await self.project_loader.get_branches_from_pr(
+                        current_context.pull_request_id
+                    )
+
+                    # Build context description
+                    context_description = (
+                        f"Pull Request #{current_context.pull_request_id}"
+                    )
+
+                    # Add issue context if available
+                    if current_context.issue_id:
+                        try:
+                            issue_model = await self.project_loader.load_issue(
+                                str(current_context.issue_id)
+                            )
+                            issue_title = f"Issue #{current_context.issue_id}"
+                            context_description = (
+                                f"Pull Request #{current_context.pull_request_id} - {issue_title}\n\n"
+                                + issue_model.context
+                            )
+                        except Exception as e:
+                            self.logger.warning(
+                                f"Could not load issue #{current_context.issue_id}: {e}"
+                            )
+
+                    # Get git diff using branches
+                    git_diff_context = git_repo.get_diff_from_branches(
+                        source_branch,
+                        target_branch,
+                        context_description,
+                        include_patch=True,
+                    )
+
+                elif current_context.source_git_ref and current_context.target_git_ref:
+                    # Use direct git ref comparison
+                    context_description = f"Git ref comparison: {current_context.source_git_ref} -> {current_context.target_git_ref}"
+                    self.logger.info(f"Loading diff for {context_description}")
+                    git_diff_context = git_repo.get_diff_from_branches(
+                        current_context.source_git_ref,
+                        current_context.target_git_ref,
+                        context_description,
+                        include_patch=True,
+                    )
+
+                if not git_diff_context:
+                    return "Unable to build diff context from available information."
+
+                # Create ChangelogSubagent
+                subagent = ChangelogSubagent()
+
+                # Run changelog generation
+                self.logger.info("Starting changelog generation...")
+                result = await subagent.generate_changelogs(
+                    git_diff_context, user_instructions
+                )
+
+                # Summarize the changelog
+                changelog_output = await subagent.summarize_changelog(
+                    result, user_instructions
+                )
+
+                # Log the results
+                self.logger.info(f"Changelog generation completed:\n{changelog_output}")
+                await get_current_agent_execution_context().send_response(
+                    f"{git_diff_context.source_branch} -> {git_diff_context.target_branch}\n\n{changelog_output}",
+                )
+
+                return (
+                    "Changelog generated successfully. User has successfully received the changelog. Here is a copy for you:\n\n"
+                    + changelog_output
+                )
+
+            except Exception as e:
+                self.logger.error(
+                    f"Error during changelog generation: {type(e).__name__}: {str(e)}",
+                    exc_info=True,
+                )
+                self.logger.error(
+                    f"Context details: user_instructions='{user_instructions}', current_context={getattr(current_context, '__dict__', 'Unknown')}"
+                )
+                self.logger.error(
+                    f"Agent context type: {type(get_current_agent_execution_context())}"
+                )
+                return f"Changelog generation failed: {type(e).__name__}: {str(e)}"
+
+        @self.agent.tool
         async def list_recent_tags(
             ctx: RunContext[PersistentAgentDeps], limit: int = 20
         ) -> str:
             """
             List the most recent git tags from the repository.
 
-            This tool retrieves git tags sorted by version in descending order (most recent first).
+            Git tags sorted by version in ascending order (oldest first)
 
             Args:
                 limit: Maximum number of tags to retrieve (defaults to 20, max 50)
 
             Returns:
-                Formatted list of recent git tags to be used in the response for the user.
+                Formatted list of recent git tags to be used in the response for the user in ascending order (oldest first).
             """
             await self.send_toolcall_message(ctx, "👋🚀")
             self.logger.info(f"list_recent_tags tool called with limit={limit}")

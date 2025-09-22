@@ -23,7 +23,7 @@ import pytest
 
 from core.config import BaseConfig
 from core.exceptions import ConfigurationError
-from core.project_config import ProjectConfig, ProjectConfigFactory
+from core.project_config import ProjectConfig
 
 
 class TestProjectConfig:
@@ -228,8 +228,8 @@ projects:
         assert not project_config.is_configured()
 
 
-class TestProjectConfigFactory:
-    """Test cases for ProjectConfigFactory class."""
+class TestBaseConfigProjectMethods:
+    """Test cases for BaseConfig project management methods."""
 
     def _create_test_config(self, config_content: str) -> BaseConfig:
         """Helper method to create a test config from string content."""
@@ -251,8 +251,8 @@ class TestProjectConfigFactory:
                     Path(temp_file).unlink()
             self._temp_files = []
 
-    def test_factory_initialization(self):
-        """Test ProjectConfigFactory initialization."""
+    def test_baseconfig_project_methods(self):
+        """Test BaseConfig project management methods."""
         config_content = """
 projects:
   test_project:
@@ -260,8 +260,10 @@ projects:
       path: "/test/repo"
 """
         base_config = self._create_test_config(config_content)
-        factory = ProjectConfigFactory(base_config)
-        assert factory._base_config is base_config
+        # Test that the methods work directly on BaseConfig
+        assert hasattr(base_config, "get_available_projects")
+        assert hasattr(base_config, "get_project_config")
+        assert hasattr(base_config, "get_default_project_config")
 
     def test_get_available_projects(self):
         """Test getting available project names."""
@@ -278,9 +280,8 @@ projects:
       path: "/prod/repo"
 """
         base_config = self._create_test_config(config_content)
-        factory = ProjectConfigFactory(base_config)
 
-        projects = factory.get_available_projects()
+        projects = base_config.get_available_projects()
         assert isinstance(projects, list)
         assert len(projects) == 3
         assert "default" in projects
@@ -294,9 +295,8 @@ other_section:
   value: "test"
 """
         base_config = self._create_test_config(config_content)
-        factory = ProjectConfigFactory(base_config)
 
-        projects = factory.get_available_projects()
+        projects = base_config.get_available_projects()
         assert isinstance(projects, list)
         assert len(projects) == 0
 
@@ -313,9 +313,8 @@ projects:
         url: "https://dev.azure.com"
 """
         base_config = self._create_test_config(config_content)
-        factory = ProjectConfigFactory(base_config)
 
-        project_config = factory.get_project_config("test_project")
+        project_config = base_config.get_project_config("test_project")
         assert isinstance(project_config, ProjectConfig)
         assert project_config.project_name == "test_project"
 
@@ -333,10 +332,9 @@ projects:
       path: "/test/repo"
 """
         base_config = self._create_test_config(config_content)
-        factory = ProjectConfigFactory(base_config)
 
         with pytest.raises(ConfigurationError, match="Project 'nonexistent' not found"):
-            factory.get_project_config("nonexistent")
+            base_config.get_project_config("nonexistent")
 
     def test_get_default_project_config(self):
         """Test getting default project configuration."""
@@ -351,9 +349,8 @@ projects:
       path: "/other/repo"
 """
         base_config = self._create_test_config(config_content)
-        factory = ProjectConfigFactory(base_config)
 
-        default_config = factory.get_default_project_config()
+        default_config = base_config.get_default_project_config()
         assert isinstance(default_config, ProjectConfig)
         assert default_config.project_name == "default"
 
@@ -370,24 +367,22 @@ projects:
       path: "/other/repo"
 """
         base_config = self._create_test_config(config_content)
-        factory = ProjectConfigFactory(base_config)
 
         with pytest.raises(ConfigurationError, match="Project 'default' not found"):
-            factory.get_default_project_config()
+            base_config.get_default_project_config()
 
     def test_real_config_integration(self):
         """Test integration with the actual project config file."""
         # This tests against the real config.yaml that should have projects.default
         base_config = BaseConfig()
-        factory = ProjectConfigFactory(base_config)
 
         # Should be able to get available projects
-        projects = factory.get_available_projects()
+        projects = base_config.get_available_projects()
         assert isinstance(projects, list)
         assert "default" in projects
 
         # Should be able to get default project
-        default_config = factory.get_default_project_config()
+        default_config = base_config.get_default_project_config()
         assert isinstance(default_config, ProjectConfig)
         assert default_config.project_name == "default"
 

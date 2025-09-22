@@ -117,7 +117,13 @@ class SlackAgentContext(AgentExecutionContext):
             return message_ts
 
         except Exception as e:
-            logger.error(f"Failed to send/update message: {str(e)}")
+            logger.error(
+                f"Failed to send/update message: {type(e).__name__}: {str(e)}",
+                exc_info=True,
+            )
+            logger.error(
+                f"Context: channel_id={self.channel_id}, thread_ts={self.thread_ts}, last_message_ts={self.last_message_ts}"
+            )
             return None
 
     async def send_status(self, message: str) -> None:
@@ -150,14 +156,14 @@ class SlackAgentContext(AgentExecutionContext):
         message_ts = await self._send_or_update_message(response, is_status=False)
 
         if not message_ts:
-            logger.error("Failed to send response to Slack")
+            logger.error("Failed to send response to Slack - message_ts is None")
             # Try to send an error message
             with contextlib.suppress(Exception):
                 await self._send_or_update_message(
                     "❌ Sorry, I encountered an error while sending my response.",
                     is_status=False,
                 )
-            raise Exception("Failed to send response to Slack")
+            raise Exception("Failed to send response to Slack: message_ts is None")
 
     def get_message_list(self) -> MessageList:
         """Get the list of messages available to the agent.

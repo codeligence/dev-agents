@@ -57,6 +57,7 @@ load_dotenv()
 # Set up logging
 base_config = get_default_config()
 # Check for verbose logging from main entrypoint
+
 enable_console = bool(os.environ.get("DEV_AGENTS_CONSOLE_LOGGING"))
 setup_thread_logging(base_config, enable_console_logging=enable_console)
 logger = get_logger("AGUIEntrypoint", level="INFO")
