@@ -16,27 +16,22 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
-"""Dev Agents - AI Agents for Agile Dev Teams.
+"""Changelog Generation Subagent
 
-This package provides AI agents for common development workflow automation including:
-- Release notes generation from PRs
-- PR review and guideline checking
-- UI impact analysis and test note generation
-- Code research and analysis
-- and more
-
-The agents are designed to integrate with Slack, Azure DevOps, GitLab, and other
-development tools to provide consistent AI assistance across your development workflow.
+This subagent generates changelog entries from code changes by analyzing file diffs,
+commit history, and related issue context to create meaningful release notes.
 """
 
-__version__ = "0.10.0"
-__author__ = "Dev Agents Team"
-__email__ = "dev@codeligence.com"
-
-from core.config import BaseConfig
-from core.prompts import BasePrompts
+from .changelog_subagent import ChangelogSubagent
+from .models import (
+    ChangelogEntry,
+    ChangelogReport,
+    ChangelogResult,
+)
 
 __all__ = [
-    "BaseConfig",
-    "BasePrompts",
+    "ChangelogEntry",
+    "ChangelogReport",
+    "ChangelogResult",
+    "ChangelogSubagent",
 ]

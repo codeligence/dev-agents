@@ -1,0 +1,141 @@
+{
+  "number": 1001,
+  "title": "Add new feature for user authentication",
+  "state": "open",
+  "created_at": "2025-08-10T14:30:20Z",
+  "updated_at": "2025-08-11T09:15:45Z",
+  "closed_at": null,
+  "merged_at": null,
+  "user": {
+    "login": "octocat",
+    "name": "Octo Cat",
+    "id": 1,
+    "node_id": "MDQ6VXNlcjE=",
+    "avatar_url": "https://github.com/images/error/octocat_happy.gif",
+    "html_url": "https://github.com/octocat"
+  },
+  "body": "This PR adds the new user authentication feature with OAuth2 integration.",
+  "assignee": {
+    "login": "reviewcat",
+    "name": "Review Cat",
+    "id": 2,
+    "node_id": "MDQ6VXNlcjI=",
+    "avatar_url": "https://github.com/images/error/reviewcat_happy.gif",
+    "html_url": "https://github.com/reviewcat"
+  },
+  "assignees": [
+    {
+      "login": "reviewcat",
+      "name": "Review Cat",
+      "id": 2,
+      "node_id": "MDQ6VXNlcjI=",
+      "avatar_url": "https://github.com/images/error/reviewcat_happy.gif",
+      "html_url": "https://github.com/reviewcat"
+    }
+  ],
+  "requested_reviewers": [
+    {
+      "login": "securitycat",
+      "name": "Security Cat",
+      "id": 3,
+      "node_id": "MDQ6VXNlcjM=",
+      "avatar_url": "https://github.com/images/error/securitycat_happy.gif",
+      "html_url": "https://github.com/securitycat"
+    }
+  ],
+  "labels": [
+    {
+      "id": 1,
+      "node_id": "MDU6TGFiZWwx",
+      "url": "https://api.github.com/repos/octocat/Hello-World/labels/enhancement",
+      "name": "enhancement",
+      "color": "84b6eb",
+      "default": false
+    },
+    {
+      "id": 2,
+      "node_id": "MDU6TGFiZWwy",
+      "url": "https://api.github.com/repos/octocat/Hello-World/labels/security",
+      "name": "security",
+      "color": "d73a4a",
+      "default": false
+    }
+  ],
+  "milestone": {
+    "id": 1,
+    "node_id": "MDk6TWlsZXN0b25lMQ==",
+    "title": "Sprint 42",
+    "description": "Sprint focused on security features",
+    "state": "open",
+    "created_at": "2025-07-28T10:00:00Z",
+    "updated_at": "2025-07-28T10:00:00Z",
+    "due_on": "2025-08-15T23:59:59Z",
+    "closed_at": null
+  },
+  "head": {
+    "label": "octocat:feature-auth",
+    "ref": "feature-auth",
+    "sha": "6dcb09b5b57875f334f61aebed695e2e4193db5e",
+    "repo": {
+      "id": 1296269,
+      "node_id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+      "name": "Hello-World",
+      "full_name": "octocat/Hello-World",
+      "owner": {
+        "login": "octocat",
+        "id": 1,
+        "node_id": "MDQ6VXNlcjE=",
+        "html_url": "https://github.com/octocat"
+      },
+      "html_url": "https://github.com/octocat/Hello-World",
+      "description": "This your first repository",
+      "url": "https://api.github.com/repos/octocat/Hello-World",
+      "private": false,
+      "default_branch": "main"
+    }
+  },
+  "base": {
+    "label": "octocat:main",
+    "ref": "main",
+    "sha": "aa218f56b14c9653891f9e74264a383fa43fefbd",
+    "repo": {
+      "id": 1296269,
+      "node_id": "MDEwOlJlcG9zaXRvcnkxMjk2MjY5",
+      "name": "Hello-World",
+      "full_name": "octocat/Hello-World",
+      "owner": {
+        "login": "octocat",
+        "id": 1,
+        "node_id": "MDQ6VXNlcjE=",
+        "html_url": "https://github.com/octocat"
+      },
+      "html_url": "https://github.com/octocat/Hello-World",
+      "description": "This your first repository",
+      "url": "https://api.github.com/repos/octocat/Hello-World",
+      "private": false,
+      "default_branch": "main"
+    }
+  },
+  "merge_commit_sha": null,
+  "merged": false,
+  "mergeable": true,
+  "rebaseable": true,
+  "mergeable_state": "clean",
+  "_links": {
+    "self": {
+      "href": "https://api.github.com/repos/octocat/Hello-World/pulls/1001"
+    },
+    "html": {
+      "href": "https://github.com/octocat/Hello-World/pull/1001"
+    },
+    "issue": {
+      "href": "https://api.github.com/repos/octocat/Hello-World/issues/1001"
+    },
+    "comments": {
+      "href": "https://api.github.com/repos/octocat/Hello-World/issues/1001/comments"
+    },
+    "commits": {
+      "href": "https://api.github.com/repos/octocat/Hello-World/pulls/1001/commits"
+    }
+  }
+}

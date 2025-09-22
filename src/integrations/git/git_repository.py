@@ -16,6 +16,7 @@
 # along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
 
 
+from datetime import datetime
 from pathlib import Path
 import shlex
 import subprocess
@@ -26,7 +27,7 @@ from core.log import get_logger
 from core.project_config import ProjectConfig
 from integrations.git.changed_file import ChangedFile, ChangedFileSet
 from integrations.git.config import GitRepositoryConfig
-from integrations.git.models import DiffMetadata, GitDiffContext
+from integrations.git.models import Commit, DiffMetadata, GitDiffContext
 
 logger = get_logger(logger_name="GitRepository", level="DEBUG")
 
@@ -214,7 +215,7 @@ class GitRepository:
         return self._git_output("git pull")
 
     def get_latest_tags(self, limit: int = 20) -> list[str]:
-        """Get the latest git tags sorted by version in descending order.
+        """Get the latest git tags sorted by version in ascending order.
 
         Parameters
         ----------
@@ -222,7 +223,7 @@ class GitRepository:
 
         Returns
         -------
-        List of tag names sorted by version (most recent first)
+        List of tag names sorted by version (oldest first)
         """
         # Use GitRepositoryConfig to check if auto-pull is needed
         git_config = GitRepositoryConfig.from_project_config(self.project_config)
@@ -230,15 +231,105 @@ class GitRepository:
 
         logger.debug(f"Getting latest {limit} git tags")
         try:
-            # Get tags sorted by version (descending) and limit the output
+            # Get tags sorted by version (descending), limit, then reverse to ascending
             output = self._git_output(
-                f"git tag --sort=-version:refname -l | head -n {limit}"
+                f"git tag --sort=-creatordate -l | head -n {limit}"
             )
             if not output:
                 return []
-            return [tag.strip() for tag in output.splitlines() if tag.strip()]
+            tags = [tag.strip() for tag in output.splitlines() if tag.strip()]
+            return list(reversed(tags))
         except subprocess.CalledProcessError as e:
             logger.warning(f"Failed to get git tags: {e}")
+            return []
+
+    def get_commits(
+        self,
+        source_ref: str,
+        target_ref: str,
+        file_path: str,
+    ) -> list[Commit]:
+        """Get list of commits between two refs that modified a specific file.
+
+        Uses three-dot syntax to get commits reachable from target_ref but not
+        from source_ref, including merge commits with --full-history.
+        Returns full commit messages (subject + body), not just the subject line.
+
+        Parameters
+        ----------
+        source_ref: the starting reference (e.g. older tag/branch)
+        target_ref: the ending reference (e.g. newer tag/branch)
+        file_path: specific file to get commits for
+
+        Returns
+        -------
+        List of Commit objects with full commit messages sorted by date (newest first)
+        """
+        src_ref = self._resolve_branch(source_ref)
+        tgt_ref = self._resolve_branch(target_ref)
+
+        logger.debug(
+            f"Getting commits for file '{file_path}' between '{source_ref}' and '{target_ref}'"
+        )
+
+        try:
+            # Use custom format with unique delimiter for easy parsing
+            # --full-history includes merge commits that may have modified the file
+            # %B gives the full commit message (subject + body), use |||COMMIT_END||| as separator
+            output = self._git_output(
+                f"git log --format='format:%H|%an|%aI|%B|||COMMIT_END|||' --full-history "
+                f"{src_ref}...{tgt_ref} -- {shlex.quote(file_path)}"
+            )
+
+            if not output.strip():
+                return []
+
+            commits: list[Commit] = []
+            # Split by the commit delimiter instead of processing line by line
+            commit_entries = output.split("|||COMMIT_END|||")
+
+            for entry in commit_entries:
+                entry = entry.strip()
+                if not entry:
+                    continue
+
+                # Parse the pipe-delimited format: hash|author|date|full_message
+                parts = entry.split("|", 3)  # Split into max 4 parts
+                if len(parts) != 4:
+                    logger.warning(f"Skipping malformed commit entry: {entry[:100]}...")
+                    continue
+
+                commit_hash, author, date_str, message = parts
+                # Clean up the message by stripping extra whitespace
+                message = message.strip()
+
+                try:
+                    # Parse ISO 8601 date format from git
+                    commit_date = datetime.fromisoformat(
+                        date_str.replace("Z", "+00:00")
+                    )
+                except ValueError as e:
+                    logger.warning(
+                        f"Skipping commit with invalid date '{date_str}': {e}"
+                    )
+                    continue
+
+                commits.append(
+                    Commit(
+                        commit_hash=commit_hash,
+                        author=author,
+                        date=commit_date,
+                        message=message,
+                    )
+                )
+
+            # Sort by date (newest first) to match typical git log behavior
+            commits.sort(key=lambda c: c.date, reverse=True)
+            logger.debug(f"Found {len(commits)} commits for file '{file_path}'")
+            return commits
+
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to get commits for file '{file_path}': {e}")
             return []
 
     # ------------------------------------------------------------------

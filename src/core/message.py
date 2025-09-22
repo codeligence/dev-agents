@@ -166,14 +166,10 @@ class MessageList:
             text_parts = [
                 TextPart(content=msg.get_formatted_message()) for msg in messages
             ]
-            return ModelResponse(
-                parts=text_parts  # type: ignore[arg-type]  # TextPart is valid for ModelResponse
-            )
+            return ModelResponse(parts=text_parts)  # type: ignore[arg-type]
         else:
             # User messages become ModelRequest with list of UserPromptPart
             user_parts = [
                 UserPromptPart(content=msg.get_formatted_message()) for msg in messages
             ]
-            return ModelRequest(
-                parts=user_parts  # type: ignore[arg-type]  # UserPromptPart is valid for ModelRequest
-            )
+            return ModelRequest(parts=user_parts)  # type: ignore[arg-type]

@@ -3,7 +3,7 @@
 **You have your copilot, but what about the agile team work outside the IDE? Dev Agents handle the nasty grind outside your IDE: docs, reviews, debugging, logs & delivery, so you peacefully focus on building.**
 
 ![Build Status](https://img.shields.io/badge/build-pass-brightgreen.svg)
-[![Version](https://img.shields.io/badge/version-0.9.3-blue.svg)](https://pypi.org/project/dev-agents/)
+[![Version](https://img.shields.io/badge/version-0.10.0-blue.svg)](https://pypi.org/project/dev-agents/)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](https://github.com/codeligence/dev-agents/blob/main/LICENSE.md)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Code Quality](https://img.shields.io/badge/code%20quality-black%20%7C%20%20ruff%20%7C%20mypy%20%7C%20bandit-brightgreen.svg)](https://shields.io)
@@ -147,7 +147,7 @@ _We’re currently porting more use cases from our customer deployments:_
 - **📚 Documentation**: Comprehensive guides and API reference
 - **🐛 Issues**: [GitHub Issues](https://github.com/codeligence/dev-agents/issues)
 - **💬 Discussions**: [GitHub Discussions](https://github.com/codeligence/dev-agents/discussions)
-- **💬 Discord**: [Join Discord Server](https://discord.gg/xJvfaPb8)
+- **💬 Discord**: [Join Discord Server](https://discord.gg/n5vSSB6b29)
 - **🔒 Security**: [Security Policy](https://github.com/codeligence/dev-agents/security/policy)
 
 

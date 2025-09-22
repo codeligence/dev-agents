@@ -17,11 +17,19 @@
 
 
 from abc import abstractmethod
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol, Union
+
+from pydantic_ai.usage import RunUsage
 
 from core.config import BaseConfig
 from core.message import MessageList
 from core.prompts import BasePrompts
+
+if TYPE_CHECKING:
+    from pydantic_ai.models import Model
+
+    from core.integrations.context_integration_loader import ContextIntegrationLoader
+    from core.utils.progress_tracker import ProgressTracker
 
 
 class AgentExecutionContext(Protocol):
@@ -85,19 +93,124 @@ class AgentExecutionContext(Protocol):
         """
         ...
 
+    def get_context_integration_loader(
+        self, project_name: str = "default"
+    ) -> "ContextIntegrationLoader":
+        """Get a ContextIntegrationLoader for the specified project.
+
+        Provides lazy initialization and caching of ContextIntegrationLoader instances.
+
+        Args:
+            project_name: Name of the project (defaults to "default")
+
+        Returns:
+            ContextIntegrationLoader instance for the project
+        """
+        from core.integrations.context_integration_loader import (
+            ContextIntegrationLoader,
+        )
+
+        # Initialize cache if it doesn't exist
+        if not hasattr(self, "_context_loaders"):
+            object.__setattr__(self, "_context_loaders", {})
+
+        context_loaders: dict[str, ContextIntegrationLoader] = getattr(
+            self, "_context_loaders", {}
+        )
+
+        # Lazy load and cache the loader for this project
+        if project_name not in context_loaders:
+            project_config = self.get_config().get_project_config(project_name)
+            context_loaders[project_name] = ContextIntegrationLoader(project_config)
+
+        return context_loaders[project_name]
+
+    def get_progress_tracker(self) -> "ProgressTracker":
+        """Get a progress tracker configured with this context's status callback.
+
+        Returns:
+            ProgressTracker instance configured to report status via send_status()
+        """
+        from core.utils.progress_tracker import ProgressTracker
+
+        return ProgressTracker(status_callback=self.send_status)
+
+    def track_usage(
+        self, model: Union[str, "Model"], usage: RunUsage | None = None
+    ) -> None:
+        """Track usage statistics for a model by incrementing existing totals.
+
+        Accumulates usage statistics across multiple runs for the same model.
+        Creates a new RunUsage instance if this is the first time tracking for the model.
+
+        Args:
+            model: Name/identifier of the model (string) or Model instance
+            usage: RunUsage instance containing new usage statistics to add
+        """
+        if not usage or not model:
+            return
+
+        # Convert model to string if it's a Model instance
+        model_name = model.model_name if hasattr(model, "model_name") else str(model)
+
+        # Initialize cache if it doesn't exist
+        if not hasattr(self, "_run_usage_by_model"):
+            object.__setattr__(self, "_run_usage_by_model", {})
+
+        run_usage_by_model: dict[str, RunUsage] = getattr(
+            self, "_run_usage_by_model", {}
+        )
+
+        # Get existing usage or create new one
+        if model_name not in run_usage_by_model:
+            run_usage_by_model[model_name] = RunUsage()
+
+        # Increment existing usage with new usage
+        run_usage_by_model[model_name].incr(usage)
+
+    def log_run_usages(self) -> None:
+        """Log all RunUsage statistics accumulated during agent execution.
+
+        Provides visibility into LLM usage across all models used in the current context.
+        Should be called before context cleanup to capture final usage statistics.
+        """
+        if not hasattr(self, "_run_usage_by_model"):
+            return
+
+        run_usage_by_model: dict[str, RunUsage] = getattr(
+            self, "_run_usage_by_model", {}
+        )
+
+        if not run_usage_by_model:
+            return
+
+        from core.log import get_logger
+
+        logger = get_logger("RunUsage")
+
+        logger.info("=== Agent Execution Usage Summary ===")
+        for model, usage in run_usage_by_model.items():
+            logger.info(
+                f"Model: {model} | "
+                f"Requests: {usage.requests} | "
+                f"Input tokens: {usage.input_tokens} | "
+                f"Output tokens: {usage.output_tokens} | "
+                f"Total tokens: {usage.total_tokens}"
+            )
+
 
 class Agent(Protocol):
     """Protocol defining the interface for agents.
 
     Generic protocol that defines how agents should be implemented.
-    Agents receive context during initialization and execute via run() method.
+    Agents access execution context via context-local functions and execute via run() method.
     """
 
-    def __init__(self, context: AgentExecutionContext) -> None:
-        """Initialize the agent with execution context.
+    def __init__(self) -> None:
+        """Initialize the agent.
 
-        Args:
-            context: Execution context providing access to messages, config, and communication
+        Agents access execution context via context-local functions from core.agents.context
+        rather than receiving it as a constructor parameter.
         """
         ...
 

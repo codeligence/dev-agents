@@ -199,6 +199,63 @@ class SlackClientService:
             is_from_bot=user_id == self.bot_id,
         )
 
+    def _create_text_blocks(self, text: str) -> list[dict[str, Any]]:
+        """Create Slack blocks for text, splitting if necessary to handle length limits.
+
+        Args:
+            text: The text to convert to blocks
+
+        Returns:
+            List of Slack block dictionaries
+        """
+        converted_text = self.markdown_converter.convert(text)
+
+        # Slack mrkdwn text blocks have a 3000 character limit
+        MAX_BLOCK_LENGTH = 3000
+
+        if len(converted_text) <= MAX_BLOCK_LENGTH:
+            return [
+                {"type": "section", "text": {"type": "mrkdwn", "text": converted_text}}
+            ]
+
+        # Split long text into multiple blocks
+        blocks: list[dict[str, Any]] = []
+        lines = converted_text.split("\n")
+        current_block_text = ""
+
+        for line in lines:
+            # Check if adding this line would exceed the limit
+            test_text = current_block_text + ("\n" if current_block_text else "") + line
+
+            if len(test_text) <= MAX_BLOCK_LENGTH:
+                current_block_text = test_text
+            else:
+                # Save current block if it has content
+                if current_block_text.strip():
+                    blocks.append(
+                        {
+                            "type": "section",
+                            "text": {"type": "mrkdwn", "text": current_block_text},
+                        }
+                    )
+
+                # Start new block with current line
+                # If single line is too long, truncate it
+                if len(line) > MAX_BLOCK_LENGTH:
+                    line = line[: MAX_BLOCK_LENGTH - 3] + "..."
+                current_block_text = line
+
+        # Add final block if it has content
+        if current_block_text.strip():
+            blocks.append(
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": current_block_text},
+                }
+            )
+
+        return blocks
+
     def send_reply(self, thread_ts: str, text: str) -> str | None:
         """Send a reply in a thread with markdown formatting support.
 
@@ -210,17 +267,15 @@ class SlackClientService:
             str or None: The timestamp of the sent message if successful, None otherwise
         """
         try:
-            # Convert markdown to Slack's mrkdwn format
-            mrkdwn_text = self.markdown_converter.convert(text)
+            # Create blocks with automatic text splitting
+            blocks = self._create_text_blocks(text)
 
-            # Always use blocks structure with mrkdwn for proper markdown formatting
-            blocks = [
-                {"type": "section", "text": {"type": "mrkdwn", "text": mrkdwn_text}}
-            ]
+            # Slack text parameter has a 40,000 character limit
+            fallback_text = text if len(text) < 3000 else text[:2996] + "..."
 
             message_params: dict[str, Any] = {
                 "channel": self.channel_id,
-                "text": text,  # Fallback for notifications (original text)
+                "text": fallback_text,  # Fallback for notifications (truncated if needed)
                 "blocks": blocks,
                 "thread_ts": thread_ts,
             }
@@ -251,18 +306,16 @@ class SlackClientService:
             str or None: The timestamp of the updated message if successful, None otherwise
         """
         try:
-            # Convert markdown to Slack's mrkdwn format
-            mrkdwn_text = self.markdown_converter.convert(text)
+            # Create blocks with automatic text splitting
+            blocks = self._create_text_blocks(text)
 
-            # Always use blocks structure with mrkdwn for proper markdown formatting
-            blocks = [
-                {"type": "section", "text": {"type": "mrkdwn", "text": mrkdwn_text}}
-            ]
+            # Slack text parameter has a 40,000 character limit
+            fallback_text = text if len(text) <= 40000 else text[:39997] + "..."
 
             update_params: dict[str, Any] = {
                 "channel": self.channel_id,
                 "ts": message_ts,
-                "text": text,  # Fallback for notifications (original text)
+                "text": fallback_text,  # Fallback for notifications (truncated if needed)
                 "blocks": blocks,
             }
 

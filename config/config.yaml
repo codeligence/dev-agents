@@ -22,6 +22,17 @@ providers:
     project_id: "@jinja {{ env.get('GITLAB_PROJECT_ID', '') }}"
     token: "@jinja {{ env.get('GITLAB_TOKEN', '') }}"
     mock: "@jinja {{ env.get('GITLAB_MOCK', 'False') }}"
+  github:
+    api_url: "@jinja {{ env.get('GITHUB_API_URL', '') }}"
+    owner: "@jinja {{ env.get('GITHUB_OWNER', '') }}"
+    repo: "@jinja {{ env.get('GITHUB_REPO', '') }}"
+    token: "@jinja {{ env.get('GITHUB_TOKEN', '') }}"
+    mock: "@jinja {{ env.get('GITHUB_MOCK', 'False') }}"
+  jira:
+    domain: "@jinja {{ env.get('JIRA_DOMAIN', '') }}"
+    email: "@jinja {{ env.get('JIRA_EMAIL', '') }}"
+    token: "@jinja {{ env.get('JIRA_TOKEN', '') }}"
+    mock: "@jinja {{ env.get('JIRA_MOCK', 'False') }}"
 
 projects:
   default:
@@ -43,6 +54,12 @@ projects:
         project_id: "@jinja {{ this.providers.gitlab.project_id }}"
         token: "@jinja {{ this.providers.gitlab.token }}"
         mock: "@jinja {{ this.providers.gitlab.mock }}"
+      github:
+        api_url: "@jinja {{ this.providers.github.api_url }}"
+        owner: "@jinja {{ this.providers.github.owner }}"
+        repo: "@jinja {{ this.providers.github.repo }}"
+        token: "@jinja {{ this.providers.github.token }}"
+        mock: "@jinja {{ this.providers.github.mock }}"
     issues:
       devops:
         url: "@jinja {{ this.providers.devops.url }}"
@@ -56,6 +73,17 @@ projects:
         project_id: "@jinja {{ this.providers.gitlab.project_id }}"
         token: "@jinja {{ this.providers.gitlab.token }}"
         mock: "@jinja {{ this.providers.gitlab.mock }}"
+      github:
+        api_url: "@jinja {{ this.providers.github.api_url }}"
+        owner: "@jinja {{ this.providers.github.owner }}"
+        repo: "@jinja {{ this.providers.github.repo }}"
+        token: "@jinja {{ this.providers.github.token }}"
+        mock: "@jinja {{ this.providers.github.mock }}"
+      jira:
+        domain: "@jinja {{ this.providers.jira.domain }}"
+        email: "@jinja {{ this.providers.jira.email }}"
+        token: "@jinja {{ this.providers.jira.token }}"
+        mock: "@jinja {{ this.providers.jira.mock }}"
 
 slack:
   bot:
@@ -106,8 +134,8 @@ subagents:
         - '.*/static/.*'                             # Static files
         - '.*\.(json)$.*/(public|assets|static)/'   # Frontend config files
       backendPatterns:
-        - '.*\.(cs|java|py|php|rb|go|rs)$'          # Server language files
-        - '.*Controller\.(cs|java|py)$'             # Controllers
+        - '.*\.(cs|java|py|php|rb|go|rs|kt)$'        # Server language files
+        - '.*Controller\.(cs|java|py)$'              # Controllers
         - '.*/Controllers?/.*\.(cs|java|py)$'        # Controller directories
         - '.*/Models?/.*\.(cs|java|py)$'             # Model files
         - '.*/DTOs?/.*\.(cs|java|py)$'               # DTO files
@@ -119,5 +147,10 @@ subagents:
         - '.*/server/.*'                             # Server directories
         - '.*/backend/.*'                            # Backend directories
         - '.*/src/main/.*\.(java|kt)$'               # Java/Kotlin main sources
+  changelog:
+    maxFiles: "@jinja {{env.CHANGELOG_MAX_FILES or 200}}"
+    retries: 3
+    analysisModel: "@jinja {{ this.models.small }}"
+    summaryModel: "@jinja {{ this.models.large }}"
   coderesearch:
     model: "@jinja {{ this.models.small }}"

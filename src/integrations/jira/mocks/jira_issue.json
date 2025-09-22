@@ -1,0 +1,150 @@
+{
+  "expand": "renderedFields,names,schema,operations,editmeta,changelog,versionedRepresentations,customfield_10010.requestTypePractice",
+  "id": "12345",
+  "self": "https://example.atlassian.net/rest/api/3/issue/37943",
+  "key": "PROJ-123",
+  "changelog": {
+    "startAt": 0,
+    "maxResults": 2,
+    "total": 2,
+    "histories": [
+      {
+        "id": "431594",
+        "author": {
+          "self": "https://example.atlassian.net/rest/api/3/user?accountId=1235",
+          "accountId": "test-account-id-123",
+          "emailAddress": "user@example.com",
+          "avatarUrls": {
+            "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/48",
+            "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/24",
+            "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/16",
+            "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/32"
+          },
+          "displayName": "Test User",
+          "active": true,
+          "timeZone": "Europe/Berlin",
+          "accountType": "atlassian"
+        },
+        "created": "2024-08-07T13:51:40.747+0200",
+        "items": [
+          {
+            "field": "labels",
+            "fieldtype": "jira",
+            "fieldId": "labels",
+            "from": null,
+            "fromString": "SAMPLE_LABEL",
+            "to": null,
+            "toString": ""
+          }
+        ]
+      },
+      {
+        "id": "431273",
+        "author": {
+          "self": "https://example.atlassian.net/rest/api/3/user?accountId=712020%3Ade4f94db-1905-4f06-bed5-34b69503ee2e",
+          "accountId": "test-account-id-123",
+          "emailAddress": "user@example.com",
+          "avatarUrls": {
+            "48x48": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/48",
+            "24x24": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/24",
+            "16x16": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/16",
+            "32x32": "https://avatar-management--avatars.us-west-2.prod.public.atl-paas.net/xxx/c6192746-7e7a-4b0e-86ad-24530872a2dd/32"
+          },
+          "displayName": "Test User",
+          "active": true,
+          "timeZone": "Europe/Berlin",
+          "accountType": "atlassian"
+        },
+        "created": "2024-08-07T13:14:20.480+0200",
+        "items": [
+          {
+            "field": "labels",
+            "fieldtype": "jira",
+            "fieldId": "labels",
+            "from": null,
+            "fromString": "",
+            "to": null,
+            "toString": "SAMPLE_LABEL"
+          }
+        ]
+      }
+    ]
+  },
+  "fields": {
+    "summary": "Sample Project - Release Ticket",
+    "issuetype": {
+      "self": "https://example.atlassian.net/rest/api/3/issuetype/10062",
+      "id": "10062",
+      "description": "Release ticket, which describes the contents of a particular version to be released.",
+      "iconUrl": "https://example.atlassian.net/rest/api/2/universal_avatar/view/type/issuetype/avatar/10309?size=medium",
+      "name": "Release",
+      "subtask": false,
+      "avatarId": 10309,
+      "hierarchyLevel": 0
+    },
+    "creator": {
+      "self": "https://example.atlassian.net/rest/api/3/user?accountId=1234",
+      "accountId": "test-account-id-123",
+      "avatarUrls": {
+        "48x48": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+        "24x24": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+        "16x16": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+        "32x32": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+      },
+      "displayName": "Test User",
+      "active": true,
+      "timeZone": "Europe/Berlin",
+      "accountType": "app"
+    },
+    "subtasks": [],
+    "created": "2024-06-23T01:55:21.977+0200",
+    "description": null,
+    "reporter": {
+      "self": "https://example.atlassian.net/rest/api/3/user?accountId=1234",
+      "accountId": "test-account-id-123",
+      "avatarUrls": {
+        "48x48": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+        "24x24": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+        "16x16": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png",
+        "32x32": "https://secure.gravatar.com/avatar/xxx?d=https%3A%2F%2Favatar-management--avatars.us-west-2.prod.public.atl-paas.net%2Finitials%2FAJ-0.png"
+      },
+      "displayName": "Test User",
+      "active": true,
+      "timeZone": "Europe/Berlin",
+      "accountType": "app"
+    },
+    "customfield_10010": null,
+    "priority": {
+      "self": "https://example.atlassian.net/rest/api/3/priority/3",
+      "iconUrl": "https://example.atlassian.net/images/icons/priorities/medium_new.svg",
+      "name": "Medium",
+      "id": "3"
+    },
+    "attachment": [],
+    "resolutiondate": null,
+    "comment": {
+      "comments": [],
+      "self": "https://example.atlassian.net/rest/api/3/issue/37943/comment",
+      "maxResults": 0,
+      "total": 0,
+      "startAt": 0
+    },
+    "issuelinks": [],
+    "assignee": null,
+    "updated": "2024-08-07T13:51:40.731+0200",
+    "status": {
+      "self": "https://example.atlassian.net/rest/api/3/status/10005",
+      "description": "",
+      "iconUrl": "https://example.atlassian.net/images/icons/statuses/generic.png",
+      "name": "Backlog",
+      "id": "10005",
+      "statusCategory": {
+        "self": "https://example.atlassian.net/rest/api/3/statuscategory/2",
+        "id": 2,
+        "key": "new",
+        "colorName": "blue-gray",
+        "name": "To Do"
+      }
+    }
+  }
+}

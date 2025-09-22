@@ -68,4 +68,5 @@ git config --system --add safe.directory /code
 
 # Always use the main Python script, passing any arguments to it
 print_info "Executing: python -m entrypoints.main $*"
+print_info "Dev Agents running."
 exec gosu appuser python -m entrypoints.main "$@"

@@ -24,6 +24,11 @@ import asyncio
 import time
 import uuid
 
+from core.agents.context import (
+    has_agent_execution_context,
+    reset_agent_execution_context,
+    set_agent_execution_context,
+)
 from core.agents.factory import SimpleAgentFactory
 from core.exceptions import AgentExecutionError, AgentGracefulExit, AgentTimeoutError
 from core.log import get_logger
@@ -35,7 +40,7 @@ logger = get_logger("AgentService")
 class AgentService:
     """Service for orchestrating agent execution with proper error handling and monitoring."""
 
-    def __init__(self, default_timeout_seconds: int = 600):
+    def __init__(self, default_timeout_seconds: int = 6000):
         self.default_timeout_seconds = default_timeout_seconds
         self.agent_factory = SimpleAgentFactory()
 
@@ -78,11 +83,48 @@ class AgentService:
         """
         logger.info(f"Creating and executing agent by type: {agent_type}")
 
-        # Create agent using factory
+        # Get agent class from factory
         agent_class = self.agent_factory.create_agent(agent_type)
-        agent = agent_class(context)
 
-        return await self.execute_agent(agent, context, agent_type, timeout_seconds)
+        return await self.execute_agent_class(
+            agent_class, context, agent_type, timeout_seconds
+        )
+
+    async def execute_agent_class(
+        self,
+        agent_class: type[Agent],
+        context: AgentExecutionContext,
+        agent_type: str = "unknown",
+        timeout_seconds: int | None = None,
+    ) -> str:
+        """Execute an agent class by first setting context, then creating the agent.
+
+        Args:
+            agent_class: The agent class to instantiate and execute
+            context: Execution context for the agent
+            agent_type: Type identifier for the agent (for logging/monitoring)
+            timeout_seconds: Optional timeout override
+
+        Returns:
+            Result from agent execution
+
+        Raises:
+            AgentExecutionError: If agent execution fails
+            AgentTimeoutError: If agent execution exceeds timeout
+        """
+        # Set agent execution context BEFORE creating the agent
+        context_token = set_agent_execution_context(context)
+
+        try:
+            # Create agent after context is set
+            agent = agent_class()
+
+            # Use existing execute_agent method for full error handling
+            return await self.execute_agent(agent, context, agent_type, timeout_seconds)
+
+        finally:
+            # Always reset context
+            reset_agent_execution_context(context_token)
 
     async def execute_agent(
         self,
@@ -114,8 +156,14 @@ class AgentService:
             f"Starting agent execution: type={agent_type}, execution_id={execution_id}"
         )
 
+        # Set agent execution context for the duration of agent execution (if not already set)
+        context_already_set = has_agent_execution_context()
+        context_token = (
+            None if context_already_set else set_agent_execution_context(context)
+        )
+
         try:
-            # Execute agent with timeout - agents get context in constructor, run() takes no params
+            # Execute agent with timeout - agents access context via context-local functions
             result = await asyncio.wait_for(agent.run(), timeout=timeout)
 
             execution_time_ms = int((time.time() - start_time) * 1000)
@@ -153,3 +201,10 @@ class AgentService:
 
             await context.send_status(f"Agent execution failed: {str(e)}")
             raise AgentExecutionError(error_msg, agent_type) from e
+
+        finally:
+            # Log usage statistics before context cleanup
+            context.log_run_usages()
+            # Reset the context only if we set it
+            if context_token is not None:
+                reset_agent_execution_context(context_token)

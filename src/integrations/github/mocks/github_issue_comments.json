@@ -1,0 +1,53 @@
+[
+  {
+    "id": 1001,
+    "node_id": "MDEyOklzc3VlQ29tbWVudDEwMDE=",
+    "url": "https://api.github.com/repos/owner/repo/issues/comments/1001",
+    "html_url": "https://github.com/owner/repo/issues/2001#issuecomment-1001",
+    "body": "I can reproduce this issue on macOS as well. The problem seems to be related to URL encoding of special characters in the password field.",
+    "user": {
+      "login": "developer1",
+      "name": "Senior Developer",
+      "id": 10,
+      "node_id": "MDQ6VXNlcjEw",
+      "avatar_url": "https://github.com/images/error/developer1_happy.gif",
+      "html_url": "https://github.com/developer1"
+    },
+    "created_at": "2025-08-09T14:30:15Z",
+    "updated_at": "2025-08-09T14:30:15Z"
+  },
+  {
+    "id": 1002,
+    "node_id": "MDEyOklzc3VlQ29tbWVudDEwMDI=",
+    "url": "https://api.github.com/repos/owner/repo/issues/comments/1002",
+    "html_url": "https://github.com/owner/repo/issues/2001#issuecomment-1002",
+    "body": "## Potential Fix\n\nI think the issue is in the authentication middleware. We need to properly escape special characters before processing the password.\n\n```javascript\nfunction sanitizePassword(password) {\n  return encodeURIComponent(password);\n}\n```\n\nThis should be applied before the password is sent to the authentication service.",
+    "user": {
+      "login": "securityexpert",
+      "name": "Security Expert",
+      "id": 20,
+      "node_id": "MDQ6VXNlcjIw",
+      "avatar_url": "https://github.com/images/error/securityexpert_happy.gif",
+      "html_url": "https://github.com/securityexpert"
+    },
+    "created_at": "2025-08-10T09:15:30Z",
+    "updated_at": "2025-08-10T09:15:30Z"
+  },
+  {
+    "id": 1003,
+    "node_id": "MDEyOklzc3VlQ29tbWVudDEwMDM=",
+    "url": "https://api.github.com/repos/owner/repo/issues/comments/1003",
+    "html_url": "https://github.com/owner/repo/issues/2001#issuecomment-1003",
+    "body": "Thanks @securityexpert! I tested your suggested fix and it works perfectly. Should we also add some unit tests to cover edge cases with different special characters?",
+    "user": {
+      "login": "bugreporter",
+      "name": "Bug Reporter",
+      "id": 5,
+      "node_id": "MDQ6VXNlcjU=",
+      "avatar_url": "https://github.com/images/error/bugreporter_happy.gif",
+      "html_url": "https://github.com/bugreporter"
+    },
+    "created_at": "2025-08-10T11:45:22Z",
+    "updated_at": "2025-08-10T11:45:22Z"
+  }
+]

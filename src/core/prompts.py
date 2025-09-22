@@ -57,6 +57,7 @@ class BasePrompts:
             envvar_default="",
             ignore_unknown_envvars=True,
             environments=False,
+            env_switcher="DYNACONF_ENV",
             load_dotenv=True,
             merge_enabled=True,
         )
