@@ -141,4 +141,4 @@ Need an admin dashboard, team analytics, SSO, or dedicated support? See [codelig
 
 ## License
 
-[MIT](LICENSE.md). Use it, fork it, deploy it, sell it. No restrictions.
+[MIT](LICENSE). Use it, fork it, deploy it, sell it. No restrictions.

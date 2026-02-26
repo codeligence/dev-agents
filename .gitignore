@@ -45,6 +45,7 @@ Thumbs.db
 
 # Environment and secrets
 .env
+.env-*
 !.env.example
 .secrets/
 credentials.json
