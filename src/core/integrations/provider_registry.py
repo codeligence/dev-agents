@@ -1,27 +1,13 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from collections.abc import Callable
 from typing import Any, TypeVar
 
 from core.log import get_logger
 from core.project_config import ProjectConfig
-from core.protocols.provider_protocols import IssueProvider, PullRequestProvider
+from core.protocols.provider_protocols import (
+    IssueProvider,
+    PipelineProvider,
+    PullRequestProvider,
+)
 
 logger = get_logger("ProviderRegistry")
 
@@ -37,6 +23,9 @@ class ProviderRegistry:
         ] = {}
         self._issue_providers: dict[
             str, Callable[[dict[str, Any]], IssueProvider | None]
+        ] = {}
+        self._pipeline_providers: dict[
+            str, Callable[[dict[str, Any]], PipelineProvider | None]
         ] = {}
 
     def register_pullrequest_provider(
@@ -64,6 +53,18 @@ class ProviderRegistry:
         """
         self._issue_providers[name] = factory
         logger.debug(f"Registered issue provider: {name}")
+
+    def register_pipeline_provider(
+        self, name: str, factory: Callable[[dict[str, Any]], PipelineProvider | None]
+    ) -> None:
+        """Register a pipeline provider factory.
+
+        Args:
+            name: Provider name (e.g., 'gitlab', 'github')
+            factory: Factory function that takes config dict and returns provider or None
+        """
+        self._pipeline_providers[name] = factory
+        logger.debug(f"Registered pipeline provider: {name}")
 
     def resolve_pullrequest_provider(
         self, project_config: ProjectConfig
@@ -99,6 +100,24 @@ class ProviderRegistry:
         provider_configs = project_config.get_issue_providers()
         return self._resolve_provider(self._issue_providers, provider_configs, "issue")
 
+    def resolve_pipeline_provider(
+        self, project_config: ProjectConfig
+    ) -> PipelineProvider | None:
+        """Resolve a pipeline provider from project configuration.
+
+        Tries all registered providers in order until one matches the configuration.
+
+        Args:
+            project_config: Project configuration
+
+        Returns:
+            First matching provider or None if no provider matches
+        """
+        provider_configs = project_config.get_pipeline_providers()
+        return self._resolve_provider(
+            self._pipeline_providers, provider_configs, "pipeline"
+        )
+
     def get_registered_pullrequest_providers(self) -> list[str]:
         """Get list of registered pull request provider names."""
         return list(self._pullrequest_providers.keys())
@@ -106,6 +125,10 @@ class ProviderRegistry:
     def get_registered_issue_providers(self) -> list[str]:
         """Get list of registered issue provider names."""
         return list(self._issue_providers.keys())
+
+    def get_registered_pipeline_providers(self) -> list[str]:
+        """Get list of registered pipeline provider names."""
+        return list(self._pipeline_providers.keys())
 
     def _resolve_provider(
         self,

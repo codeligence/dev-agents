@@ -36,16 +36,15 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      
+
       # Documentation dependencies
       docs-dependencies:
         patterns:
-          - "mkdocs*"
-          - "mkdocstrings*"
+          - "zensical"
         update-types:
-          - "minor" 
+          - "minor"
           - "patch"
-      
+
       # AI/ML dependencies (more careful updates)
       ai-dependencies:
         patterns:

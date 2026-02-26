@@ -134,8 +134,8 @@ ENV_FOR_DYNACONF=production python -m src.entrypoints.slack_bot
 # Code analysis
 @BettySharp review the changes in commit abc123
 
-# Impact analysis  
-@BettySharp analyze impact of refactoring the payment system
+# Testing notes generation
+@BettySharp generate testing notes for refactoring the payment system
 
 # Release planning
 @BettySharp generate release notes for sprint 42
@@ -265,7 +265,7 @@ slack:
       
       I can help with:
       • Code analysis and reviews
-      • Impact assessment
+      • Testing notes generation
       • Testing recommendations
       • Documentation questions
       

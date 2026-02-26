@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -67,3 +49,44 @@ class GitDiffContext:
     def has_changes(self) -> bool:
         """Whether any file changes were found."""
         return len(self.file_diffs) > 0
+
+
+@dataclass
+class GrepSearchResult:
+    """Result from git grep search operation."""
+
+    matches: list[str]
+    total_lines: int
+    truncated: bool
+    pattern: str
+
+
+@dataclass
+class GlobFilesResult:
+    """Result from git glob file search operation."""
+
+    files: list[str]
+    total_found: int
+    truncated: bool
+    pattern: str
+
+
+@dataclass
+class DirectoryListingResult:
+    """Result from git directory listing operation."""
+
+    directories: list[str]
+    files: list[str]
+    path: str
+
+
+@dataclass
+class FileContentResult:
+    """Result from git file read operation."""
+
+    content: str
+    total_lines: int
+    start_line: int
+    end_line: int
+    file_path: str
+    truncated: bool

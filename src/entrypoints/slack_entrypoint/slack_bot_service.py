@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -24,12 +6,14 @@ import queue
 import signal
 import threading
 
-from core.config import get_default_config
 from core.log import get_logger, reset_context_token, set_context_token
 from core.message import BaseMessage, MessageList
 from core.protocols.message_consumer_protocols import MessageConsumer
-from integrations.slack.models import SlackBotConfig
-from integrations.slack.slack_client_service import SlackClientService
+from entrypoints.slack_entrypoint.stop_command_handler import StopCommandHandler
+from entrypoints.slack_entrypoint.thread_task_manager import ThreadTaskManager
+from integrations.slack.slack_client_service import (
+    SlackClientService,
+)
 
 
 @dataclass
@@ -67,11 +51,21 @@ class SlackMessage(BaseMessage):
 class SlackBotService:
     """Core service for Slack bot message processing."""
 
-    def __init__(self, consumer: MessageConsumer, processing_timeout: int = 6000):
+    def __init__(
+        self,
+        consumer: MessageConsumer,
+        slack_client: SlackClientService,
+        processing_timeout: int = 6000,
+        register_signal_handlers: bool = True,
+    ):
         self.consumer = consumer
+        self.slack_service = slack_client  # Use the existing instance
         self.processing_timeout = processing_timeout
         self.logger = get_logger("SlackBotService")
-        self.slack_service = SlackClientService(SlackBotConfig(get_default_config()))
+
+        # Task management with stop command support
+        self.task_manager = ThreadTaskManager()
+        self.stop_handler = StopCommandHandler(slack_client, self.task_manager)
 
         # Thread management
         self.active_threads: set[str] = set()
@@ -94,21 +88,23 @@ class SlackBotService:
         # Set up message callback
         self.slack_service.set_message_callback(self._handle_new_message)
 
-        # Set up signal handlers for graceful shutdown
-        self._setup_signal_handlers()
+        # Set up shutdown callback for connection failure handling
+        self.slack_service.set_shutdown_callback(self.shutdown)
+
+        # Set up signal handlers for graceful shutdown (skip when managed by orchestrator)
+        if register_signal_handlers:
+            self._setup_signal_handlers()
 
     def start(self) -> None:
         """Start the Slack bot service with proper thread separation."""
         self.logger.info("Starting Slack Bot Service")
 
         # Validate Slack configuration
-        if not self.slack_service.bot_token or not self.slack_service.channel_id:
-            self.logger.error(
-                "Missing Slack credentials. Please set SLACK_BOT_TOKEN and SLACK_CHANNEL_ID"
-            )
+        if not self.slack_service.bot_token:
+            self.logger.error("Missing Slack credentials. Please set SLACK_BOT_TOKEN")
             return
 
-        self.logger.info(f"Connected to Slack channel: {self.slack_service.channel_id}")
+        self.logger.info("Slack bot credentials validated")
 
         # Start the asyncio thread for message processing
         self.logger.info("Starting asyncio message processing thread...")
@@ -225,7 +221,12 @@ class SlackBotService:
 
                 if raw_messages:
                     # Extract unique (channel_id, thread_id) pairs
-                    unique_threads = set()
+                    unique_threads: set[tuple[str, str]] = set()
+                    # Store preloaded conversations to avoid re-fetching
+                    preloaded_conversations: dict[
+                        tuple[str, str], list[dict[str, Any]]
+                    ] = {}
+
                     for raw_message in raw_messages:
                         channel_id = raw_message.get("channelId", "unknown")
                         thread_id = raw_message.get(
@@ -233,6 +234,7 @@ class SlackBotService:
                         )
                         message_id = raw_message.get("messageId", "unknown")
                         username = raw_message.get("username", "unknown")
+                        sender_id = raw_message.get("userId", "unknown")
                         content = raw_message.get("content", "")
                         content_preview = content[:100]
 
@@ -245,7 +247,11 @@ class SlackBotService:
                             # Top-level message: only process if bot is explicitly mentioned
                             if self.slack_service.is_bot_mentioned(content):
                                 self.logger.info(
-                                    f"Bot mentioned in top-level message from {username}, will process"
+                                    f"Bot mentioned in top-level message from {username}, "
+                                    f"registering thread {thread_id}"
+                                )
+                                self.slack_service.register_bot_conversation(
+                                    thread_id, sender_id
                                 )
                                 unique_threads.add((channel_id, thread_id))
                             else:
@@ -253,11 +259,34 @@ class SlackBotService:
                                     f"Bot not mentioned in top-level message from {username}, skipping"
                                 )
                         else:
-                            # Thread response: always process
-                            self.logger.debug(
-                                f"Thread response from {username}, will process"
+                            # Thread reply: use participant-based filtering
+                            decision = self.slack_service.should_process_thread_reply(
+                                thread_id=thread_id,
+                                channel_id=channel_id,
+                                message_content=content,
                             )
-                            unique_threads.add((channel_id, thread_id))
+                            if decision.should_process:
+                                unique_threads.add((channel_id, thread_id))
+                                if decision.conversation:
+                                    preloaded_conversations[(channel_id, thread_id)] = (
+                                        decision.conversation
+                                    )
+
+                    # Detect and handle stop commands first
+                    stop_threads: set[tuple[str, str]] = set()
+                    for raw_message in raw_messages:
+                        content = raw_message.get("content", "")
+                        message_id = raw_message.get("messageId", "unknown")
+                        thread_id = raw_message.get("thread_ts", message_id)
+                        if self.stop_handler.is_stop_command(
+                            content, thread_id, message_id
+                        ):
+                            channel_id = raw_message.get("channelId", "unknown")
+                            stop_threads.add((channel_id, thread_id))
+
+                    for channel_id, thread_id in stop_threads:
+                        self.stop_handler.handle_stop(channel_id, thread_id)
+                        unique_threads.discard((channel_id, thread_id))
 
                     self.logger.info(
                         f"Processing {len(raw_messages)} raw messages into {len(unique_threads)} unique threads"
@@ -265,15 +294,23 @@ class SlackBotService:
 
                     # Process each unique thread
                     for channel_id, thread_id in unique_threads:
-                        asyncio.create_task(
-                            self._process_messages(thread_id, channel_id)
+                        self.logger.info(f"Starting task for thread_id={thread_id}")
+                        preloaded = preloaded_conversations.get((channel_id, thread_id))
+                        self.task_manager.start_task(
+                            thread_id,
+                            self._process_messages(thread_id, channel_id, preloaded),
                         )
 
             except Exception as e:
                 self.logger.error(f"Error in message queue processor: {str(e)}")
                 await asyncio.sleep(1)  # Wait before retrying
 
-    async def _process_messages(self, thread_id: str, channel_id: str) -> None:
+    async def _process_messages(
+        self,
+        thread_id: str,
+        channel_id: str,
+        preloaded_conversation: list[dict[str, Any]] | None = None,
+    ) -> None:
         """Process messages for a specific thread with conversation loading and thread-safe locking."""
         # Get or create thread lock
         async with self.main_lock:
@@ -298,14 +335,31 @@ class SlackBotService:
                     # Set logging context
                     token = set_context_token(thread_id)
 
+                    # Track last message for processing indicator emoji
+                    last_message_ts: str | None = None
+
                     try:
-                        # Load full conversation using existing Slack client method
-                        self.logger.info(
-                            f"Loading conversation for thread {thread_id} in channel {channel_id}"
-                        )
-                        slack_messages = self.slack_service.get_thread_conversation(
-                            channel_id, thread_id
-                        )
+                        # Use preloaded conversation if available, otherwise fetch
+                        if preloaded_conversation is not None:
+                            self.logger.debug(
+                                f"Using preloaded conversation for thread {thread_id}"
+                            )
+                            slack_messages = preloaded_conversation
+                        else:
+                            self.logger.info(
+                                f"Loading conversation for thread {thread_id} in channel {channel_id}"
+                            )
+                            slack_messages = self.slack_service.get_thread_conversation(
+                                channel_id, thread_id
+                            )
+
+                        # Add processing indicator emoji to the last message
+                        if slack_messages:
+                            last_message_ts = slack_messages[-1].get("ts")
+                            if last_message_ts:
+                                self.slack_service.add_reaction(
+                                    channel_id, last_message_ts, "eyes"
+                                )
 
                         # Convert to SlackMessage objects using existing method
                         processed_messages = [
@@ -332,6 +386,11 @@ class SlackBotService:
                         )
 
                     finally:
+                        # Remove processing indicator emoji
+                        if last_message_ts:
+                            self.slack_service.remove_reaction(
+                                channel_id, last_message_ts, "eyes"
+                            )
                         # Clean up
                         reset_context_token(token)
                         self.active_threads.discard(thread_id)
@@ -341,6 +400,10 @@ class SlackBotService:
                 f"Thread {thread_id} processing timed out after {self.processing_timeout}s"
             )
             self.active_threads.discard(thread_id)
+        except asyncio.CancelledError:
+            self.logger.info(f"Thread {thread_id} processing cancelled")
+            self.active_threads.discard(thread_id)
+            # Response is sent by stop_handler, task cleanup by task_manager
         except Exception as e:
             self.logger.error(
                 f"Unexpected error processing thread {thread_id}: {str(e)}"

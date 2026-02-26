@@ -100,7 +100,7 @@ Analyze merge requests and code changes:
 
 @BettySharp review the changes in MR !456
 
-@BettySharp what's the impact of merge request !789?
+@BettySharp generate testing notes for merge request !789?
 ```
 
 ### Issue Tracking Integration
@@ -178,7 +178,7 @@ integrations:
 
 Dev Agents can analyze:
 
-- **Code changes** - Diff analysis and impact assessment
+- **Code changes** - Diff analysis and testing recommendations
 - **File modifications** - Which files changed and how
 - **Commit history** - Individual commits in the MR
 - **Comments and discussions** - Review feedback and conversations

@@ -1,24 +1,5 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from datetime import datetime
 from pathlib import Path
-import shlex
 import subprocess
 import threading
 import time
@@ -136,9 +117,7 @@ class GitRepository:
         for path, status in name_status.items():
             insertions, deletions, binary_flag = numstat.get(path, (None, None, False))
             patch = (
-                self._git_output(
-                    f"git diff {tgt_ref}...{src_ref} -- {shlex.quote(path)}"
-                )
+                self._git_output(["git", "diff", f"{tgt_ref}...{src_ref}", "--", path])
                 if include_patch and not binary_flag
                 else None
             )
@@ -200,19 +179,19 @@ class GitRepository:
 
     # --------------------- low‑level helpers ------------------------------
 
-    def _git_output(self, cmd: str) -> str:
+    def _git_output(self, cmd: list[str]) -> str:
         """Run *cmd* in the repo and return **stdout** as *str* (strip tail newline)."""
         logger.debug("Running git command: %s", cmd)
         return (
-            subprocess.check_output(cmd, shell=True, cwd=self.repo_path)  # nosec B602
-            .decode("utf-8")
+            subprocess.check_output(cmd, cwd=self.repo_path)
+            .decode("utf-8", errors="replace")
             .strip()
         )
 
     def pull(self) -> str:
         """Execute git pull in the repository to update it with remote changes."""
         logger.debug("Pulling latest changes from remote")
-        return self._git_output("git pull")
+        return self._git_output(["git", "pull"])
 
     def get_latest_tags(self, limit: int = 20) -> list[str]:
         """Get the latest git tags sorted by version in ascending order.
@@ -231,14 +210,12 @@ class GitRepository:
 
         logger.debug(f"Getting latest {limit} git tags")
         try:
-            # Get tags sorted by version (descending), limit, then reverse to ascending
-            output = self._git_output(
-                f"git tag --sort=-creatordate -l | head -n {limit}"
-            )
+            # Get tags sorted by version (descending), then limit in Python
+            output = self._git_output(["git", "tag", "--sort=-creatordate", "-l"])
             if not output:
                 return []
             tags = [tag.strip() for tag in output.splitlines() if tag.strip()]
-            return list(reversed(tags))
+            return list(reversed(tags[:limit]))
         except subprocess.CalledProcessError as e:
             logger.warning(f"Failed to get git tags: {e}")
             return []
@@ -277,8 +254,15 @@ class GitRepository:
             # --full-history includes merge commits that may have modified the file
             # %B gives the full commit message (subject + body), use |||COMMIT_END||| as separator
             output = self._git_output(
-                f"git log --format='format:%H|%an|%aI|%B|||COMMIT_END|||' --full-history "
-                f"{src_ref}...{tgt_ref} -- {shlex.quote(file_path)}"
+                [
+                    "git",
+                    "log",
+                    "--format=format:%H|%an|%aI|%B|||COMMIT_END|||",
+                    "--full-history",
+                    f"{src_ref}...{tgt_ref}",
+                    "--",
+                    file_path,
+                ]
             )
 
             if not output.strip():
@@ -338,7 +322,7 @@ class GitRepository:
         """Return the first valid reference for *branch*, or None if not found."""
         for candidate in (branch, f"origin/{branch}", f"remotes/origin/{branch}"):
             try:
-                self._git_output(f"git rev-parse --verify {shlex.quote(candidate)}")
+                self._git_output(["git", "rev-parse", "--verify", candidate])
                 return candidate
             except subprocess.CalledProcessError:
                 continue
@@ -363,9 +347,7 @@ class GitRepository:
 
     def _merge_base(self, src: str, tgt: str) -> str:
         try:
-            return self._git_output(
-                f"git merge-base {shlex.quote(src)} {shlex.quote(tgt)}"
-            )
+            return self._git_output(["git", "merge-base", src, tgt])
         except subprocess.CalledProcessError:
             return EMPTY_TREE_HASH
 
@@ -373,7 +355,9 @@ class GitRepository:
 
     def _parse_name_status_three_dots(self, tgt: str, src: str) -> dict[str, str]:
         """Return mapping *path -> status letter* using a three dots git diff."""
-        output = self._git_output(f"git diff --name-status -M -C {tgt}...{src}")
+        output = self._git_output(
+            ["git", "diff", "--name-status", "-M", "-C", f"{tgt}...{src}"]
+        )
         logger.debug("Got name_status output: %s", output)
         mapping: dict[str, str] = {}
         for line in output.splitlines():
@@ -394,7 +378,9 @@ class GitRepository:
         self, tgt: str, src: str
     ) -> dict[str, tuple[int | None, int | None, bool]]:
         """Return mapping *path -> (insertions, deletions, binary)* using three dots git diff."""
-        output = self._git_output(f"git diff --numstat -M -C {tgt}...{src}")
+        output = self._git_output(
+            ["git", "diff", "--numstat", "-M", "-C", f"{tgt}...{src}"]
+        )
         result: dict[str, tuple[int | None, int | None, bool]] = {}
         for line in output.splitlines():
             if not line.strip():

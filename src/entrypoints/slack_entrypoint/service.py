@@ -1,24 +1,6 @@
 #!/usr/bin/env python3
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
-from pathlib import Path
 import os
+import threading
 import traceback
 
 from dotenv import load_dotenv
@@ -45,40 +27,37 @@ def main() -> None:
     """Main entry point for the Slack bot."""
     logger.info("Starting Slack Bot")
 
-    # Print release information if available
-    try:
-        with Path("release.txt").open() as f:
-            release_info = f.read().strip()
-            logger.info(f"Release information:\n{release_info}")
-    except Exception:
-        logger.info("No release information available")
-
     # Load configuration
     try:
         slack_config = SlackBotConfig(base_config)
 
         if not slack_config.is_configured():
             logger.error(
-                "Missing Slack configuration. Please set SLACK_BOT_TOKEN, "
-                "SLACK_CHANNEL_ID, and SLACK_APP_TOKEN environment variables"
+                "Missing Slack configuration. Please set SLACK_BOT_TOKEN "
+                "and SLACK_APP_TOKEN environment variables"
             )
             return
 
-        logger.info(f"Configured for channel: {slack_config.get_channel_id()}")
+        logger.info("Slack configuration validated")
 
     except Exception as e:
         logger.error(f"Error loading configuration: {str(e)}")
         return
 
     # Initialize Slack client for the agent consumer
-    slack_client = SlackClientService(slack_config)
+    slack_client = SlackClientService(
+        slack_config,
+        max_connection_failures=slack_config.get_max_connection_failures(),
+    )
 
     # Initialize agent-based consumer
     consumer = AgentMessageConsumer(slack_client=slack_client, config=base_config)
 
     # Initialize and start bot service
     bot_service = SlackBotService(
-        consumer=consumer, processing_timeout=slack_config.get_processing_timeout()
+        consumer=consumer,
+        slack_client=slack_client,
+        processing_timeout=slack_config.get_processing_timeout(),
     )
 
     try:
@@ -88,6 +67,66 @@ def main() -> None:
     except Exception as e:
         error_traceback = traceback.format_exc()
         logger.error(f"Error in main loop: {str(e)}\n{error_traceback}")
+    finally:
+        logger.info("Slack Bot shutting down")
+
+
+def start_service(shutdown_event: threading.Event) -> None:
+    """Start the Slack bot service, managed by the orchestrator.
+
+    Args:
+        shutdown_event: Shared shutdown event from the orchestrator.
+            When set, the service should shut down gracefully.
+    """
+    logger.info("Starting Slack Bot (orchestrated)")
+
+    # Load configuration
+    try:
+        slack_config = SlackBotConfig(base_config)
+
+        if not slack_config.is_configured():
+            logger.error(
+                "Missing Slack configuration. Please set SLACK_BOT_TOKEN "
+                "and SLACK_APP_TOKEN environment variables"
+            )
+            return
+
+        logger.info("Slack configuration validated")
+
+    except Exception as e:
+        logger.error(f"Error loading configuration: {str(e)}")
+        return
+
+    # Initialize Slack client for the agent consumer
+    slack_client = SlackClientService(
+        slack_config,
+        max_connection_failures=slack_config.get_max_connection_failures(),
+    )
+
+    # Initialize agent-based consumer
+    consumer = AgentMessageConsumer(slack_client=slack_client, config=base_config)
+
+    # Initialize bot service without signal handlers (orchestrator handles signals)
+    bot_service = SlackBotService(
+        consumer=consumer,
+        slack_client=slack_client,
+        processing_timeout=slack_config.get_processing_timeout(),
+        register_signal_handlers=False,
+    )
+
+    # Watcher thread: bridge external shutdown_event to bot_service.shutdown()
+    def _watch_shutdown() -> None:
+        shutdown_event.wait()
+        bot_service.shutdown()
+
+    watcher = threading.Thread(target=_watch_shutdown, daemon=True)
+    watcher.start()
+
+    try:
+        bot_service.start()  # Blocks until internal shutdown_event is set
+    except Exception as e:
+        error_traceback = traceback.format_exc()
+        logger.error(f"Error in Slack bot: {str(e)}\n{error_traceback}")
     finally:
         logger.info("Slack Bot shutting down")
 

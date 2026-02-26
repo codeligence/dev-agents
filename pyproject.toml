@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dev-agents"
-version = "0.10.0"
+version = "1.0.0"
 description = "AI Agents for Agile Dev Teams"
 readme = "README.md"
-license = 'AGPL-3.0'
+license = 'MIT'
 license-files = ['LICENSE']
 requires-python = ">=3.11"
 authors = [
@@ -26,7 +26,7 @@ keywords = [
     "automation",
     "development",
     "testing",
-    "impact-analysis",
+    "testing-notes",
     "git",
     "llm",
     "chatbot",
@@ -52,9 +52,10 @@ dependencies = [
     "pyyaml>=6.0.2,<7.0.0",
     "dynaconf>=3.2.11,<4.0.0",
     "jinja2>=3.1.6,<4.0.0",
-    "pydantic-ai~=1.0.5",
+    "pydantic-ai~=1.62.0",
     "beautifulsoup4~=4.13.5",
     "fastapi~=0.116.1",
+    "pydriller~=2.9",
 ]
 
 [project.urls]
@@ -67,13 +68,18 @@ Homepage = "https://github.com/codeligence/dev-agents"
 [project.optional-dependencies]
 slack = [
     "slack_sdk>=3.19.5,<4.0.0",
-    "markdown_to_mrkdwn~=0.2.0",
+]
+jira = [
+    "markdown-it-py>=3.0.0,<4.0.0",
 ]
 azure = [
     "azure-devops>=7.1.0b4,<8.0.0",
 ]
-prod = [
-    "dev-agents[slack,azure]",
+nats = [
+    "nats-py>=2.0.0",
+]
+claude = [
+    "claude-agent-sdk>=0.1.0,<1.0.0",
 ]
 dev = [
     # Testing
@@ -127,22 +133,13 @@ dev = [
     "psutil>=5.9.0,<6.0.0",
 ]
 docs = [
-    "mkdocs>=1.6.1,<2.0.0",
-    "mkdocs-material>=9.6.17,<10.0.0",
-    "mkdocstrings[python]>=0.30.0,<1.0.0",
-    "mkdocs-git-revision-date-localized-plugin>=1.4.7,<2.0.0",
-    "mkdocs-minify-plugin>=0.8.0,<1.0.0",
-    "mkdocs-social-plugin>=0.1.0,<1.0.0",
-    "pymdown-extensions>=10.16.1,<11.0.0",
-    "cairosvg>=2.8.2,<3.0.0",
-    "mike>=2.1.3,<3.0.0",
-    "griffe>=1.12.1,<2.0.0",
-    "mkdocs-autorefs>=1.4.2,<2.0.0",
-    "mkdocs-redirects>=1.2.2,<2.0.0",
-    "mkdocs-include-markdown-plugin>=7.1.6,<8.0.0",
+    "zensical>=0.0.11",
+]
+prod = [
+    "dev-agents[slack,azure,nats,jira]",
 ]
 all = [
-    "dev-agents[slack,azure,dev,docs]",
+    "dev-agents[slack,azure,dev,nats,jira,claude,docs]",
 ]
 
 [tool.setuptools.packages.find]
@@ -291,7 +288,6 @@ show_error_codes = true
 namespace_packages = true
 explicit_package_bases = true
 mypy_path = "src"
-packages = ["src"]
 
 # Per-module options
 [[tool.mypy.overrides]]
@@ -300,6 +296,7 @@ module = [
     "dynaconf.*",
     "pydantic_ai.*",
     "fastapi.*",
+    "claude_agent_sdk.*",
 ]
 ignore_missing_imports = true
 
@@ -382,15 +379,18 @@ cache = true
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.10.0"
+version = "1.0.0"
 tag_format = "v$major.$minor.$patch"
 version_files = [
     "pyproject.toml:version",
     "src/__init__.py:__version__",
+    "src/core/version_check.py:__version__",
     "README.md",
     "docs/index.md",
     "COMPLIANCE_SUMMARY.md",
-    "Dockerfile:VERSION="
+    "Dockerfile:VERSION=",
+    "Dockerfile-claude:VERSION=",
+    "setup/src/version.ts:VERSION = \""
 ]
 style = [
     ["qmark", "fg:#ff9d00 bold"],

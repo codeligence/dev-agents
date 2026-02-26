@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from pathlib import Path
 from typing import Any, Optional, cast
 import os
@@ -81,7 +63,7 @@ class BaseConfig:
             envvar_default="",
             ignore_unknown_envvars=True,
             environments=False,
-            load_dotenv=True,
+            load_dotenv=False,
             # Set up environment variable resolution for nested keys
             env_switcher="DYNACONF_ENV",
             merge_enabled=True,
@@ -162,6 +144,26 @@ class BaseConfig:
     def get_default_project_config(self) -> ProjectConfig:
         """Get the default project configuration."""
         return self.get_project_config("default")
+
+    def with_overlay(self, overlay_path: str) -> "BaseConfig":
+        """Create a new config with overlay merged on top of this one.
+
+        Clones the current settings in memory (no disk I/O for the base)
+        and merges the overlay file on top of the clone.
+
+        Args:
+            overlay_path: Path to the overlay YAML file to merge.
+
+        Returns:
+            New BaseConfig instance with overlay values merged.
+        """
+        clone = object.__new__(type(self))
+        clone._config_path = self._config_path
+        clone._settings = self._settings.dynaconf_clone()
+        clone._config_data = {}
+        if Path(overlay_path).exists():
+            clone._settings.load_file(path=overlay_path)
+        return clone
 
 
 # Global default config instance - thread-safe singleton

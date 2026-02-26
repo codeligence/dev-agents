@@ -1,29 +1,11 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 #!/usr/bin/env python3
 """AG-UI entrypoint for streaming agent events via HTTP."""
 
 from collections.abc import AsyncGenerator
-from pathlib import Path
 from typing import Any, cast
 import asyncio
 import os
+import threading
 import traceback
 
 from ag_ui.core import (
@@ -319,16 +301,6 @@ def main() -> None:
 
     logger.info("Starting AG-UI service")
 
-    # Print release information if available
-    try:
-        with Path("release.txt").open() as f:
-            release_info = f.read().strip()
-            logger.info(f"Release information:\\n{release_info}")
-    except FileNotFoundError:
-        logger.info("No release information available")
-    except Exception as release_error:
-        logger.warning(f"Could not read release information: {release_error}")
-
     # Load configuration
     try:
         agui_config = AGUIConfig(base_config)
@@ -353,6 +325,49 @@ def main() -> None:
     except Exception as startup_error:
         logger.error(f"Failed to start AG-UI service: {str(startup_error)}")
         raise
+
+
+def start_service(shutdown_event: threading.Event) -> None:
+    """Start the AG-UI service, managed by the orchestrator.
+
+    Args:
+        shutdown_event: Shared shutdown event from the orchestrator.
+            When set, the service should shut down gracefully.
+    """
+    import uvicorn
+
+    logger.info("Starting AG-UI service (orchestrated)")
+
+    try:
+        agui_config = AGUIConfig(base_config)
+        host = agui_config.get_server_host()
+        port = agui_config.get_server_port()
+
+        logger.info(f"AG-UI service starting on {host}:{port}")
+
+        # Use uvicorn.Server directly for programmatic shutdown control
+        config = uvicorn.Config(
+            app=app,
+            host=host,
+            port=port,
+            log_level="info",
+        )
+        server = uvicorn.Server(config)
+        # Signal handlers are automatically skipped by uvicorn when not on main thread
+
+        # Watcher thread: bridge external shutdown_event to uvicorn shutdown
+        def _watch_shutdown() -> None:
+            shutdown_event.wait()
+            server.should_exit = True
+
+        watcher = threading.Thread(target=_watch_shutdown, daemon=True)
+        watcher.start()
+
+        server.run()
+    except Exception as e:
+        logger.error(f"Error in AG-UI service: {str(e)}")
+    finally:
+        logger.info("AG-UI service shut down")
 
 
 if __name__ == "__main__":

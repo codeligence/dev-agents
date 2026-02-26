@@ -1,0 +1,237 @@
+{
+  "pipeline": {
+    "id": 281,
+    "iid": 281,
+    "project_id": 42,
+    "status": "failed",
+    "source": "merge_request_event",
+    "ref": "feature/add-pipeline-tool",
+    "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+    "web_url": "https://gitlab.example.com/example/project/-/pipelines/281",
+    "created_at": "2026-01-19T10:30:00.000Z",
+    "updated_at": "2026-01-19T10:45:00.000Z",
+    "finished_at": "2026-01-19T10:45:00.000Z",
+    "duration": 900,
+    "queued_duration": 5,
+    "user": {
+      "id": 123,
+      "username": "developer",
+      "name": "Test User",
+      "state": "active",
+      "avatar_url": "https://gitlab.example.com/uploads/user/avatar/123/avatar.png"
+    },
+    "merge_request": {
+      "iid": 42,
+      "title": "Add GitLab Pipeline Tool for Dev Agents",
+      "source_branch": "feature/add-pipeline-tool",
+      "target_branch": "main",
+      "state": "opened"
+    },
+    "before_sha": "9t0s8r7q6p5o4n3m2l1k0j9i8h7g6f5e4d3c2b1a",
+    "tag": false,
+    "yaml_errors": null,
+    "started_at": "2026-01-19T10:30:10.000Z",
+    "coverage": "85.5"
+  },
+  "jobs": [
+    {
+      "id": 1001,
+      "status": "success",
+      "stage": "build",
+      "name": "build-backend",
+      "ref": "feature/add-pipeline-tool",
+      "created_at": "2026-01-19T10:30:05.000Z",
+      "started_at": "2026-01-19T10:30:10.000Z",
+      "finished_at": "2026-01-19T10:35:00.000Z",
+      "duration": 290.5,
+      "user": {
+        "id": 123,
+        "username": "developer",
+        "name": "Developer User"
+      },
+      "commit": {
+        "id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "short_id": "a1b2c3d4",
+        "title": "Add GitLab pipeline tool implementation"
+      },
+      "pipeline": {
+        "id": 281,
+        "iid": 281,
+        "ref": "feature/add-pipeline-tool",
+        "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "status": "failed"
+      },
+      "web_url": "https://gitlab.example.com/example/project/-/jobs/1001",
+      "artifacts": [],
+      "runner": {
+        "id": 10,
+        "description": "gitlab-runner-1",
+        "active": true
+      },
+      "coverage": null,
+      "allow_failure": false
+    },
+    {
+      "id": 1002,
+      "status": "success",
+      "stage": "build",
+      "name": "build-frontend",
+      "ref": "feature/add-pipeline-tool",
+      "created_at": "2026-01-19T10:30:05.000Z",
+      "started_at": "2026-01-19T10:30:10.000Z",
+      "finished_at": "2026-01-19T10:36:00.000Z",
+      "duration": 350.0,
+      "user": {
+        "id": 123,
+        "username": "developer",
+        "name": "Developer User"
+      },
+      "commit": {
+        "id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "short_id": "a1b2c3d4",
+        "title": "Add GitLab pipeline tool implementation"
+      },
+      "pipeline": {
+        "id": 281,
+        "iid": 281,
+        "ref": "feature/add-pipeline-tool",
+        "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "status": "failed"
+      },
+      "web_url": "https://gitlab.example.com/example/project/-/jobs/1002",
+      "artifacts": [
+        {
+          "file_type": "archive",
+          "size": 1024000,
+          "filename": "artifacts.zip",
+          "file_format": "zip"
+        }
+      ],
+      "runner": {
+        "id": 11,
+        "description": "gitlab-runner-2",
+        "active": true
+      },
+      "coverage": null,
+      "allow_failure": false
+    },
+    {
+      "id": 1003,
+      "status": "success",
+      "stage": "test",
+      "name": "test-unit",
+      "ref": "feature/add-pipeline-tool",
+      "created_at": "2026-01-19T10:36:05.000Z",
+      "started_at": "2026-01-19T10:36:10.000Z",
+      "finished_at": "2026-01-19T10:40:00.000Z",
+      "duration": 230.0,
+      "user": {
+        "id": 123,
+        "username": "developer",
+        "name": "Developer User"
+      },
+      "commit": {
+        "id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "short_id": "a1b2c3d4",
+        "title": "Add GitLab pipeline tool implementation"
+      },
+      "pipeline": {
+        "id": 281,
+        "iid": 281,
+        "ref": "feature/add-pipeline-tool",
+        "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "status": "failed"
+      },
+      "web_url": "https://gitlab.example.com/example/project/-/jobs/1003",
+      "artifacts": [
+        {
+          "file_type": "junit",
+          "size": 52000,
+          "filename": "junit.xml",
+          "file_format": "gzip"
+        }
+      ],
+      "runner": {
+        "id": 10,
+        "description": "gitlab-runner-1",
+        "active": true
+      },
+      "coverage": "92.3",
+      "allow_failure": false
+    },
+    {
+      "id": 1004,
+      "status": "failed",
+      "stage": "test",
+      "name": "test-integration",
+      "ref": "feature/add-pipeline-tool",
+      "created_at": "2026-01-19T10:36:05.000Z",
+      "started_at": "2026-01-19T10:36:10.000Z",
+      "finished_at": "2026-01-19T10:42:30.000Z",
+      "duration": 380.0,
+      "user": {
+        "id": 123,
+        "username": "developer",
+        "name": "Developer User"
+      },
+      "commit": {
+        "id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "short_id": "a1b2c3d4",
+        "title": "Add GitLab pipeline tool implementation"
+      },
+      "pipeline": {
+        "id": 281,
+        "iid": 281,
+        "ref": "feature/add-pipeline-tool",
+        "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "status": "failed"
+      },
+      "web_url": "https://gitlab.example.com/example/project/-/jobs/1004",
+      "failure_reason": "script_failure",
+      "artifacts": [],
+      "runner": {
+        "id": 11,
+        "description": "gitlab-runner-2",
+        "active": true
+      },
+      "coverage": null,
+      "allow_failure": false
+    },
+    {
+      "id": 1005,
+      "status": "canceled",
+      "stage": "deploy",
+      "name": "deploy-staging",
+      "ref": "feature/add-pipeline-tool",
+      "created_at": "2026-01-19T10:42:35.000Z",
+      "started_at": null,
+      "finished_at": "2026-01-19T10:42:40.000Z",
+      "duration": null,
+      "user": {
+        "id": 123,
+        "username": "developer",
+        "name": "Developer User"
+      },
+      "commit": {
+        "id": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "short_id": "a1b2c3d4",
+        "title": "Add GitLab pipeline tool implementation"
+      },
+      "pipeline": {
+        "id": 281,
+        "iid": 281,
+        "ref": "feature/add-pipeline-tool",
+        "sha": "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0",
+        "status": "failed"
+      },
+      "web_url": "https://gitlab.example.com/example/project/-/jobs/1005",
+      "artifacts": [],
+      "runner": null,
+      "coverage": null,
+      "allow_failure": false
+    }
+  ],
+  "job_logs": {
+    "1004": "Running with gitlab-runner 15.9.0 (HEAD)\n  on gitlab-runner-2 (runner-11)\nPreparing the \"docker\" executor\nUsing Docker executor with image python:3.11-slim ...\nPulling docker image python:3.11-slim ...\nUsing docker image sha256:abc123... for python:3.11-slim with digest python@sha256:def456...\nPreparing environment\nRunning on runner-11-project-42-concurrent-0 via gitlab-runner-2...\nGetting source from Git repository\nFetching changes with git depth set to 20...\nReinitialized existing Git repository in /builds/example/project/.git/\nChecking out a1b2c3d4 as feature/add-pipeline-tool...\nSkipping Git submodules setup\nExecuting \"step_script\" stage of the job script\n$ pip install -e .[all]\nProcessing /builds/example/project\n  Installing build dependencies: started\n  Installing build dependencies: finished with status 'done'\n  Getting requirements to build wheel: started\n  Getting requirements to build wheel: finished with status 'done'\n  Preparing metadata (pyproject.toml): started\n  Preparing metadata (pyproject.toml): finished with status 'done'\nCollecting python-dotenv<2.0.0,>=1.0.1\n  Using cached python_dotenv-1.0.1-py3-none-any.whl (19 kB)\n... (package installation logs) ...\nSuccessfully installed dev-agents-0.12.0 ...\n$ pytest tests/integration -v --tb=short\n============================= test session starts ==============================\nplatform linux -- Python 3.11.7, pytest-8.4.1, pluggy-1.5.0 -- /usr/local/bin/python\ncachedir: .pytest_cache\nrootdir: /builds/example/project\nconfigfile: pyproject.toml\ntestpaths: tests\nplugins: asyncio-0.21.2, cov-4.1.0, mock-3.11.1, html-4.1.1, benchmark-4.0.0, xdist-3.3.1\nasyncio: mode=auto\ncollected 42 items\n\ntests/integration/test_gitlab_integration.py::test_fetch_pipeline PASSED [  2%]\ntests/integration/test_gitlab_integration.py::test_fetch_pipeline_jobs PASSED [  4%]\ntests/integration/test_gitlab_integration.py::test_pipeline_provider FAILED [  7%]\n\n=================================== FAILURES ===================================\n_______________________ test_pipeline_provider _______________________\n\nself = <tests.integration.test_gitlab_integration.TestGitLabPipeline object at 0x7f8b9c123456>\n\n    def test_pipeline_provider(self):\n        \"\"\"Test GitLab pipeline provider loads pipeline correctly.\"\"\"\n        provider = GitLabPipelineProvider(config)\n>       result = asyncio.run(provider.load(\"281\"))\nE       httpx.HTTPStatusError: 404 Client Error: Not Found for url: https://gitlab.example.com/api/v4/projects/42/pipelines/281/jobs\nE       \nE       Pipeline endpoint returned: {'id': 281, 'status': 'failed', ...}\nE       But jobs endpoint failed with 404 Not Found\nE       \nE       This typically indicates:\nE       1. The pipeline exists but jobs are not accessible\nE       2. Insufficient API token permissions (needs read_api scope)\nE       3. Jobs have been deleted or archived\n\ntests/integration/test_gitlab_integration.py:87: HTTPStatusError\n----------------------------- Captured log call -----------------------------\nERROR    integrations.gitlab.provider:provider.py:245 Failed to fetch pipeline jobs: 404 Client Error: Not Found\n=========================== short test summary info ============================\nFAILED tests/integration/test_gitlab_integration.py::test_pipeline_provider - httpx.HTTPStatusError: 404 Client Error: Not Found\n========================= 1 failed, 39 passed, 2 skipped in 45.67s ===========\nCleaning up project directory and file based variables\nERROR: Job failed: exit code 1\n"
+  }
+}

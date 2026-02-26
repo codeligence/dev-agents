@@ -38,7 +38,7 @@ COPY LICENSE ./
 
 # Install the package and its dependencies
 RUN pip install --upgrade pip setuptools wheel \
-    && pip install -e .[prod]
+    && pip install .[prod]
 
 # =============================================================================
 # Runtime stage - Create minimal runtime image
@@ -48,7 +48,7 @@ FROM python:3.11-slim AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
-ARG VERSION=0.10.0
+ARG VERSION=1.0.0
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
@@ -104,6 +104,7 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD pytho
 
 ENV CORE_LOG_DIR=/data/logs
 ENV CORE_STORAGE_FILE_DIR=/data/storage
+ENV VERSION_CHECK_URL=https://setup.dev-agents.ai/api/version-check
 
 # Set entrypoint script
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

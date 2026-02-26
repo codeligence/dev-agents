@@ -253,9 +253,9 @@ run_type_checking() {
 
     print_header "Type Checking"
 
-    # mypy type checking
+    # mypy type checking - use package names since mypy_path is set to src/
     run_check "mypy (Static Type Checking)" \
-        "mypy --config-file pyproject.toml src/" \
+        "mypy --config-file pyproject.toml -p core -p integrations -p agents -p entrypoints" \
         "" \
         true || true
 }

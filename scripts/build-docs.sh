@@ -27,22 +27,16 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if mkdocs is installed
+# Check if zensical is installed
 check_dependencies() {
     log_info "Checking documentation dependencies..."
 
-    if ! command -v mkdocs &> /dev/null; then
-        log_error "MkDocs not found. Installing documentation dependencies..."
+    if ! command -v zensical &> /dev/null; then
+        log_error "Zensical not found. Installing documentation dependencies..."
         pip install -e .[docs]
     else
-        log_success "MkDocs found"
+        log_success "Zensical found"
     fi
-
-    # Check if key plugins are available
-    python -c "import material" 2>/dev/null || {
-        log_warning "Material theme not found. Installing..."
-        pip install -e .[docs]
-    }
 }
 
 # Build the documentation
@@ -55,14 +49,8 @@ build_docs() {
         log_info "Cleaned previous build"
     fi
 
-    # Set strict mode based on environment variable
-    local strict_flag=""
-    if [ "${STRICT_BUILD:-true}" = "true" ]; then
-        strict_flag="--strict"
-    fi
-
     # Build documentation
-    mkdocs build $strict_flag
+    zensical build
 
     if [ $? -eq 0 ]; then
         log_success "Documentation built successfully in 'site/' directory"
@@ -88,12 +76,20 @@ serve_docs() {
     log_info "Documentation will be available at: http://$host:$port"
     log_info "Press Ctrl+C to stop the server"
 
-    mkdocs serve --dev-addr="$host:$port"
+    zensical serve
 }
 
 # Deploy to GitHub Pages (if configured)
 deploy_docs() {
     log_info "Deploying documentation to GitHub Pages..."
+
+    # Build the documentation first
+    zensical build
+
+    if [ $? -ne 0 ]; then
+        log_error "Build failed, cannot deploy"
+        exit 1
+    fi
 
     # Check if gh-pages branch exists
     if git show-ref --verify --quiet refs/heads/gh-pages; then
@@ -106,12 +102,26 @@ deploy_docs() {
         git checkout main
     fi
 
-    mkdocs gh-deploy --force
+    # Deploy site directory to gh-pages branch
+    log_info "Deploying site/ directory to gh-pages branch..."
 
-    if [ $? -eq 0 ]; then
+    # Save current commit hash
+    local current_commit=$(git rev-parse HEAD)
+
+    # Force push site directory to gh-pages
+    git worktree add -f gh-pages-deploy gh-pages 2>/dev/null || git checkout gh-pages
+
+    if [ -d "gh-pages-deploy" ]; then
+        cp -r site/* gh-pages-deploy/
+        cd gh-pages-deploy
+        git add -A
+        git commit -m "Deploy documentation from commit ${current_commit:0:7}" || true
+        git push origin gh-pages --force
+        cd ..
+        git worktree remove gh-pages-deploy
         log_success "Documentation deployed to GitHub Pages"
     else
-        log_error "Documentation deployment failed"
+        log_error "Failed to create gh-pages worktree"
         exit 1
     fi
 }
@@ -121,7 +131,7 @@ validate_docs() {
     log_info "Validating documentation..."
 
     # Build first to generate the site
-    mkdocs build --quiet
+    zensical build
 
     # Check for broken internal links with linkchecker
     log_info "Checking for broken internal links..."
@@ -151,15 +161,19 @@ validate_docs() {
     log_info "Validating documentation structure..."
     python -c "
 import os
-import yaml
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 from pathlib import Path
 
-# Load mkdocs.yml
-with open('mkdocs.yml', 'r') as f:
-    config = yaml.safe_load(f)
+# Load zensical.toml
+with open('zensical.toml', 'rb') as f:
+    config = tomllib.load(f)
 
 # Check navigation structure
-nav = config.get('nav', [])
+project_config = config.get('project', {})
+nav = project_config.get('nav', [])
 missing_files = []
 
 def check_nav_files(nav_items, prefix='docs/'):
@@ -247,61 +261,12 @@ else:
 "
 }
 
-# Version management with mike
+# Version management - Not supported in Zensical yet
 manage_versions() {
-    local action="$1"
-    local version="$2"
-    local alias="$3"
-
-    case "$action" in
-        "list")
-            log_info "Available documentation versions:"
-            mike list
-            ;;
-        "deploy")
-            if [ -z "$version" ]; then
-                log_error "Version required for deploy command"
-                echo "Usage: $0 version deploy <version> [alias]"
-                exit 1
-            fi
-
-            log_info "Deploying documentation version: $version"
-            if [ -n "$alias" ]; then
-                mike deploy --push --update-aliases "$version" "$alias"
-                log_success "Deployed version $version with alias $alias"
-            else
-                mike deploy --push "$version"
-                log_success "Deployed version $version"
-            fi
-            ;;
-        "delete")
-            if [ -z "$version" ]; then
-                log_error "Version required for delete command"
-                echo "Usage: $0 version delete <version>"
-                exit 1
-            fi
-
-            log_info "Deleting documentation version: $version"
-            mike delete --push "$version"
-            log_success "Deleted version $version"
-            ;;
-        "set-default")
-            if [ -z "$version" ]; then
-                log_error "Version required for set-default command"
-                echo "Usage: $0 version set-default <version>"
-                exit 1
-            fi
-
-            log_info "Setting default version: $version"
-            mike set-default --push "$version"
-            log_success "Set $version as default version"
-            ;;
-        *)
-            log_error "Unknown version command: $action"
-            echo "Available version commands: list, deploy, delete, set-default"
-            exit 1
-            ;;
-    esac
+    log_error "Version management is not yet supported in Zensical"
+    log_info "Mike (the version management tool for MkDocs) is not compatible with Zensical"
+    log_info "Consider using Git tags or branches for documentation versioning"
+    exit 1
 }
 
 # Generate comprehensive documentation report
@@ -317,7 +282,7 @@ Generated: $(date)
 
 ## Build Information
 
-- MkDocs Version: $(mkdocs --version)
+- Zensical Version: $(zensical --version 2>/dev/null || echo "Unable to determine")
 - Python Version: $(python --version)
 - Working Directory: $(pwd)
 
@@ -342,10 +307,13 @@ EOF
 
     # Add navigation info
     python -c "
-import yaml
-with open('mkdocs.yml', 'r') as f:
-    config = yaml.safe_load(f)
-nav = config.get('nav', [])
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+with open('zensical.toml', 'rb') as f:
+    config = tomllib.load(f)
+nav = config.get('project', {}).get('nav', [])
 def print_nav(items, level=0):
     for item in items:
         indent = '  ' * level
@@ -362,22 +330,10 @@ print_nav(nav)
 " >> "$report_file"
 
     echo "" >> "$report_file"
-    echo "## Plugin Configuration" >> "$report_file"
+    echo "## Extensions Configuration" >> "$report_file"
     echo "" >> "$report_file"
-
-    # Add plugin info
-    python -c "
-import yaml
-with open('mkdocs.yml', 'r') as f:
-    config = yaml.safe_load(f)
-plugins = config.get('plugins', [])
-for plugin in plugins:
-    if isinstance(plugin, dict):
-        for name, settings in plugin.items():
-            print(f'- {name}: Configured with settings')
-    else:
-        print(f'- {plugin}: Default configuration')
-" >> "$report_file"
+    echo "Zensical includes built-in extensions and features." >> "$report_file"
+    echo "See zensical.toml for markdown extensions configuration." >> "$report_file"
 
     log_success "Documentation report generated: $report_file"
 }
@@ -398,24 +354,18 @@ show_help() {
     echo "  version       Manage documentation versions with mike"
     echo "  help          Show this help message"
     echo ""
-    echo "Version Management:"
-    echo "  version list                    List all available versions"
-    echo "  version deploy <ver> [alias]    Deploy a new version"
-    echo "  version delete <version>        Delete a version"
-    echo "  version set-default <version>   Set default version"
+    echo "Note: Version management with mike is not supported in Zensical yet."
     echo ""
     echo "Examples:"
     echo "  $0 build                        # Build documentation"
     echo "  $0 serve                        # Serve locally for development"
     echo "  $0 validate                     # Check links and structure"
-    echo "  $0 version deploy 1.0.0 latest  # Deploy version with alias"
-    echo "  $0 version list                 # Show all versions"
+    echo "  $0 deploy                       # Deploy to GitHub Pages"
     echo "  $0 report                       # Generate documentation report"
     echo ""
     echo "Environment Variables:"
     echo "  DOCS_PORT     Port for local server (default: 8000)"
     echo "  DOCS_HOST     Host for local server (default: 127.0.0.1)"
-    echo "  STRICT_BUILD  Enable strict mode (default: true)"
 }
 
 # Clean build artifacts

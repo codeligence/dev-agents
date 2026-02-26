@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from pathlib import Path
 import json
 import unittest
@@ -41,7 +23,7 @@ class TestWorkItem(unittest.TestCase):
 
     def test_get_system_team_project(self):
         """Test retrieving the team project."""
-        self.assertEqual(self.workitem.get_system_team_project(), "acmecorp.com")
+        self.assertEqual(self.workitem.get_system_team_project(), "example.com")
 
     def test_get_system_state(self):
         """Test retrieving the state."""
@@ -64,8 +46,8 @@ class TestWorkItem(unittest.TestCase):
         person = self.workitem.get_system_created_by()
         self.assertIsInstance(person, Person)
         self.assertEqual(person.display_name, "Jane Doe")
-        self.assertEqual(person.unique_name, "jane.doe@acmecorp.com")
-        self.assertEqual(person.format(), "Jane Doe <jane.doe@acmecorp.com>")
+        self.assertEqual(person.unique_name, "jane.doe@example.com")
+        self.assertEqual(person.format(), "Jane Doe <jane.doe@example.com>")
 
     def test_get_system_changed_date(self):
         """Test retrieving the last changed date."""
@@ -78,8 +60,8 @@ class TestWorkItem(unittest.TestCase):
         person = self.workitem.get_system_changed_by()
         self.assertIsInstance(person, Person)
         self.assertEqual(person.display_name, "Jane Doe")
-        self.assertEqual(person.unique_name, "jane.doe@acmecorp.com")
-        self.assertEqual(person.format(), "Jane Doe <jane.doe@acmecorp.com>")
+        self.assertEqual(person.unique_name, "jane.doe@example.com")
+        self.assertEqual(person.format(), "Jane Doe <jane.doe@example.com>")
 
     def test_get_system_title(self):
         """Test retrieving the title."""
@@ -97,8 +79,8 @@ class TestWorkItem(unittest.TestCase):
         person = self.workitem.get_custom_dev()
         self.assertIsInstance(person, Person)
         self.assertEqual(person.display_name, "John Doe")
-        self.assertEqual(person.unique_name, "john.doe@acmecorp.com")
-        self.assertEqual(person.format(), "John Doe <john.doe@acmecorp.com>")
+        self.assertEqual(person.unique_name, "john.doe@example.com")
+        self.assertEqual(person.format(), "John Doe <john.doe@example.com>")
 
     def test_get_system_description(self):
         """Test retrieving the description."""
@@ -143,9 +125,9 @@ class TestWorkItem(unittest.TestCase):
 
         # Check that key information is included in the composed string
         self.assertIn("Title: General Task Issue: Minor UI Inconsistency", info)
-        self.assertIn("Team Project: acmecorp.com", info)
+        self.assertIn("Team Project: example.com", info)
         self.assertIn("State: Ready for Review", info)
-        self.assertIn("Created By: Jane Doe <jane.doe@acmecorp.com>", info)
+        self.assertIn("Created By: Jane Doe <jane.doe@example.com>", info)
         self.assertIn("Application: Generic App", info)
 
 

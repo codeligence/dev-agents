@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 """Slack implementation of AgentExecutionContext."""
 
 from typing import Any
@@ -89,16 +71,19 @@ class SlackAgentContext(AgentExecutionContext):
                 # Update existing message
                 logger.debug(f"Updating existing message {self.last_message_ts}")
                 message_ts = self.slack_client.update_message(
-                    thread_ts=self.thread_ts or self.channel_id,
+                    channel_id=self.channel_id,
                     message_ts=self.last_message_ts,
                     text=text,
+                    thread_ts=self.thread_ts or self.channel_id,
                 )
                 action = "Updated"
             else:
                 # Send new message
                 logger.debug("Sending new message")
                 message_ts = self.slack_client.send_reply(
-                    thread_ts=self.thread_ts or self.channel_id, text=text
+                    channel_id=self.channel_id,
+                    thread_ts=self.thread_ts or self.channel_id,
+                    text=text,
                 )
                 action = "Sent"
 
@@ -164,6 +149,57 @@ class SlackAgentContext(AgentExecutionContext):
                     is_status=False,
                 )
             raise Exception("Failed to send response to Slack: message_ts is None")
+
+    async def send_attachment(
+        self, name: str, content: str | bytes, is_binary: bool = False
+    ) -> None:
+        """Post an attachment to Slack.
+
+        For text content: Creates a Slack canvas with the content
+        For binary content: Raises NotImplementedError (not yet supported)
+
+        Args:
+            name: Title/name of the attachment
+            content: Content of the attachment (text/markdown or binary)
+            is_binary: Whether the content is binary data (default False)
+
+        Raises:
+            NotImplementedError: If binary attachments are requested
+        """
+        logger.info(f"Posting attachment: {name} (binary: {is_binary})")
+
+        if is_binary:
+            logger.error("Binary attachments not yet supported in Slack")
+            raise NotImplementedError("Binary attachments not yet supported in Slack")
+
+        try:
+            # For text content, create a Slack canvas
+            content_str = (
+                content
+                if isinstance(content, str)
+                else content.decode("utf-8", errors="replace")
+            )
+
+            canvas_id = self.slack_client.post_canvas(
+                channel_id=self.channel_id,
+                title=name,
+                markdown_content=content_str,
+                thread_ts=self.thread_ts,
+            )
+
+            if canvas_id:
+                logger.info(
+                    f"Successfully posted attachment '{name}' as canvas: {canvas_id}"
+                )
+            else:
+                logger.error(
+                    f"Failed to post attachment '{name}' - canvas creation failed"
+                )
+                raise Exception(f"Failed to create canvas for attachment '{name}'")
+
+        except Exception as e:
+            logger.error(f"Error posting attachment '{name}': {str(e)}")
+            raise Exception(f"Failed to post attachment '{name}': {str(e)}")
 
     def get_message_list(self) -> MessageList:
         """Get the list of messages available to the agent.

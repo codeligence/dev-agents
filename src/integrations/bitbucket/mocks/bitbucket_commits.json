@@ -1,0 +1,48 @@
+{
+  "pagelen": 30,
+  "values": [
+    {
+      "hash": "a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4",
+      "date": "2025-08-10T14:00:00+00:00",
+      "message": "Add OAuth2 authentication implementation\n\nImplemented the core OAuth2 flow with token management.",
+      "author": {
+        "raw": "Test Developer <testdev@example.com>",
+        "user": {
+          "display_name": "Test Developer",
+          "nickname": "testdev",
+          "account_id": "5c4322b43d5e1c0e12345678"
+        }
+      },
+      "links": {
+        "html": {"href": "https://bitbucket.org/testworkspace/testrepo/commits/a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4"}
+      },
+      "parents": [
+        {
+          "hash": "0987654321fedcba0987654321fedcba09876543"
+        }
+      ]
+    },
+    {
+      "hash": "b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5",
+      "date": "2025-08-09T16:30:00+00:00",
+      "message": "Update user session handling",
+      "author": {
+        "raw": "Test Developer <testdev@example.com>",
+        "user": {
+          "display_name": "Test Developer",
+          "nickname": "testdev",
+          "account_id": "5c4322b43d5e1c0e12345678"
+        }
+      },
+      "links": {
+        "html": {"href": "https://bitbucket.org/testworkspace/testrepo/commits/b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4e5"}
+      },
+      "parents": [
+        {
+          "hash": "0987654321fedcba0987654321fedcba09876543"
+        }
+      ]
+    }
+  ],
+  "page": 1
+}

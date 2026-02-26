@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from typing import Any
 
 from bs4 import BeautifulSoup
@@ -50,13 +32,14 @@ class JiraPerson:
 
 
 def format_attachments_v3(
-    attachments: list[dict[str, Any]] | None, describe_images: bool = False
+    attachments: list[dict[str, Any]] | None,
+    image_descriptions: dict[str, str] | None = None,
 ) -> str:
     """Format attachments for display (v3 API format).
 
     Args:
         attachments: List of attachment dictionaries
-        describe_images: Whether to describe image attachments
+        image_descriptions: Dictionary mapping filename to AI-generated description
 
     Returns:
         Formatted attachments string
@@ -65,17 +48,16 @@ def format_attachments_v3(
         return "None"
 
     lines = []
-    image_extensions = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".svg")
 
     for att in attachments:
         filename = att.get("filename", "Unknown file")
-        content_url = att.get("content", "")
+
+        # Add description if available
         description = ""
+        if image_descriptions and filename in image_descriptions:
+            description = f"\n    Description: {image_descriptions[filename]}"
 
-        if describe_images and filename.lower().endswith(image_extensions):
-            description = " [Image - description available via client service]"
-
-        lines.append(f"  - {filename}: {content_url}{description}")
+        lines.append(f"  - {filename}: {description}")
 
     return "\n".join(lines)
 
@@ -348,20 +330,16 @@ class JiraIssue:
                 return html_desc
         return ""
 
-    def get_web_url(self) -> str:
-        """Get web URL of the issue."""
-        # This should be constructed using the actual domain from config
-        # For now, using placeholder
-        return f"https://example.atlassian.net/browse/{self.get_key()}"
-
     def to_formatted_string(
-        self, with_summary: bool = True, describe_images: bool = False
+        self,
+        with_summary: bool = True,
+        image_descriptions: dict[str, str] | None = None,
     ) -> str:
         """Get formatted string representation of the issue.
 
         Args:
             with_summary: Whether to include the summary in the output
-            describe_images: Whether to describe image attachments
+            image_descriptions: Dictionary mapping filename to AI-generated description
 
         Returns:
             Formatted issue information
@@ -389,19 +367,29 @@ class JiraIssue:
         )
 
         return (
-            f"Link: {self.get_web_url()}\n"
             f"Issue: {self.get_key()}\n"
             f"{summary_str}"
             f"Creator: {creator_name}\n"
             f"Assignee: {assignee_name}\n"
             f"Description: {self.get_plain_description()}\n\n"
             f"{additional_info}\n"
-            f"Attachments:\n{format_attachments_v3(self.get_attachments(), describe_images)}\n\n"
+            f"Attachments:\n{format_attachments_v3(self.get_attachments(), image_descriptions)}\n\n"
             f"Comments:\n{format_comments_v3(self.get_comments())}\n\n"
             f"Subtasks:\n{format_subtasks_v3(self.get_subtasks())}\n\n"
             f"Linked Issues:\n{format_linked_issues_v3(self.get_linked_issues())}\n"
         )
 
-    def get_composed_issue_info(self) -> str:
-        """Get composed issue information for AI context."""
-        return self.to_formatted_string(with_summary=True, describe_images=False)
+    def get_composed_issue_info(
+        self, image_descriptions: dict[str, str] | None = None
+    ) -> str:
+        """Get composed issue information for AI context.
+
+        Args:
+            image_descriptions: Dictionary mapping filename to AI-generated description
+
+        Returns:
+            Formatted issue information string
+        """
+        return self.to_formatted_string(
+            with_summary=True, image_descriptions=image_descriptions
+        )

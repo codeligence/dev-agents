@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from datetime import datetime
 from unittest.mock import Mock, patch
 import subprocess
@@ -100,7 +82,15 @@ This fixes the login issue that was causing users to be unable to access their a
             assert commits[0].date > commits[1].date > commits[2].date
 
             # Verify git command was called correctly
-            expected_cmd = "git log --format='format:%H|%an|%aI|%B|||COMMIT_END|||' --full-history resolved_release/v1.0...resolved_release/v2.0 -- src/auth.py"
+            expected_cmd = [
+                "git",
+                "log",
+                "--format=format:%H|%an|%aI|%B|||COMMIT_END|||",
+                "--full-history",
+                "resolved_release/v1.0...resolved_release/v2.0",
+                "--",
+                "src/auth.py",
+            ]
             mock_git_output.assert_called_once_with(expected_cmd)
 
             # Verify branch resolution calls
@@ -248,9 +238,10 @@ This fixes the login issue that was causing users to be unable to access their a
 
             self.git_repo.get_commits("branch1", "branch2", file_path)
 
-            # Verify the file path was properly quoted in the git command
+            # Verify the file path is passed as a separate list element
+            # (list-based subprocess calls handle spaces without quoting)
             called_cmd = mock_git_output.call_args[0][0]
-            assert "'src/special file with spaces.py'" in called_cmd
+            assert "src/special file with spaces.py" in called_cmd
 
     def test_get_commits_sorting(self):
         """Test get_commits returns commits sorted by date (newest first)."""

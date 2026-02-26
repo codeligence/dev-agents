@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # License compliance checking script for dev-agents
-# This script checks all third-party dependencies for license compliance with AGPL v3
+# This script checks all third-party dependencies for license compliance with MIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
@@ -87,10 +87,6 @@ cat > "$PROJECT_ROOT/licenses_map.json" <<'JSON'
   "anyio": "MIT License",
   "cz-conventional-gitmoji": "MIT License",
   "hf-xet": "Apache License 2.0",
-  "mkdocs-autorefs": "ISC License",
-  "mkdocs-social-plugin": "MIT License",
-  "mkdocstrings": "ISC License",
-  "mkdocstrings-python": "ISC License",
   "mypy_extensions": "MIT License",
   "pillow": "HPND",
   "pytest-xdist": "MIT License",
@@ -110,10 +106,10 @@ jq --slurpfile map "$PROJECT_ROOT/licenses_map.json" \
 
 REPORT_JSON="$PROJECT_ROOT/licenses_report_resolved.json"
 
-# Analyze licenses for AGPL compliance
+# Analyze licenses for MIT compliance
 echo "🔍 Analyzing license compatibility..."
 
-# Known compatible licenses with AGPL v3
+# Known compatible licenses with MIT
 COMPATIBLE_LICENSES=(
     "MIT License"
     "BSD License"
@@ -180,7 +176,7 @@ if [ ${#KNOWN_MPL_DEPS[@]} -gt 0 ]; then
     for dep in "${KNOWN_MPL_DEPS[@]}"; do
         jq -r ".[] | select(.Name == \"$dep\" and (.License | contains(\"Mozilla Public License\"))) | \"- \(.Name) \(.Version) (\(.License))\"" "$REPORT_JSON"
     done
-    echo -e "   ${GREEN}✓ These dependencies are compatible with dual AGPL/proprietary licensing${NC}"
+    echo -e "   ${GREEN}✓ These dependencies are compatible with MIT licensing${NC}"
     echo -e "   ${GREEN}✓ Do not modify these libraries directly in this project${NC}"
 fi
 

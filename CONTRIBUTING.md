@@ -143,7 +143,7 @@ pytest -v
    ```
 
 2. **Use descriptive branch names**:
-   - `feature/impact-analysis-enhancement`
+   - `feature/testing-notes-enhancement`
    - `fix/slack-message-parsing`
    - `refactor/config-management`
 

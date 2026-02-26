@@ -1,26 +1,8 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from pathlib import Path
 from typing import Any, cast
 import json
 
-from .models import Issue, MergeRequest
+from .models import Issue, MergeRequest, Pipeline
 
 
 def _load_mock_file(file_path: str) -> dict[str, Any] | list[Any] | None:
@@ -88,3 +70,82 @@ def mock_fetch_issue(issue_id: str) -> Issue:
     # Ensure issue_data is a dict for Issue constructor
     issue_dict = issue_data if isinstance(issue_data, dict) else {}
     return Issue(issue_dict)
+
+
+def mock_fetch_pipeline(pipeline_id: str) -> Pipeline:
+    """Fetch mock pipeline data.
+
+    Args:
+        pipeline_id: Pipeline ID to fetch
+
+    Returns:
+        Pipeline object with mock data
+    """
+    # Load mock data from JSON file
+    mock_data = _load_mock_file("mocks/gitlab_pipeline.json")
+
+    if not mock_data or not isinstance(mock_data, dict):
+        # Return empty pipeline if file not found
+        return Pipeline({}, [])
+
+    pipeline_data = mock_data.get("pipeline", {})
+    jobs_data = mock_data.get("jobs", [])
+
+    # Update the ID to match the requested ID
+    if isinstance(pipeline_data, dict):
+        pipeline_data["id"] = int(pipeline_id)
+        pipeline_data["iid"] = int(pipeline_id)
+
+    return Pipeline(pipeline_data, cast("list[dict[str, Any]]", jobs_data))
+
+
+def mock_list_pipelines(
+    ref: str | None = None,
+    status: str | None = None,
+    count: int = 20,
+) -> list[dict[str, Any]]:
+    """Fetch mock pipeline list data with optional filtering.
+
+    Args:
+        ref: Optional git reference to filter by
+        status: Optional pipeline status to filter by
+        count: Maximum number of results to return
+
+    Returns:
+        List of pipeline data dictionaries
+    """
+    mock_data = _load_mock_file("mocks/gitlab_pipelines_list.json")
+
+    if not mock_data or not isinstance(mock_data, list):
+        return []
+
+    results = cast("list[dict[str, Any]]", mock_data)
+    if ref:
+        results = [p for p in results if p.get("ref") == ref]
+    if status:
+        results = [p for p in results if p.get("status") == status]
+
+    return results[:count]
+
+
+def mock_fetch_pipeline_job_log(pipeline_id: str, job_id: str) -> str:
+    """Fetch mock job log data.
+
+    Args:
+        pipeline_id: Pipeline ID (unused for mock)
+        job_id: Job ID to fetch logs for
+
+    Returns:
+        Job log as string
+    """
+    # Suppress unused argument warning
+    _ = pipeline_id
+
+    # Load mock data from JSON file
+    mock_data = _load_mock_file("mocks/gitlab_pipeline.json")
+
+    if not mock_data or not isinstance(mock_data, dict):
+        return "No log data available"
+
+    job_logs = mock_data.get("job_logs", {})
+    return cast("str", job_logs.get(job_id, "No log available for this job"))

@@ -4,6 +4,7 @@ core:
   storage:
     file:
       dir: "@jinja {{env.CORE_STORAGE_FILE_DIR or '/data/storage'}}"
+  version_check_url: "@jinja {{env.VERSION_CHECK_URL or ''}}"
 
 models:
   large: "@jinja {{env.LLM_MODEL_LARGE or 'openai:gpt-4.1'}}"
@@ -33,6 +34,14 @@ providers:
     email: "@jinja {{ env.get('JIRA_EMAIL', '') }}"
     token: "@jinja {{ env.get('JIRA_TOKEN', '') }}"
     mock: "@jinja {{ env.get('JIRA_MOCK', 'False') }}"
+    imageModel: "@jinja {{ env.get('JIRA_IMAGE_MODEL', '') }}"
+  bitbucket:
+    api_url: "@jinja {{ env.get('BITBUCKET_API_URL', 'https://api.bitbucket.org/2.0') }}"
+    workspace: "@jinja {{ env.get('BITBUCKET_WORKSPACE', '') }}"
+    repo_slug: "@jinja {{ env.get('BITBUCKET_REPO_SLUG', '') }}"
+    username: "@jinja {{ env.get('BITBUCKET_EMAIL', '') }}"
+    token: "@jinja {{ env.get('BITBUCKET_TOKEN', '') }}"
+    mock: "@jinja {{ env.get('BITBUCKET_MOCK', 'False') }}"
 
 projects:
   default:
@@ -60,6 +69,13 @@ projects:
         repo: "@jinja {{ this.providers.github.repo }}"
         token: "@jinja {{ this.providers.github.token }}"
         mock: "@jinja {{ this.providers.github.mock }}"
+      bitbucket:
+        api_url: "@jinja {{ this.providers.bitbucket.api_url }}"
+        workspace: "@jinja {{ this.providers.bitbucket.workspace }}"
+        repo_slug: "@jinja {{ this.providers.bitbucket.repo_slug }}"
+        username: "@jinja {{ this.providers.bitbucket.username }}"
+        token: "@jinja {{ this.providers.bitbucket.token }}"
+        mock: "@jinja {{ this.providers.bitbucket.mock }}"
     issues:
       devops:
         url: "@jinja {{ this.providers.devops.url }}"
@@ -84,13 +100,20 @@ projects:
         email: "@jinja {{ this.providers.jira.email }}"
         token: "@jinja {{ this.providers.jira.token }}"
         mock: "@jinja {{ this.providers.jira.mock }}"
+        imageModel: "@jinja {{ this.providers.jira.imageModel }}"
+    pipelines:
+      gitlab:
+        api_url: "@jinja {{ this.providers.gitlab.api_url }}"
+        project_id: "@jinja {{ this.providers.gitlab.project_id }}"
+        token: "@jinja {{ this.providers.gitlab.token }}"
+        mock: "@jinja {{ this.providers.gitlab.mock }}"
 
 slack:
   bot:
     botToken:    "@jinja {{ env.SLACK_BOT_TOKEN or '' }}"
-    channelId:   "@jinja {{ env.SLACK_CHANNEL_ID or '' }}"
     appToken:    "@jinja {{ env.SLACK_APP_TOKEN or '' }}"
     processingTimeout: "@jinja {{ env.SLACK_PROCESSING_TIMEOUT or 6000 }}"
+    maxConnectionFailures: "@jinja {{ env.SLACK_MAX_CONNECTION_FAILURES or 5 }}"
 
 agui:
   server:
@@ -102,9 +125,21 @@ agui:
     defaultAgentType: "@jinja {{env.AGUI_DEFAULT_AGENT_TYPE or 'chatbot'}}"
     maxMessageLength: "@jinja {{env.AGUI_MAX_MESSAGE_LENGTH or 10000}}"
 
+nats:
+  server_url: "@jinja {{ env.get('NATS_SERVER_URL', '') }}"
+  job_id: "@jinja {{ env.get('NATS_JOB_ID', '') }}"
+  user: "@jinja {{ env.get('NATS_USER', '') }}"
+  password: "@jinja {{ env.get('NATS_PASSWORD', '') }}"
+  ca_cert_path: "@jinja {{ env.get('NATS_CA_CERT_PATH', '') }}"
+  subject_job_data: "@jinja {{ env.get('NATS_SUBJECT_JOB_DATA', 'jobdata') }}"
+  subject_job_updates: "@jinja {{ env.get('NATS_SUBJECT_JOB_UPDATES', 'jobupdates') }}"
+
 cli:
   agent:
     defaultAgentType: "@jinja {{env.CLI_DEFAULT_AGENT_TYPE or 'gitchatbot'}}"
+
+skills:
+  enable: []
 
 agents:
   gitchatbot:
@@ -114,43 +149,7 @@ agents:
     timeoutSeconds: 60
 
 subagents:
-  impactanalysis:
-    maxFiles: "@jinja {{env.IMPACT_ANALYSIS_MAX_FILES or 200}}"
-    retries: 3
-    model: "@jinja {{ this.models.large }}"
-    fileClassification:
-      frontendPatterns:
-        - '.*\.(js|ts|jsx|tsx)$'                    # JavaScript/TypeScript files
-        - '.*\.(html|htm)$'                         # HTML files
-        - '.*\.(css|scss|sass|less|styl)$'          # Style files
-        - '.*\.(vue|svelte)$'                       # Framework files
-        - '.*/src/app/.*'                            # Angular app files
-        - '.*/components?/.*\.(js|ts|jsx|tsx)$'      # Component files
-        - '.*/pages/.*\.(js|ts|jsx|tsx)$'           # Next.js/Nuxt pages
-        - '.*/views/.*\.(js|ts|jsx|tsx|vue)$'       # Vue.js views
-        - '.*/public/.*'                             # Static assets
-        - '.*/assets/.*'                             # Frontend assets
-        - '.*/styles?/.*'                            # Style directories
-        - '.*/static/.*'                             # Static files
-        - '.*\.(json)$.*/(public|assets|static)/'   # Frontend config files
-      backendPatterns:
-        - '.*\.(cs|java|py|php|rb|go|rs|kt)$'        # Server language files
-        - '.*Controller\.(cs|java|py)$'              # Controllers
-        - '.*/Controllers?/.*\.(cs|java|py)$'        # Controller directories
-        - '.*/Models?/.*\.(cs|java|py)$'             # Model files
-        - '.*/DTOs?/.*\.(cs|java|py)$'               # DTO files
-        - '.*/Contracts?/.*\.(cs|java|py)$'          # Contract files
-        - '.*/Services?/.*\.(cs|java|py|js|ts)$'     # Service files
-        - '.*/api/.*\.(js|ts|py|cs|java|php|rb|go)$' # API routes
-        - '.*appsettings.*\.json$'                   # Configuration files
-        - '.*\.(sql|csproj|pom\.xml|requirements\.txt|Gemfile|go\.mod|Cargo\.toml)$' # Project/DB files
-        - '.*/server/.*'                             # Server directories
-        - '.*/backend/.*'                            # Backend directories
-        - '.*/src/main/.*\.(java|kt)$'               # Java/Kotlin main sources
-  changelog:
-    maxFiles: "@jinja {{env.CHANGELOG_MAX_FILES or 200}}"
-    retries: 3
-    analysisModel: "@jinja {{ this.models.small }}"
-    summaryModel: "@jinja {{ this.models.large }}"
   coderesearch:
     model: "@jinja {{ this.models.small }}"
+  claude_code:
+    cli_path: "@jinja {{ env.get('CLAUDE_CODE_PATH', '') }}"

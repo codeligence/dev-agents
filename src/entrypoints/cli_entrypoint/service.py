@@ -1,29 +1,11 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 #!/usr/bin/env python3
 """CLI entrypoint for interactive command-line agent conversations."""
 
-from pathlib import Path
 from typing import cast
 import argparse
 import asyncio
 import sys
+import threading
 
 from dotenv import load_dotenv
 
@@ -125,8 +107,13 @@ def _register_agents(agent_service: AgentService) -> None:
     logger.info("Registered agents: " + AGENT_NAME)
 
 
-async def run_cli() -> None:
-    """Run the interactive CLI loop."""
+async def run_cli(shutdown_event: threading.Event | None = None) -> None:
+    """Run the interactive CLI loop.
+
+    Args:
+        shutdown_event: Optional shared shutdown event from the orchestrator.
+            When set, the CLI loop exits gracefully.
+    """
 
     # Initialize agent service and register agents
     agent_service = AgentService()
@@ -158,14 +145,14 @@ async def run_cli() -> None:
             print(
                 f"  {_colorize('•', '96')} Please tell me about issue 123"
             )  # Cyan bullet
-            print(f"  {_colorize('•', '96')} Please do an impact analysis on issue 456")
+            print(f"  {_colorize('•', '96')} Please generate test plan for issue 456")
             print(
                 f"  {_colorize('•', '96')} Please run the guideline check on issue 789"
             )
         else:
             print("Here are some examples to get you started:")
             print("  • Please tell me about issue 123")
-            print("  • Please do an impact analysis on issue 456")
+            print("  • Please generate test plan for issue 456")
             print("  • Please run the guideline check on issue 789")
 
         print()
@@ -174,6 +161,11 @@ async def run_cli() -> None:
 
         while True:
             try:
+                # Check if orchestrator requested shutdown
+                if shutdown_event is not None and shutdown_event.is_set():
+                    print("\nShutting down...")
+                    break
+
                 # Get user input
                 user_input = input("You: ").strip()
 
@@ -246,16 +238,6 @@ def main() -> None:
     logger.info("Starting CLI service")
 
     try:
-        # Print release information if available
-        try:
-            with Path("release.txt").open() as f:
-                release_info = f.read().strip()
-                logger.info(f"Release information:\\n{release_info}")
-        except FileNotFoundError:
-            logger.info("No release information available")
-        except Exception as release_error:
-            logger.warning(f"Could not read release information: {release_error}")
-
         # Run the CLI loop
         asyncio.run(run_cli())
 
@@ -265,6 +247,64 @@ def main() -> None:
     except Exception as startup_error:
         logger.error(f"Failed to start CLI service: {str(startup_error)}")
         sys.exit(1)
+
+
+async def run_single_prompt(prompt: str) -> None:
+    """Execute a single prompt non-interactively and return.
+
+    Used for scripted/CI usage (e.g. ``--prompt`` flag from Docker containers).
+    No banner, no input loop — just one agent round-trip.
+
+    Args:
+        prompt: The user prompt to send to the agent.
+    """
+    agent_service = AgentService()
+    _register_agents(agent_service)
+
+    cli_config = CLIConfig(base_config)
+    agent_type = cli_config.get_default_agent_type()
+
+    conversation_history = MessageList()
+    thread_id = "cli-prompt"
+
+    context_token = set_context_token(thread_id)
+    try:
+        cli_context = CLIAgentContext(
+            message_list=conversation_history,
+            config=base_config,
+            prompts=get_default_prompts(),
+            thread_id=thread_id,
+        )
+        cli_context.add_user_message(prompt)
+
+        logger.info(f"Running single prompt: {prompt[:50]}...")
+
+        await agent_service.execute_agent_by_type(
+            agent_type=agent_type, context=cli_context
+        )
+
+        logger.info("Single prompt execution completed successfully")
+    finally:
+        reset_context_token(context_token)
+
+
+def start_service(shutdown_event: threading.Event) -> None:
+    """Start the CLI service, managed by the orchestrator.
+
+    Args:
+        shutdown_event: Shared shutdown event from the orchestrator.
+            When set, the CLI loop exits gracefully.
+    """
+    logger.info("Starting CLI service (orchestrated)")
+
+    try:
+        asyncio.run(run_cli(shutdown_event=shutdown_event))
+    except KeyboardInterrupt:
+        logger.info("CLI received interrupt, shutting down...")
+    except Exception as e:
+        logger.error(f"Error in CLI service: {str(e)}")
+    finally:
+        logger.info("CLI service shut down")
 
 
 if __name__ == "__main__":

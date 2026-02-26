@@ -1,22 +1,5 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from pathlib import Path
+from typing import Any
 import threading
 
 from dotenv import load_dotenv
@@ -32,14 +15,26 @@ logger = get_logger("BasePrompts")
 class BasePrompts:
     """Base prompts class that loads and resolves YAML prompts with environment variables using Dynaconf."""
 
-    def __init__(self, prompts_path: str | None = None):
-        if prompts_path is None:
-            # Default to config/prompts.yaml relative to project root
-            project_root = Path(__file__).parent.parent.parent
-            prompts_path = str(project_root / "config" / "prompts.yaml")
+    _prompts_path: str
+    _settings: Any
 
-        self._prompts_path = prompts_path
-        self._settings = self._load_prompts()
+    def __init__(
+        self,
+        prompts_path: str | None = None,
+        base_prompts: "BasePrompts | None" = None,
+    ):
+        if base_prompts is not None:
+            # Copy constructor: share settings from another BasePrompts instance
+            self._prompts_path = base_prompts._prompts_path
+            self._settings = base_prompts._settings
+        else:
+            if prompts_path is None:
+                # Default to config/prompts.yaml relative to project root
+                project_root = Path(__file__).parent.parent.parent
+                prompts_path = str(project_root / "config" / "prompts.yaml")
+
+            self._prompts_path = prompts_path
+            self._settings = self._load_prompts()
 
     def _load_prompts(self) -> Dynaconf:
         """Load and resolve the YAML prompts file using Dynaconf."""
@@ -58,7 +53,7 @@ class BasePrompts:
             ignore_unknown_envvars=True,
             environments=False,
             env_switcher="DYNACONF_ENV",
-            load_dotenv=True,
+            load_dotenv=False,
             merge_enabled=True,
         )
         return settings
@@ -81,6 +76,25 @@ class BasePrompts:
         except Exception as e:
             logger.warning(f"Error Prompt key '{key_path}' not found: {str(e)}")
             return default
+
+    def with_overlay(self, overlay_path: str) -> "BasePrompts":
+        """Create a new prompts instance with overlay merged on top of this one.
+
+        Clones the current settings in memory (no disk I/O for the base)
+        and merges the overlay file on top of the clone.
+
+        Args:
+            overlay_path: Path to the overlay YAML file to merge.
+
+        Returns:
+            New BasePrompts instance with overlay values merged.
+        """
+        clone = object.__new__(type(self))
+        clone._prompts_path = self._prompts_path
+        clone._settings = self._settings.dynaconf_clone()
+        if Path(overlay_path).exists():
+            clone._settings.load_file(path=overlay_path)
+        return clone
 
 
 # Global default prompts instance - thread-safe singleton

@@ -1,0 +1,67 @@
+[
+    {
+        "id": 281,
+        "iid": 11,
+        "project_id": 42,
+        "sha": "a0d2dfb2f80bf753f08cf4925e98322a52694464",
+        "ref": "deploy",
+        "status": "success",
+        "source": "push",
+        "created_at": "2026-01-19T10:45:46.026Z",
+        "updated_at": "2026-01-19T12:29:37.555Z",
+        "web_url": "https://gitlab.example.com/example/project/-/pipelines/281",
+        "name": null
+    },
+    {
+        "id": 280,
+        "iid": 10,
+        "project_id": 42,
+        "sha": "9fe23e17f30ce5cc3b11196e792d0e17c1a7784e",
+        "ref": "deploy",
+        "status": "failed",
+        "source": "push",
+        "created_at": "2026-01-19T10:43:38.759Z",
+        "updated_at": "2026-01-19T10:43:47.133Z",
+        "web_url": "https://gitlab.example.com/example/project/-/pipelines/280",
+        "name": null
+    },
+    {
+        "id": 279,
+        "iid": 9,
+        "project_id": 42,
+        "sha": "55fb4d81e4b28fd2084f13ec9e20800593375784",
+        "ref": "main",
+        "status": "success",
+        "source": "merge_request_event",
+        "created_at": "2026-01-19T10:34:02.844Z",
+        "updated_at": "2026-01-19T10:39:37.047Z",
+        "web_url": "https://gitlab.example.com/example/project/-/pipelines/279",
+        "name": null
+    },
+    {
+        "id": 278,
+        "iid": 8,
+        "project_id": 42,
+        "sha": "6ee8d41528f893fa91b50287f75db1274bc1c02c",
+        "ref": "feature/auth-update",
+        "status": "running",
+        "source": "push",
+        "created_at": "2026-01-18T10:27:00.493Z",
+        "updated_at": "2026-01-18T10:27:09.170Z",
+        "web_url": "https://gitlab.example.com/example/project/-/pipelines/278",
+        "name": null
+    },
+    {
+        "id": 277,
+        "iid": 7,
+        "project_id": 42,
+        "sha": "5c8755f21954bbe1ae140e9f14543696ca2300ea",
+        "ref": "deploy",
+        "status": "pending",
+        "source": "push",
+        "created_at": "2026-01-17T16:32:27.746Z",
+        "updated_at": "2026-01-18T09:46:49.174Z",
+        "web_url": "https://gitlab.example.com/example/project/-/pipelines/277",
+        "name": null
+    }
+]

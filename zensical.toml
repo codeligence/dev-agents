@@ -1,0 +1,234 @@
+# Zensical Configuration for Dev Agents Documentation
+# Migrated from mkdocs.yml
+
+[project]
+site_name = "Dev Agents Documentation"
+site_description = "AI-Powered Development Team Automation with PydanticAI"
+site_author = "Dev Agents Team"
+site_url = "https://dev-agents.ai/"
+
+# Repository information
+repo_name = "dev-agents"
+repo_url = "https://github.com/codeligence/dev-agents"
+edit_uri = "edit/main/docs/"
+
+# Copyright
+copyright = "Copyright &copy; 2025 Codeligence"
+
+# Additional CSS
+extra_css = ["stylesheets/extra.css"]
+
+# Additional JavaScript
+extra_javascript = [
+  "javascripts/matomo.js",
+  "javascripts/mathjax.js",
+  "https://polyfill.io/v3/polyfill.min.js?features=es6",
+  "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js",
+  "https://unpkg.com/mermaid@10.6.1/dist/mermaid.min.js"
+]
+
+# Theme configuration
+[project.theme]
+variant = "modern"
+favicon = "assets/favicon.png"
+logo = "assets/logo.svg"
+
+# Theme features
+[project.theme.features]
+announce_dismiss = true
+content_action_edit = true
+content_action_view = true
+content_code_annotate = true
+content_code_copy = true
+content_tabs_link = true
+content_tooltips = true
+header_autohide = true
+navigation_expand = true
+navigation_footer = true
+navigation_indexes = true
+navigation_instant = true
+navigation_instant_prefetch = true
+navigation_instant_progress = true
+navigation_prune = true
+navigation_sections = true
+navigation_tabs = true
+navigation_tabs_sticky = true
+navigation_top = true
+navigation_tracking = true
+search_highlight = true
+search_share = true
+search_suggest = true
+toc_follow = true
+toc_integrate = true
+
+# Theme palette - Light mode
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "blue"
+accent = "blue"
+
+[project.theme.palette.toggle]
+icon = "material/brightness-7"
+name = "Switch to dark mode"
+
+# Theme palette - Dark mode
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "blue"
+accent = "blue"
+
+[project.theme.palette.toggle]
+icon = "material/brightness-4"
+name = "Switch to light mode"
+
+# Theme fonts
+[project.theme.font]
+text = "Roboto"
+code = "Roboto Mono"
+
+# Navigation structure
+[[project.nav]]
+Home = "index.md"
+
+[[project.nav]]
+"Quick Start" = "quick-start.md"
+
+[[project.nav]]
+Configuration = [
+  { "Environment Variables" = "configuration/environment-variables.md" },
+  { "config.yaml" = "configuration/config-yaml.md" },
+  { "prompts.yaml" = "configuration/prompts-yaml.md" },
+  { Integrations = [
+    { Git = "configuration/integrations/git.md" },
+    { Slack = "configuration/integrations/slack.md" },
+    { "Azure DevOps" = "configuration/integrations/azure-devops.md" },
+    { GitLab = "configuration/integrations/gitlab.md" }
+  ]}
+]
+
+# Search configuration
+[project.search]
+separator = '''[\\s\\-,:!=\\[\\]()\"`/]+|\\.(?!\\d)|&[lg]t;|(?!\\b)(?=[A-Z][a-z])'''
+lang = "en"
+
+# Markdown extensions configuration
+[project.markdown_extensions.abbr]
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.def_list]
+[project.markdown_extensions.footnotes]
+[project.markdown_extensions.md_in_html]
+
+[project.markdown_extensions.toc]
+permalink = true
+title = "On this page"
+
+[project.markdown_extensions.tables]
+
+[project.markdown_extensions.pymdownx.arithmatex]
+generic = true
+
+[project.markdown_extensions.pymdownx.betterem]
+smart_enable = "all"
+
+[project.markdown_extensions.pymdownx.caret]
+[project.markdown_extensions.pymdownx.details]
+
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+
+[project.markdown_extensions.pymdownx.inlinehilite]
+[project.markdown_extensions.pymdownx.keys]
+
+# Note: MagicLink configuration simplified - full Python object references not supported in TOML
+[project.markdown_extensions.pymdownx.magiclink]
+normalize_issue_symbols = true
+repo_url_shorthand = true
+
+[project.markdown_extensions.pymdownx.mark]
+[project.markdown_extensions.pymdownx.smartsymbols]
+
+# Snippets - Note: auto_append feature removed (includes/mkdocs.md doesn't exist)
+[project.markdown_extensions.pymdownx.snippets]
+
+[project.markdown_extensions.pymdownx.superfences]
+# Note: Custom fences like Mermaid may require additional configuration
+
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true
+
+[project.markdown_extensions.pymdownx.tasklist]
+custom_checkbox = true
+
+[project.markdown_extensions.pymdownx.tilde]
+
+[project.markdown_extensions.pymdownx.emoji]
+# Note: Emoji configuration uses Zensical's built-in emoji support
+
+# Extra configuration
+[project.extra]
+generator = false
+
+# Social links
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/codeligence/dev-agents"
+name = "GitHub Repository"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/python"
+link = "https://pypi.org/project/dev-agents/"
+name = "PyPI Package"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/docker"
+link = "https://hub.docker.com/r/codeligence/dev-agents"
+name = "Docker Hub"
+
+# Analytics configuration
+[project.extra.analytics]
+provider = "google"
+property = "G-XXXXXXXXXX"  # Replace with actual GA4 property
+
+[project.extra.analytics.feedback]
+title = "Was this page helpful?"
+
+[[project.extra.analytics.feedback.ratings]]
+icon = "material/thumb-up-outline"
+name = "This page was helpful"
+data = 1
+note = "Thanks for your feedback!"
+
+[[project.extra.analytics.feedback.ratings]]
+icon = "material/thumb-down-outline"
+name = "This page could be improved"
+data = 0
+note = '''Thanks for your feedback! Help us improve this page by
+<a href="https://github.com/codeligence/dev-agents/issues/new/?title=[Docs]+{title}+-+{url}" target="_blank" rel="noopener">telling us what you need</a>.'''
+
+# Status labels
+[project.extra.status]
+new = "Recently added"
+deprecated = "Deprecated"
+
+# =============================================================================
+# FEATURES REMOVED IN ZENSICAL MIGRATION:
+# =============================================================================
+# - mkdocstrings plugin (Python API documentation from docstrings)
+# - git-revision-date-localized plugin (file modification dates)
+# - social cards plugin (OpenGraph images - in development)
+# - minify plugin (HTML/CSS/JS minification)
+# - autorefs plugin (automatic cross-references)
+# - include-markdown plugin (including external markdown files)
+# - mike versioning (documentation version management)
+# - griffe_fieldz extension (Pydantic field documentation)
+#
+# If you need these features, consider:
+# - Manual API documentation in markdown files
+# - External build tools for minification
+# - Waiting for Zensical to add these features
+# =============================================================================

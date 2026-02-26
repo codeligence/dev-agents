@@ -28,7 +28,9 @@
                 "im:history",
                 "users:read",
                 "canvases:read",
-                "canvases:write"
+                "canvases:write",
+                "reactions:read",
+                "reactions:write"
             ]
         }
     },

@@ -1,24 +1,21 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol
+
+
+@dataclass
+class PipelineModel:
+    """Model representing a CI/CD pipeline from any provider."""
+
+    id: str
+    context: str  # Composed pipeline info for AI context
+    status: str  # success, failed, running, pending, canceled, skipped
+    ref: str  # Git branch or tag
+    web_url: str  # Link to pipeline UI
+    jobs: list[dict[str, Any]] = field(default_factory=list)
+    failed_jobs: list[dict[str, Any]] = field(default_factory=list)
+    duration: int | None = None
+    coverage: str | None = None
 
 
 @dataclass
@@ -101,5 +98,121 @@ class IssueProvider(Protocol):
 
         Raises:
             ProviderError: If issue cannot be loaded
+        """
+        ...
+
+    def extract_issue_ids(self, text: str) -> list[str]:  # noqa: ARG002
+        """Extract issue IDs from text.
+
+        Args:
+            text: Text to search for issue identifiers
+
+        Returns:
+            List of issue IDs found in text
+        """
+        return []
+
+    async def update(
+        self, issue_id: str, description: str  # noqa: ARG002
+    ) -> tuple[bool, str]:
+        """Update issue description.
+
+        Default implementation returns failure. Override in providers
+        that support issue updates (e.g., Jira).
+
+        Args:
+            issue_id: Issue identifier
+            description: New description in Markdown format
+
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        return False, "Update not supported by this provider"
+
+
+@dataclass
+class PipelineListFilter:
+    """Filter criteria for listing pipelines."""
+
+    ref: str | None = None
+    status: str | None = None
+    count: int = 20
+
+
+@dataclass
+class PipelineSummaryModel:
+    """Lightweight model representing a pipeline in list results."""
+
+    id: str
+    status: str
+    ref: str
+    sha: str
+    web_url: str
+    created_at: str
+    updated_at: str
+    source: str = ""
+
+
+class PipelineProvider(Protocol):
+    """Protocol for CI/CD pipeline providers (GitLab CI, GitHub Actions, etc.)."""
+
+    @staticmethod
+    @abstractmethod
+    def from_config(config: dict[str, Any]) -> Optional["PipelineProvider"]:
+        """Create provider instance from configuration.
+
+        Args:
+            config: Provider-specific configuration dictionary
+
+        Returns:
+            Provider instance if config is valid, None otherwise
+        """
+        ...
+
+    @abstractmethod
+    async def load(self, pipeline_id: str) -> PipelineModel:
+        """Load pipeline by ID.
+
+        Args:
+            pipeline_id: Pipeline identifier
+
+        Returns:
+            PipelineModel with pipeline data and context
+
+        Raises:
+            ProviderError: If pipeline cannot be loaded
+        """
+        ...
+
+    @abstractmethod
+    async def list(
+        self, filters: PipelineListFilter | None = None
+    ) -> list[PipelineSummaryModel]:
+        """List pipelines with optional filtering.
+
+        Args:
+            filters: Optional filter criteria for ref, status, and result count
+
+        Returns:
+            List of PipelineSummaryModel with pipeline summaries
+
+        Raises:
+            ProviderError: If pipelines cannot be listed
+        """
+        ...
+
+    @abstractmethod
+    async def get_job_log(self, pipeline_id: str, job_id: str) -> str:
+        """Get log output for a specific job.
+
+        Args:
+            pipeline_id: Pipeline identifier
+            job_id: Job identifier
+
+        Returns:
+            Job log as string
+
+        Raises:
+            ProviderError: If job log cannot be retrieved
         """
         ...

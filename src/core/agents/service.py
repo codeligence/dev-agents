@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 """Agent orchestration service for managing agent execution."""
 
 from collections.abc import Callable
@@ -31,6 +13,7 @@ from core.agents.context import (
 )
 from core.agents.factory import SimpleAgentFactory
 from core.exceptions import AgentExecutionError, AgentGracefulExit, AgentTimeoutError
+from core.hooks import hooks
 from core.log import get_logger
 from core.protocols.agent_protocols import Agent, AgentExecutionContext
 
@@ -43,6 +26,7 @@ class AgentService:
     def __init__(self, default_timeout_seconds: int = 6000):
         self.default_timeout_seconds = default_timeout_seconds
         self.agent_factory = SimpleAgentFactory()
+        hooks().do_action("agent_service.created", self)
 
     def register_agent(
         self, agent_type: str, factory_func: Callable[[], type[Agent]]
@@ -81,6 +65,9 @@ class AgentService:
             AgentExecutionError: If agent execution fails
             AgentTimeoutError: If agent execution exceeds timeout
         """
+        agent_type = hooks().apply_filters(
+            "agent_service.execute_agent_name", agent_type
+        )
         logger.info(f"Creating and executing agent by type: {agent_type}")
 
         # Get agent class from factory

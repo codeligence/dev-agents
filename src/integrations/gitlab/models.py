@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from typing import Any, cast
 
 from bs4 import BeautifulSoup
@@ -243,5 +225,218 @@ class Issue:
             composed_info += f"Closed: {self.get_closed_at()}\n"
 
         composed_info += f"\nDescription:\n{self.get_plain_description()}\n"
+
+        return composed_info
+
+
+class Pipeline:
+    """Represents a GitLab pipeline."""
+
+    def __init__(
+        self,
+        pipeline_data: dict[str, Any],
+        jobs_data: list[dict[str, Any]] | None = None,
+    ):
+        """Initialize with GitLab API pipeline and jobs data.
+
+        Args:
+            pipeline_data: GitLab API pipeline data dictionary
+            jobs_data: Optional GitLab API jobs data list
+        """
+        self.pipeline_data = pipeline_data
+        self.jobs_data = jobs_data or []
+
+    def get_id(self) -> str:
+        """Get pipeline ID."""
+        return str(self.pipeline_data.get("id", ""))
+
+    def get_iid(self) -> str:
+        """Get pipeline IID (internal ID)."""
+        return str(self.pipeline_data.get("iid", ""))
+
+    def get_status(self) -> str:
+        """Get pipeline status."""
+        return cast("str", self.pipeline_data.get("status", ""))
+
+    def get_ref(self) -> str:
+        """Get git reference (branch/tag)."""
+        return cast("str", self.pipeline_data.get("ref", ""))
+
+    def get_sha(self) -> str:
+        """Get commit SHA."""
+        return cast("str", self.pipeline_data.get("sha", ""))
+
+    def get_created_at(self) -> str:
+        """Get creation date."""
+        return cast("str", self.pipeline_data.get("created_at", ""))
+
+    def get_updated_at(self) -> str:
+        """Get last update date."""
+        return cast("str", self.pipeline_data.get("updated_at", ""))
+
+    def get_finished_at(self) -> str | None:
+        """Get finish date."""
+        return self.pipeline_data.get("finished_at")
+
+    def get_duration(self) -> int | None:
+        """Get pipeline duration in seconds."""
+        return self.pipeline_data.get("duration")
+
+    def get_web_url(self) -> str:
+        """Get web URL of the pipeline."""
+        return cast("str", self.pipeline_data.get("web_url", ""))
+
+    def get_jobs(self) -> list[dict[str, Any]]:
+        """Get jobs associated with the pipeline."""
+        return self.jobs_data
+
+    def get_failed_jobs(self) -> list[dict[str, Any]]:
+        """Get only failed jobs."""
+        return [job for job in self.jobs_data if job.get("status") == "failed"]
+
+    def get_user(self) -> dict[str, Any] | None:
+        """Get user who triggered the pipeline."""
+        return self.pipeline_data.get("user")
+
+    def get_source(self) -> str:
+        """Get pipeline source (push, merge_request_event, etc.)."""
+        return cast("str", self.pipeline_data.get("source", ""))
+
+    def get_merge_request(self) -> dict[str, Any] | None:
+        """Get merge request info if pipeline was triggered by MR."""
+        return self.pipeline_data.get("merge_request")
+
+    def get_before_sha(self) -> str:
+        """Get the commit SHA before this pipeline."""
+        return cast("str", self.pipeline_data.get("before_sha", ""))
+
+    def get_coverage(self) -> str | None:
+        """Get code coverage percentage."""
+        return self.pipeline_data.get("coverage")
+
+    def get_composed_pipeline_info(self) -> str:
+        """Get composed pipeline information for context."""
+        # Header
+        composed_info = "=" * 80 + "\n"
+        composed_info += f"📊 PIPELINE #{self.get_iid()} (ID: {self.get_id()})\n"
+        composed_info += "=" * 80 + "\n\n"
+
+        # Status
+        status = self.get_status()
+        status_emoji = {
+            "success": "✅",
+            "failed": "❌",
+            "running": "🔄",
+            "pending": "⏳",
+            "canceled": "🚫",
+            "skipped": "⏭️",
+        }.get(status, "❓")
+        composed_info += f"Status: {status_emoji} {status.upper()}\n"
+
+        # Reference & Commit
+        composed_info += f"Branch/Tag: {self.get_ref()}\n"
+        composed_info += f"Commit SHA: {self.get_sha()}\n"
+        if self.get_before_sha():
+            composed_info += f"Previous SHA: {self.get_before_sha()}\n"
+
+        # Triggered by
+        user = self.get_user()
+        if user:
+            username = user.get("username", "Unknown")
+            name = user.get("name", username)
+            composed_info += f"Triggered by: {name} (@{username})\n"
+
+        # Source
+        source = self.get_source()
+        composed_info += f"Source: {source}\n"
+
+        # Merge Request info
+        mr = self.get_merge_request()
+        if mr:
+            mr_iid = mr.get("iid", "?")
+            mr_title = mr.get("title", "")
+            composed_info += f"Merge Request: !{mr_iid} - {mr_title}\n"
+
+        # Timing
+        composed_info += "\n⏱️ Timing:\n"
+        composed_info += f"  Created: {self.get_created_at()}\n"
+        composed_info += f"  Updated: {self.get_updated_at()}\n"
+        if self.get_finished_at():
+            composed_info += f"  Finished: {self.get_finished_at()}\n"
+
+        duration = self.get_duration()
+        if duration:
+            duration_mins = duration // 60
+            duration_secs = duration % 60
+            composed_info += f"  Duration: {duration_mins}m {duration_secs}s\n"
+
+        # Coverage
+        coverage = self.get_coverage()
+        if coverage:
+            composed_info += f"\n📈 Code Coverage: {coverage}%\n"
+
+        # Web URL
+        composed_info += f"\n🔗 Web URL: {self.get_web_url()}\n"
+
+        # Jobs Summary
+        if self.jobs_data:
+            composed_info += "\n" + "=" * 80 + "\n"
+            composed_info += f"📋 JOBS ({len(self.jobs_data)} total)\n"
+            composed_info += "=" * 80 + "\n\n"
+
+            # Group jobs by stage
+            stages: dict[str, list[dict[str, Any]]] = {}
+            for job in self.jobs_data:
+                stage = job.get("stage", "unknown")
+                if stage not in stages:
+                    stages[stage] = []
+                stages[stage].append(job)
+
+            # Show jobs by stage
+            for stage, jobs in stages.items():
+                composed_info += f"\n🔹 Stage: {stage}\n"
+                for job in jobs:
+                    job_id = job.get("id", "")
+                    job_name = job.get("name", "")
+                    job_status = job.get("status", "")
+
+                    job_status_emoji = {
+                        "success": "✅",
+                        "failed": "❌",
+                        "running": "🔄",
+                        "pending": "⏳",
+                        "canceled": "🚫",
+                        "skipped": "⏭️",
+                    }.get(job_status, "❓")
+
+                    composed_info += (
+                        f"  {job_status_emoji} [{job_status}] {job_name} "
+                        f"(ID: {job_id})\n"
+                    )
+
+                    # Add duration if available
+                    job_duration = job.get("duration")
+                    if job_duration:
+                        mins = int(job_duration) // 60
+                        secs = int(job_duration) % 60
+                        composed_info += f"     Duration: {mins}m {secs}s\n"
+
+                    # Add failure reason if job failed
+                    if job_status == "failed":
+                        failure_reason = job.get("failure_reason", "Unknown")
+                        composed_info += f"     ⚠️ Failure Reason: {failure_reason}\n"
+
+        # Failed jobs summary
+        failed_jobs = self.get_failed_jobs()
+        if failed_jobs:
+            composed_info += "\n" + "=" * 80 + "\n"
+            composed_info += f"❌ FAILED JOBS ({len(failed_jobs)})\n"
+            composed_info += "=" * 80 + "\n\n"
+            for job in failed_jobs:
+                job_name = job.get("name", "")
+                job_id = job.get("id", "")
+                failure_reason = job.get("failure_reason", "Unknown")
+                composed_info += f"• {job_name} (ID: {job_id})\n"
+                composed_info += f"  Reason: {failure_reason}\n\n"
 
         return composed_info

@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from abc import abstractmethod
 from typing import TYPE_CHECKING, Any, Protocol, Union
 
@@ -29,6 +11,7 @@ if TYPE_CHECKING:
     from pydantic_ai.models import Model
 
     from core.integrations.context_integration_loader import ContextIntegrationLoader
+    from core.storage import BaseStorage
     from core.utils.progress_tracker import ProgressTracker
 
 
@@ -54,6 +37,22 @@ class AgentExecutionContext(Protocol):
 
         Args:
             response: Final response message
+        """
+        ...
+
+    @abstractmethod
+    async def send_attachment(
+        self, name: str, content: str | bytes, is_binary: bool = False
+    ) -> None:
+        """Post an attachment with the given name and content.
+
+        Args:
+            name: Title/name of the attachment
+            content: Content of the attachment (text/markdown or binary)
+            is_binary: Whether the content is binary data (default False)
+
+        Raises:
+            NotImplementedError: If binary attachments are not supported
         """
         ...
 
@@ -135,6 +134,18 @@ class AgentExecutionContext(Protocol):
 
         return ProgressTracker(status_callback=self.send_status)
 
+    def get_storage(self) -> "BaseStorage":
+        """Get the storage instance for this context.
+
+        Override this method in implementations to provide a custom storage instance.
+
+        Returns:
+            BaseStorage instance for data persistence
+        """
+        from core.storage import get_storage as get_global_storage
+
+        return get_global_storage(self.get_config())
+
     def track_usage(
         self, model: Union[str, "Model"], usage: RunUsage | None = None
     ) -> None:
@@ -142,6 +153,7 @@ class AgentExecutionContext(Protocol):
 
         Accumulates usage statistics across multiple runs for the same model.
         Creates a new RunUsage instance if this is the first time tracking for the model.
+        Also persists usage to storage for historical tracking.
 
         Args:
             model: Name/identifier of the model (string) or Model instance
@@ -167,6 +179,12 @@ class AgentExecutionContext(Protocol):
 
         # Increment existing usage with new usage
         run_usage_by_model[model_name].incr(usage)
+
+        # Persist to usage storage
+        from core.usage import get_usage_storage
+
+        usage_storage = get_usage_storage(self.get_storage())
+        usage_storage.track(model_name, usage)
 
     def log_run_usages(self) -> None:
         """Log all RunUsage statistics accumulated during agent execution.
@@ -195,6 +213,8 @@ class AgentExecutionContext(Protocol):
                 f"Requests: {usage.requests} | "
                 f"Input tokens: {usage.input_tokens} | "
                 f"Output tokens: {usage.output_tokens} | "
+                f"Write cache tokens: {usage.cache_write_tokens} | "
+                f"Read cache tokens: {usage.cache_read_tokens} | "
                 f"Total tokens: {usage.total_tokens}"
             )
 

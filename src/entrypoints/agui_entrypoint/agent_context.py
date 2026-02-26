@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 """AG-UI implementation of AgentExecutionContext."""
 
 from typing import Any
@@ -170,6 +152,58 @@ class AGUIAgentContext(AgentExecutionContext):
         except Exception as e:
             logger.error(f"Failed to emit response events: {str(e)}")
             raise Exception("Failed to send response via AG-UI events")
+
+    async def send_attachment(
+        self, name: str, content: str | bytes, is_binary: bool = False
+    ) -> None:
+        """Post an attachment to AG-UI.
+
+        Emits a CustomEvent with the attachment data for the AG-UI to handle.
+
+        Args:
+            name: Title/name of the attachment
+            content: Content of the attachment (text/markdown or binary)
+            is_binary: Whether the content is binary data (default False)
+        """
+        logger.info(f"Posting attachment: {name} (binary: {is_binary})")
+
+        try:
+            import base64
+
+            # Prepare content for transmission
+            if is_binary:
+                if isinstance(content, bytes):
+                    encoded_content = base64.b64encode(content).decode("utf-8")
+                else:
+                    # Convert string to bytes then base64 encode
+                    encoded_content = base64.b64encode(content.encode("utf-8")).decode(
+                        "utf-8"
+                    )
+            else:
+                # For text content, ensure it's a string
+                encoded_content = (
+                    content if isinstance(content, str) else content.decode("utf-8")
+                )
+
+            # Emit custom event with attachment data
+            await self._emit_event(
+                CustomEvent(
+                    type=EventType.CUSTOM,
+                    name="attachment",
+                    value={
+                        "name": name,
+                        "content": encoded_content,
+                        "is_binary": is_binary,
+                        "timestamp": asyncio.get_event_loop().time(),
+                    },
+                )
+            )
+
+            logger.info(f"Successfully posted attachment '{name}' to AG-UI")
+
+        except Exception as e:
+            logger.error(f"Error posting attachment '{name}': {str(e)}")
+            raise Exception(f"Failed to post attachment '{name}': {str(e)}")
 
     async def _emit_event(self, event: Event) -> None:
         """Emit an event by putting it in the event queue.

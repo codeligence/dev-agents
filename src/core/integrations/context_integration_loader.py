@@ -1,26 +1,9 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
-from typing import Any
 import logging
 
 from core.integrations.provider_registry import ProviderRegistry
 from core.project_config import ProjectConfig
+from core.protocols import IssueModel, PullRequestModel
+from core.protocols.provider_protocols import IssueProvider, PullRequestProvider
 from integrations.git.git_repository import GitRepository
 
 
@@ -33,8 +16,8 @@ class ContextIntegrationLoader:
         self._logger: logging.Logger | None = None
 
         # In-memory cache for loaded models
-        self._pr_cache: dict[str, Any] = {}
-        self._issue_cache: dict[str, Any] = {}
+        self._pr_cache: dict[str, PullRequestModel] = {}
+        self._issue_cache: dict[str, IssueModel] = {}
 
     def _get_provider_registry(self) -> ProviderRegistry:
         """Lazy initialization of provider registry to avoid circular imports."""
@@ -52,7 +35,7 @@ class ContextIntegrationLoader:
             self._logger = get_logger("ProjectLoader")
         return self._logger
 
-    async def load_pullrequest(self, pullrequest_id: str) -> Any:
+    async def load_pullrequest(self, pullrequest_id: str) -> PullRequestModel:
         """Load pull request model with caching.
 
         Args:
@@ -85,7 +68,7 @@ class ContextIntegrationLoader:
         self._pr_cache[pullrequest_id] = pr_model
         return pr_model
 
-    async def load_issue(self, issue_id: str) -> Any:
+    async def load_issue(self, issue_id: str) -> IssueModel:
         """Load issue model with caching.
 
         Args:
@@ -143,6 +126,32 @@ class ContextIntegrationLoader:
 
     def _resolve_refs_to_branch(self, refs: list[str]) -> str | None:
         return GitRepository(self.project_config).resolve_refs_to_branch(refs)
+
+    def get_project_config(self) -> ProjectConfig:
+        """Get the project configuration for this loader.
+
+        Returns:
+            ProjectConfig instance used by this loader
+        """
+        return self.project_config
+
+    def get_issue_provider(self) -> IssueProvider | None:
+        """Get the configured issue provider for this project.
+
+        Returns:
+            Issue provider instance or None if not available
+        """
+        return self._get_provider_registry().resolve_issue_provider(self.project_config)
+
+    def get_pullrequest_provider(self) -> PullRequestProvider | None:
+        """Get the configured pull request provider for this project.
+
+        Returns:
+            Pull request provider instance or None if not available
+        """
+        return self._get_provider_registry().resolve_pullrequest_provider(
+            self.project_config
+        )
 
     def clear_cache(self) -> None:
         """Clear all cached models."""

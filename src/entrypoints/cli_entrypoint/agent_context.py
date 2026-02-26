@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 """CLI implementation of AgentExecutionContext."""
 
 from datetime import datetime
@@ -117,6 +99,48 @@ class CLIAgentContext(AgentExecutionContext):
         )
 
         self.message_list.add_message(response_message)
+
+    async def send_attachment(
+        self, name: str, content: str | bytes, is_binary: bool = False
+    ) -> None:
+        """Post an attachment to the CLI.
+
+        For text content: Prints the attachment content with formatting
+        For binary content: Raises NotImplementedError (not supported)
+
+        Args:
+            name: Title/name of the attachment
+            content: Content of the attachment (text/markdown or binary)
+            is_binary: Whether the content is binary data (default False)
+
+        Raises:
+            NotImplementedError: If binary attachments are requested
+        """
+        logger.info(f"Posting attachment: {name} (binary: {is_binary})")
+
+        if is_binary:
+            logger.error("Binary attachments not supported in CLI")
+            raise NotImplementedError("Binary attachments not supported in CLI")
+
+        try:
+            # For text content, print with nice formatting
+            content_str = (
+                content
+                if isinstance(content, str)
+                else content.decode("utf-8", errors="replace")
+            )
+
+            print(f"\n{_green('📎 Attachment:')} {_red(name)}")
+            print("─" * (len(name) + 13))
+            print(content_str)
+            print("─" * (len(name) + 13))
+            print()
+
+            logger.info(f"Successfully posted attachment '{name}' to CLI")
+
+        except Exception as e:
+            logger.error(f"Error posting attachment '{name}': {str(e)}")
+            raise Exception(f"Failed to post attachment '{name}': {str(e)}")
 
     def get_message_list(self) -> MessageList:
         """Get the list of messages available to the agent.

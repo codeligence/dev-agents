@@ -1,22 +1,7 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 from dataclasses import dataclass
+from typing import cast
+
+from core.config import BaseConfig
 
 
 @dataclass
@@ -25,3 +10,19 @@ class CodeResearchDependencies:
 
     git_ref: str
     repo_path: str
+    max_lines: int = 2000  # Default max lines for file reads
+
+
+class CodeResearchConfig:
+    """Type-safe configuration class for code research subagent."""
+
+    def __init__(self, base_config: BaseConfig):
+        self._base_config = base_config
+
+    def get_model(self) -> str:
+        """Get the LLM model for code research (default from config)."""
+        return cast("str", self._base_config.get_value("subagents.coderesearch.model"))
+
+    def get_num_retries(self) -> int:
+        """Get number of retries for failed requests (default: 3)."""
+        return int(self._base_config.get_value("subagents.coderesearch.retries") or 3)

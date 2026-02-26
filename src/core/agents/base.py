@@ -1,21 +1,3 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 """Base agent implementations for common patterns."""
 
 from abc import abstractmethod
@@ -25,6 +7,7 @@ from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import RunContext
 
 from core.agents.context import get_current_agent_execution_context
+from core.agents.safe_runner import run_agent_safely
 from core.exceptions import AgentGracefulExit
 from core.log import get_logger
 from core.protocols.agent_protocols import Agent
@@ -140,11 +123,12 @@ class PydanticAIAgent(Agent):
             # Get dependencies if the agent uses them
             deps = self.get_dependencies()
 
-            # Run agent without pre-allocated usage tracking
-            if deps is not None:
-                result = await self.agent.run(message_history=chat_history, deps=deps)
-            else:
-                result = await self.agent.run(message_history=chat_history)
+            # Run agent with graceful error recovery
+            result = await run_agent_safely(
+                self.agent,
+                deps=deps,
+                message_history=chat_history,
+            )
 
             # Track usage after agent execution
             context = get_current_agent_execution_context()

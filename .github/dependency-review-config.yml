@@ -8,14 +8,15 @@ fail_on_severity: 'moderate'
 fail_on_scopes: 
   - 'runtime'
 
-# Block licenses that are incompatible with AGPL-3.0
-deny_licenses: 
+# Block licenses that are incompatible with MIT
+deny_licenses:
   - 'GPL-2.0'
   - 'GPL-3.0'
   - 'LGPL-2.1'
   - 'LGPL-3.0'
   - 'AGPL-1.0'
   - 'AGPL-2.0'
+  - 'AGPL-3.0'
   - 'OSL-3.0'
   - 'MS-PL'
   - 'MS-RL'

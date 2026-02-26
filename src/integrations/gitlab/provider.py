@@ -1,37 +1,33 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
-from typing import Any, Optional
+from typing import Any, Optional, cast
 import base64
+import builtins
 import urllib.parse
 
 import httpx
 
+from core.log import get_logger
 from core.protocols.provider_protocols import (
     IssueModel,
     IssueProvider,
+    PipelineListFilter,
+    PipelineModel,
+    PipelineProvider,
+    PipelineSummaryModel,
     PullRequestModel,
     PullRequestProvider,
 )
 
 from .config import GitLabConfig
-from .mock_gitlab import mock_fetch_issue, mock_fetch_merge_request
-from .models import Issue, MergeRequest
+from .mock_gitlab import (
+    mock_fetch_issue,
+    mock_fetch_merge_request,
+    mock_fetch_pipeline,
+    mock_fetch_pipeline_job_log,
+    mock_list_pipelines,
+)
+from .models import Issue, MergeRequest, Pipeline
+
+logger = get_logger(__name__)
 
 
 class GitLabMergeRequestProvider(PullRequestProvider):
@@ -234,3 +230,184 @@ class GitLabIssueProvider(IssueProvider):
             response = await client.get(url, headers=headers)
             response.raise_for_status()
             return Issue(response.json())
+
+
+class GitLabPipelineProvider(PipelineProvider):
+    """GitLab implementation of PipelineProvider."""
+
+    def __init__(self, config: GitLabConfig):
+        self.config = config
+
+        # Log warning if mocks are enabled
+        if self.config.get_use_mocks():
+            logger.warning(
+                "GITLAB MOCK MODE IS ENABLED! "
+                "You will receive FAKE data from local JSON files instead of real "
+                "GitLab API data. "
+                "To use REAL data: Set GITLAB_MOCK=false in your .env file or "
+                "remove the variable entirely."
+            )
+
+    @staticmethod
+    def from_config(config_data: dict[str, Any]) -> Optional["GitLabPipelineProvider"]:
+        """Create provider from configuration data.
+
+        Args:
+            config_data: GitLab configuration dictionary
+
+        Returns:
+            Provider instance if config is valid, None otherwise
+        """
+        config = GitLabConfig(config_data)
+        if not config.is_configured() and not config.get_use_mocks():
+            return None
+        return GitLabPipelineProvider(config)
+
+    async def load(self, pipeline_id: str) -> PipelineModel:
+        """Load pipeline by ID.
+
+        Args:
+            pipeline_id: Pipeline identifier
+
+        Returns:
+            PipelineModel with pipeline data and context
+        """
+        if self.config.get_use_mocks():
+            pipeline = mock_fetch_pipeline(pipeline_id)
+        else:
+            pipeline = await self._fetch_pipeline(pipeline_id)
+
+        return PipelineModel(
+            id=pipeline_id,
+            context=pipeline.get_composed_pipeline_info(),
+            status=pipeline.get_status(),
+            ref=pipeline.get_ref(),
+            web_url=pipeline.get_web_url(),
+            jobs=pipeline.get_jobs(),
+            failed_jobs=pipeline.get_failed_jobs(),
+            duration=pipeline.get_duration(),
+            coverage=pipeline.get_coverage(),
+        )
+
+    async def list(
+        self, filters: PipelineListFilter | None = None
+    ) -> builtins.list[PipelineSummaryModel]:
+        """List pipelines with optional filtering.
+
+        Args:
+            filters: Optional filter criteria for ref, status, and result count
+
+        Returns:
+            List of PipelineSummaryModel with pipeline summaries
+        """
+        resolved_filters = filters or PipelineListFilter()
+
+        if self.config.get_use_mocks():
+            pipelines_data = mock_list_pipelines(
+                ref=resolved_filters.ref,
+                status=resolved_filters.status,
+                count=resolved_filters.count,
+            )
+        else:
+            pipelines_data = await self._fetch_pipelines_list(resolved_filters)
+
+        return [
+            PipelineSummaryModel(
+                id=str(p.get("id", "")),
+                status=p.get("status", ""),
+                ref=p.get("ref", ""),
+                sha=p.get("sha", ""),
+                web_url=p.get("web_url", ""),
+                created_at=p.get("created_at", ""),
+                updated_at=p.get("updated_at", ""),
+                source=p.get("source", ""),
+            )
+            for p in pipelines_data
+        ]
+
+    async def _fetch_pipelines_list(
+        self, filters: PipelineListFilter
+    ) -> builtins.list[dict[str, Any]]:
+        """Fetch pipeline list from GitLab API.
+
+        Args:
+            filters: Filter criteria for the API request
+
+        Returns:
+            List of pipeline data dictionaries
+        """
+        api_url = self.config.get_api_url()
+        project_id = self.config.get_project_id()
+        token = self.config.get_token()
+
+        url = f"{api_url}/projects/{project_id}/pipelines"
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+        params: dict[str, str | int] = {
+            "per_page": min(filters.count, 100),
+            "order_by": "id",
+            "sort": "desc",
+        }
+        if filters.ref:
+            params["ref"] = filters.ref
+        if filters.status:
+            params["status"] = filters.status
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            return cast("list[dict[str, Any]]", response.json())
+
+    async def _fetch_pipeline(self, pipeline_id: str) -> Pipeline:
+        """Fetch pipeline from GitLab API."""
+        api_url = self.config.get_api_url()
+        project_id = self.config.get_project_id()
+        token = self.config.get_token()
+
+        pipeline_url = f"{api_url}/projects/{project_id}/pipelines/{pipeline_id}"
+        jobs_url = f"{api_url}/projects/{project_id}/pipelines/{pipeline_id}/jobs"
+
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+        async with httpx.AsyncClient() as client:
+            # Fetch pipeline and jobs concurrently
+            response_pipeline_task = client.get(pipeline_url, headers=headers)
+            response_jobs_task = client.get(jobs_url, headers=headers)
+
+            response_pipeline, response_jobs = (
+                await response_pipeline_task,
+                await response_jobs_task,
+            )
+
+            response_pipeline.raise_for_status()
+            response_jobs.raise_for_status()
+
+            pipeline_data = response_pipeline.json()
+            jobs_data = response_jobs.json()
+
+        return Pipeline(pipeline_data, jobs_data)
+
+    async def get_job_log(self, pipeline_id: str, job_id: str) -> str:
+        """Get log for a specific job.
+
+        Args:
+            pipeline_id: Pipeline identifier
+            job_id: Job identifier
+
+        Returns:
+            Job log as string
+        """
+        if self.config.get_use_mocks():
+            return mock_fetch_pipeline_job_log(pipeline_id, job_id)
+
+        api_url = self.config.get_api_url()
+        project_id = self.config.get_project_id()
+        token = self.config.get_token()
+
+        log_url = f"{api_url}/projects/{project_id}/jobs/{job_id}/trace"
+        headers = {"Authorization": f"Bearer {token}", "Accept": "text/plain"}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(log_url, headers=headers)
+            response.raise_for_status()
+            return response.text

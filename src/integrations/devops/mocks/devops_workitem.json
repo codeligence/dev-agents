@@ -2,9 +2,9 @@
   "id": 10001,
   "rev": 3,
   "fields": {
-    "System.AreaPath": "acmecorp.com\\Team Alpha Squad",
-    "System.TeamProject": "acmecorp.com",
-    "System.IterationPath": "acmecorp.com\\Team Alpha\\2025 - Q2\\04.2025\\04.2025.3",
+    "System.AreaPath": "example.com\\Team Alpha Squad",
+    "System.TeamProject": "example.com",
+    "System.IterationPath": "example.com\\Team Alpha\\2025 - Q2\\04.2025\\04.2025.3",
     "System.WorkItemType": "Bug",
     "System.State": "Ready for Review",
     "System.Reason": "Updated for general review",
@@ -17,7 +17,7 @@
         }
       },
       "id": "11111111-1111-1111-1111-111111111111",
-      "uniqueName": "john.doe@acmecorp.com",
+      "uniqueName": "john.doe@example.com",
       "imageUrl": "https://example.com/avatars/johndoe.png",
       "descriptor": "descriptor.johndoe"
     },
@@ -31,7 +31,7 @@
         }
       },
       "id": "22222222-2222-2222-2222-222222222222",
-      "uniqueName": "jane.doe@acmecorp.com",
+      "uniqueName": "jane.doe@example.com",
       "imageUrl": "https://example.com/avatars/janedoe.png",
       "descriptor": "descriptor.janedoe"
     },
@@ -45,7 +45,7 @@
         }
       },
       "id": "22222222-2222-2222-2222-222222222222",
-      "uniqueName": "jane.doe@acmecorp.com",
+      "uniqueName": "jane.doe@example.com",
       "imageUrl": "https://example.com/avatars/janedoe.png",
       "descriptor": "descriptor.janedoe"
     },
@@ -64,7 +64,7 @@
         }
       },
       "id": "11111111-1111-1111-1111-111111111111",
-      "uniqueName": "john.doe@acmecorp.com",
+      "uniqueName": "john.doe@example.com",
       "imageUrl": "https://example.com/avatars/johndoe.png",
       "descriptor": "descriptor.johndoe"
     },
@@ -89,12 +89,12 @@
         }
       },
       "id": "11111111-1111-1111-1111-111111111111",
-      "uniqueName": "john.doe@acmecorp.com",
+      "uniqueName": "john.doe@example.com",
       "imageUrl": "https://example.com/avatars/johndoe.png",
       "descriptor": "descriptor.johndoe"
     },
     "System.Description": "<div><img src=\"https://example.com/assets/sample-image.png\" alt=\"Generic Image\"><br></div><div><p>This issue describes a minor inconsistency in the user interface. The text label or icon might not appear as expected in some conditions.</p></div><div><p>Please refer to the internal documentation for more details.</p></div>",
-    "Microsoft.VSTS.TCM.ReproSteps": "<div><p>Environment:</p><ul><li><a href=\"https://acmecorpwebapps.dev/genericapp/settings\">https://acmecorpwebapps.dev/genericapp/settings</a></li></ul></div><div><p>Precondition:</p><ul><li>Feature Flag for Task Management is enabled</li><li>User has proper access rights to modify settings</li></ul></div><div><p>Steps:</p><ol><li>Log in to Generic App</li><li>Navigate to the Settings page</li><li>Select Task Management</li><li>Create a new task entry</li><li>Verify label consistency after performing the action</li></ol></div><div><p>Expected result: The UI elements display correctly.</p></div><div><p>Actual result: The UI element is not shown consistently.</p></div>",
+    "Microsoft.VSTS.TCM.ReproSteps": "<div><p>Environment:</p><ul><li><a href=\"https://examplewebapps.dev/genericapp/settings\">https://examplewebapps.dev/genericapp/settings</a></li></ul></div><div><p>Precondition:</p><ul><li>Feature Flag for Task Management is enabled</li><li>User has proper access rights to modify settings</li></ul></div><div><p>Steps:</p><ol><li>Log in to Generic App</li><li>Navigate to the Settings page</li><li>Select Task Management</li><li>Create a new task entry</li><li>Verify label consistency after performing the action</li></ol></div><div><p>Expected result: The UI elements display correctly.</p></div><div><p>Actual result: The UI element is not shown consistently.</p></div>",
     "Custom.TestingNotes": "<div>AC all criteria must be met.</div>",
     "System.Tags": "GeneralIssue"
   },

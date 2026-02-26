@@ -144,16 +144,13 @@ Connect your agent to Slack for team collaboration:
 # Required for Slack integration
 SLACK_BOT_TOKEN=xoxb-your-bot-user-oauth-token
 SLACK_APP_TOKEN=xapp-your-app-level-token
-
-# Optional: Default channel for notifications  
-SLACK_CHANNEL_ID=C1234567890
 ```
 
 **Setup Steps:**
 1. Create Slack app at [api.slack.com](https://api.slack.com/apps)
 2. Enable Socket Mode and generate App-Level Token (`SLACK_APP_TOKEN`)
 3. Install app and copy Bot User OAuth Token (`SLACK_BOT_TOKEN`)
-4. Find channel ID in Slack URL or app settings (`SLACK_CHANNEL_ID`)
+4. Invite the bot to channels where you want it to respond
 
 ### Azure DevOps
 
@@ -234,18 +231,18 @@ CLI_DEFAULT_AGENT_TYPE=gitchatbot        # Default agent for CLI
 
 ### Advanced Agent Configuration
 
-#### Impact Analysis
+#### Testing Notes
 
-Fine-tune impact analysis behavior:
+Fine-tune testing notes generation behavior:
 
 ```bash
-# Impact analysis limits
-IMPACT_ANALYSIS_MAX_FILES=200            # Max files to analyze per request
+# Testing notes limits
+TESTING_NOTES_MAX_FILES=200            # Max files to analyze per request
 ```
 
 **Performance Notes:**
 - Higher values = more thorough analysis, slower processing
-- Lower values = faster processing, might miss some impacts
+- Lower values = faster processing, might miss some testing recommendations
 - Recommended range: 50-500 depending on repository size
 
 ## Environment File Setup
@@ -285,7 +282,6 @@ GIT_AUTOPULL=false
 # Slack Integration (optional)
 # SLACK_BOT_TOKEN=xoxb-your-token
 # SLACK_APP_TOKEN=xapp-your-token
-# SLACK_CHANNEL_ID=C1234567890
 
 # Azure DevOps (optional)
 # AZURE_URL=https://dev.azure.com
@@ -302,7 +298,7 @@ GIT_AUTOPULL=false
 # LLM_MODEL_LARGE=anthropic:claude-sonnet-4-20250514
 # LLM_MODEL_SMALL=anthropic:claude-3-5-haiku-latest
 # CORE_LOG_DIR=./logs
-# IMPACT_ANALYSIS_MAX_FILES=200
+# TESTING_NOTES_MAX_FILES=200
 ```
 
 ## Environment-Specific Examples
@@ -325,7 +321,7 @@ CORE_LOG_DIR=./logs/dev
 AVATAR_FULL_NAME="DevBot (Staging)"
 AZURE_DEVOPS_MOCK=false
 LLM_MODEL_LARGE=anthropic:claude-3-5-haiku-latest  # Use smaller model
-IMPACT_ANALYSIS_MAX_FILES=100                      # Limit analysis
+TESTING_NOTES_MAX_FILES=100                      # Limit analysis
 ```
 
 ### Production Environment

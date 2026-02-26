@@ -1,24 +1,6 @@
-# Copyright (C) 2025 Codeligence
-#
-# This file is part of Dev Agents.
-#
-# Dev Agents is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# Dev Agents is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
-#
-# You should have received a copy of the GNU Affero General Public License
-# along with Dev Agents.  If not, see <https://www.gnu.org/licenses/>.
-
-
 """Data models for the chatbot agent."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from core.storage import BaseStorage
 
@@ -34,11 +16,15 @@ class ChatbotContext:
     pull_request_id: str | None = None
     source_git_ref: str | None = None
     target_git_ref: str | None = None
+    artifact_ids: list[str] = field(default_factory=list)
+    project: str | None = None
 
     def __post_init__(self) -> None:
-        """Auto-populate target_git_ref if only source is provided."""
+        """Auto-populate target_git_ref if only source is provided and set default project."""
         if self.source_git_ref and not self.target_git_ref:
             self.target_git_ref = self.source_git_ref
+        if not self.project:
+            self.project = "default"
 
 
 @dataclass
@@ -84,6 +70,8 @@ class PersistentAgentDeps:
             "pull_request_id": context.pull_request_id,
             "source_git_ref": context.source_git_ref,
             "target_git_ref": context.target_git_ref,
+            "artifact_ids": context.artifact_ids,
+            "project": context.project,
         }
         self.storage.set(self.get_storage_key(), context_data)
         self.context = context

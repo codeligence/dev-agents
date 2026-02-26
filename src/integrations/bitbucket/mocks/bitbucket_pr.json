@@ -1,0 +1,65 @@
+{
+  "id": 1,
+  "title": "Add new authentication feature",
+  "description": "This PR implements OAuth2 authentication flow.\n\n## Changes\n- Added OAuth2 provider integration\n- Updated user session handling\n- Added token refresh mechanism",
+  "state": "OPEN",
+  "created_on": "2025-08-10T14:30:20.123456+00:00",
+  "updated_on": "2025-08-11T09:15:45.654321+00:00",
+  "author": {
+    "display_name": "Test Developer",
+    "nickname": "testdev",
+    "account_id": "5c4322b43d5e1c0e12345678",
+    "uuid": "{12345678-1234-1234-1234-123456789012}",
+    "links": {
+      "html": {"href": "https://bitbucket.org/testdev/"},
+      "avatar": {"href": "https://secure.gravatar.com/avatar/123456?s=80&d=identicon"}
+    }
+  },
+  "source": {
+    "branch": {
+      "name": "feature/oauth-auth"
+    },
+    "commit": {
+      "hash": "a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4",
+      "links": {
+        "html": {"href": "https://bitbucket.org/testworkspace/testrepo/commits/a1b2c3d4e5f67890a1b2c3d4e5f67890a1b2c3d4"}
+      }
+    },
+    "repository": {
+      "full_name": "testworkspace/testrepo",
+      "uuid": "{repo-uuid-12345}"
+    }
+  },
+  "destination": {
+    "branch": {
+      "name": "main"
+    },
+    "commit": {
+      "hash": "0987654321fedcba0987654321fedcba09876543",
+      "links": {
+        "html": {"href": "https://bitbucket.org/testworkspace/testrepo/commits/0987654321fedcba0987654321fedcba09876543"}
+      }
+    },
+    "repository": {
+      "full_name": "testworkspace/testrepo",
+      "uuid": "{repo-uuid-12345}"
+    }
+  },
+  "merge_commit": null,
+  "closed_by": null,
+  "reason": "",
+  "comment_count": 2,
+  "task_count": 0,
+  "links": {
+    "self": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1"},
+    "html": {"href": "https://bitbucket.org/testworkspace/testrepo/pull-requests/1"},
+    "commits": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/commits"},
+    "approve": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/approve"},
+    "diff": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/diff"},
+    "diffstat": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/diffstat"},
+    "comments": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/comments"},
+    "activity": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/activity"},
+    "merge": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/merge"},
+    "decline": {"href": "https://api.bitbucket.org/2.0/repositories/testworkspace/testrepo/pullrequests/1/decline"}
+  }
+}

@@ -1,0 +1,114 @@
+# =============================================================================
+# Multi-stage build for dev-agents
+# =============================================================================
+
+# Directories to mount
+# /code: mount your git repos here
+# /data: for storage / cache and logs
+
+# Build stage - Install dependencies and build the package
+FROM python:3.12 AS builder
+
+# Set build arguments
+ARG PYTHONUNBUFFERED=1
+ARG PYTHONDONTWRITEBYTECODE=1
+
+# Set environment variables for build
+ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
+    PYTHONDONTWRITEBYTECODE=${PYTHONDONTWRITEBYTECODE} \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install build dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app directory
+WORKDIR /app
+RUN mkdir src
+
+# Copy package configuration files first (for better caching)
+COPY pyproject.toml ./
+COPY README.md ./
+COPY LICENSE ./
+
+# Install the package and its dependencies
+RUN pip install --upgrade pip setuptools wheel \
+    && pip install .[prod,claude]
+
+# =============================================================================
+# Runtime stage - Create minimal runtime image
+# =============================================================================
+
+FROM python:3.12 AS runtime
+
+# Set runtime arguments
+ARG PYTHONUNBUFFERED=1
+ARG VERSION=1.0.0
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
+    PYTHONPATH=/app/src \
+    APP_ENV=production
+
+# Install runtime dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends git gosu ca-certificates curl gnupg && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" | tee /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code
+RUN npm install -g @anthropic-ai/claude-code
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -m -g appuser appuser
+
+# Create app directory and set ownership
+RUN mkdir -p /app && chown -R appuser:appuser /app
+RUN mkdir -p /code && chown -R appuser:appuser /code
+RUN mkdir -p /data && chown -R appuser:appuser /data
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python environment from builder stage
+COPY --from=builder /usr/local/lib/python3.12/site-packages/ /usr/local/lib/python3.12/site-packages/
+COPY --from=builder /usr/local/bin/ /usr/local/bin/
+
+# Copy entrypoint script
+COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Copy application files
+COPY --chown=appuser:appuser src/ ./src/
+COPY --chown=appuser:appuser config/ ./config/
+COPY --chown=appuser:appuser README.md LICENSE pyproject.toml ./
+
+# Create logs directory structure
+RUN mkdir -p logs data/logs data/storage \
+    && chown -R appuser:appuser logs data
+
+# Add version label
+LABEL version="${VERSION}" \
+      description="Dev Agents - AI-powered development team automation" \
+      maintainer="dev@codeligence.com"
+
+# Expose port for entrypoints with callbacks
+# EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD python -c "import sys; sys.exit(0)" || exit 1
+
+ENV CORE_LOG_DIR=/data/logs
+ENV CORE_STORAGE_FILE_DIR=/data/storage
+ENV VERSION_CHECK_URL=https://setup.dev-agents.ai/api/version-check
+ENV CLAUDE_CODE_PATH=/usr/bin/claude
+
+# Set entrypoint script
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

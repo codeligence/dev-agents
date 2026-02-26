@@ -324,7 +324,7 @@ Get insights for release planning:
 ```slack
 @BettySharp analyze work items for next release
 
-@BettySharp what's the testing impact of release 2.1?
+@BettySharp generate testing notes for release 2.1?
 ```
 
 ## API Integration
