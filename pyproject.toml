@@ -54,7 +54,7 @@ dependencies = [
     "jinja2>=3.1.6,<4.0.0",
     "pydantic-ai~=1.62.0",
     "beautifulsoup4~=4.13.5",
-    "fastapi~=0.116.1",
+    "fastapi>=0.116.1,<0.136.0",
     "pydriller~=2.9",
 ]
 
