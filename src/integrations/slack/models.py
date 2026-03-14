@@ -23,6 +23,13 @@ class SlackBotConfig:
         """Get the maximum number of consecutive connection failures before shutdown."""
         return int(self._base_config.get_value("slack.bot.maxConnectionFailures", 5))
 
+    def get_always_respond(self) -> bool:
+        """Get whether the bot should always respond, bypassing mention checks."""
+        value = self._base_config.get_value("slack.bot.alwaysRespond", False)
+        if isinstance(value, str):
+            return value.lower() in ("true", "1", "yes")
+        return bool(value)
+
     def is_configured(self) -> bool:
         """Check if all required Slack configuration is present."""
         return bool(self.get_bot_token() and self.get_app_token())

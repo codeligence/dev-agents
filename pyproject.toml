@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dev-agents"
-version = "1.0.0"
+version = "1.0.2"
 description = "AI Agents for Agile Dev Teams"
 readme = "README.md"
 license = 'MIT'
@@ -148,7 +148,7 @@ include = ["*"]
 
 [tool.setuptools.package-data]
 "*" = ["py.typed"]
-"config" = ["*.yaml", "*.yml"]
+"core.defaults" = ["*.yaml", "*.yml"]
 
 [tool.setuptools.exclude-package-data]
 "*" = ["tests", "tests.*", "*.tests", "*.tests.*"]
@@ -297,6 +297,7 @@ module = [
     "pydantic_ai.*",
     "fastapi.*",
     "claude_agent_sdk.*",
+    "yaml.*",
 ]
 ignore_missing_imports = true
 
@@ -379,7 +380,7 @@ cache = true
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.0.0"
+version = "1.0.2"
 tag_format = "v$major.$minor.$patch"
 version_files = [
     "pyproject.toml:version",

@@ -1,7 +1,7 @@
 # License Compliance Summary and Recommendations
 
 **Report Generated**: 2025-09-11  
-**Project**: dev-agents v1.0.0  
+**Project**: dev-agents v1.0.2  
 **Primary License**: MIT License
 
 ## Executive Summary

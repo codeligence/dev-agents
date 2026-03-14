@@ -114,6 +114,7 @@ slack:
     appToken:    "@jinja {{ env.SLACK_APP_TOKEN or '' }}"
     processingTimeout: "@jinja {{ env.SLACK_PROCESSING_TIMEOUT or 6000 }}"
     maxConnectionFailures: "@jinja {{ env.SLACK_MAX_CONNECTION_FAILURES or 5 }}"
+    alwaysRespond: "@jinja {{ env.ALWAYS_RESPOND or false }}"
 
 agui:
   server:
@@ -140,6 +141,7 @@ cli:
 
 skills:
   enable: []
+  search_paths: []  # Additional directories to search for skill modules
 
 agents:
   gitchatbot:

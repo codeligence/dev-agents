@@ -25,6 +25,7 @@
                 "files:read",
                 "files:write",
                 "groups:history",
+                "groups:read",
                 "im:history",
                 "users:read",
                 "canvases:read",

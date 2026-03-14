@@ -205,6 +205,16 @@ class AGUIAgentContext(AgentExecutionContext):
             logger.error(f"Error posting attachment '{name}': {str(e)}")
             raise Exception(f"Failed to post attachment '{name}': {str(e)}")
 
+    async def download_attachment(self, attachment_id: str) -> str:
+        """Download an attachment by ID.
+
+        Not supported in AG-UI context.
+
+        Raises:
+            NotImplementedError: AG-UI does not support attachment downloads
+        """
+        raise NotImplementedError("Attachment downloads not supported in AG-UI context")
+
     async def _emit_event(self, event: Event) -> None:
         """Emit an event by putting it in the event queue.
 

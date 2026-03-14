@@ -11,9 +11,22 @@ load_dotenv()
 
 logger = get_logger("BasePrompts")
 
+# Re-use the same bundled defaults directory as BaseConfig
+_BUNDLED_PROMPTS_DIR = Path(__file__).parent / "defaults"
+
 
 class BasePrompts:
-    """Base prompts class that loads and resolves YAML prompts with environment variables using Dynaconf."""
+    """Base prompts class that loads and resolves YAML prompts with environment variables using Dynaconf.
+
+    Uses the same layered resolution strategy as :class:`BaseConfig`:
+
+    1. **Bundled defaults** (``core/defaults/prompts.yaml``) — ships with
+       the package.
+    2. **CWD override** (``<cwd>/config/prompts.yaml``) — if present,
+       *replaces* the bundled defaults entirely.
+    3. **CWD custom overlay** (``<cwd>/config/prompts.custom.yaml``) — if
+       present, merged on top.
+    """
 
     _prompts_path: str
     _settings: Any
@@ -28,21 +41,74 @@ class BasePrompts:
             self._prompts_path = base_prompts._prompts_path
             self._settings = base_prompts._settings
         else:
-            if prompts_path is None:
-                # Default to config/prompts.yaml relative to project root
-                project_root = Path(__file__).parent.parent.parent
-                prompts_path = str(project_root / "config" / "prompts.yaml")
+            if prompts_path is not None:
+                # Explicit path: load just that file + its .custom variant
+                self._prompts_path = prompts_path
+                self._settings = self._load_prompts()
+            else:
+                # Default: layered resolution (same pattern as BaseConfig)
+                self._prompts_path, self._settings = self._load_layered_prompts(
+                    "prompts.yaml"
+                )
 
-            self._prompts_path = prompts_path
-            self._settings = self._load_prompts()
+    @staticmethod
+    def _load_layered_prompts(filename: str) -> tuple[str, "Dynaconf"]:
+        """Load prompts using layered resolution: bundled → CWD replace → CWD custom.
+
+        Args:
+            filename: Base filename (e.g. ``prompts.yaml``).
+
+        Returns:
+            Tuple of (resolved primary path, loaded Dynaconf settings).
+        """
+        custom_filename = filename.replace(".yaml", ".custom.yaml")
+        settings_files: list[str] = []
+
+        # Determine base prompts: CWD replaces bundled if present
+        cwd_prompts = Path.cwd() / "config" / filename
+        bundled_prompts = _BUNDLED_PROMPTS_DIR / filename
+
+        if cwd_prompts.is_file():
+            primary_path = str(cwd_prompts)
+            settings_files.append(primary_path)
+            logger.info(f"Using CWD prompts: {cwd_prompts}")
+        elif bundled_prompts.is_file():
+            primary_path = str(bundled_prompts)
+            settings_files.append(primary_path)
+            logger.info(f"Using bundled prompts: {bundled_prompts}")
+        else:
+            raise FileNotFoundError(
+                f"No {filename} found. Searched:\n"
+                f"  - {cwd_prompts}\n"
+                f"  - {bundled_prompts}\n"
+                "Place a prompts file in <project>/config/ or install the package "
+                "with bundled defaults."
+            )
+
+        # Custom overlay merges on top
+        cwd_custom = Path.cwd() / "config" / custom_filename
+        if cwd_custom.is_file():
+            settings_files.append(str(cwd_custom))
+            logger.info(f"Merging custom overlay: {cwd_custom}")
+
+        settings = Dynaconf(
+            settings_files=settings_files,
+            envvar_prefix="",
+            envvar_default="",
+            ignore_unknown_envvars=True,
+            environments=False,
+            env_switcher="DYNACONF_ENV",
+            load_dotenv=False,
+            merge_enabled=True,
+        )
+        return primary_path, settings
 
     def _load_prompts(self) -> Dynaconf:
-        """Load and resolve the YAML prompts file using Dynaconf."""
+        """Load prompts from an explicit path (+ its .custom variant)."""
         assert self._prompts_path is not None
         if not Path(self._prompts_path).exists():
             raise FileNotFoundError(f"Prompts file not found: {self._prompts_path}")
 
-        # Use Dynaconf to load prompts with environment variable resolution
         settings = Dynaconf(
             settings_files=[
                 str(self._prompts_path),

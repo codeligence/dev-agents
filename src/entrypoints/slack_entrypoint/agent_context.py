@@ -4,6 +4,7 @@ from typing import Any
 import contextlib
 import uuid
 
+from core.agents.models import ToolRegistration
 from core.config import BaseConfig
 from core.log import get_logger
 from core.message import MessageList
@@ -200,6 +201,75 @@ class SlackAgentContext(AgentExecutionContext):
         except Exception as e:
             logger.error(f"Error posting attachment '{name}': {str(e)}")
             raise Exception(f"Failed to post attachment '{name}': {str(e)}")
+
+    async def download_attachment(self, attachment_id: str) -> str:
+        """Download a Slack file attachment by ID.
+
+        Downloads the file to {storage_dir}/attachments/ directory,
+        using the project's configured storage instance.
+
+        Args:
+            attachment_id: Slack file ID from [#attachment] marker
+
+        Returns:
+            Local file path where the attachment was saved
+
+        Raises:
+            RuntimeError: If the download fails
+        """
+        from core.storage import FileStorage, get_storage
+
+        storage = get_storage(self.config)
+        if not isinstance(storage, FileStorage):
+            raise RuntimeError("Attachment downloads require FileStorage backend")
+        target_dir = storage.storage_dir / "attachments"
+        result = self.slack_client.download_file(attachment_id, target_dir)
+        if result is None:
+            raise RuntimeError(f"Failed to download attachment {attachment_id}")
+        logger.info(f"Downloaded attachment {attachment_id} to {result}")
+        return str(result)
+
+    @staticmethod
+    def get_download_attachment_tool() -> ToolRegistration:
+        """Return a ToolRegistration for downloading Slack file attachments.
+
+        The returned registration can be hooked into agent tool registration
+        by the application. It is not automatically activated.
+
+        Returns:
+            ToolRegistration for the download_attachment tool
+        """
+        from pydantic_ai import RunContext
+
+        from core.skills.context import SkillContext
+
+        async def download_attachment(ctx: RunContext[Any], attachment_id: str) -> str:
+            """Download a file attachment by its ID and return the local path.
+
+            Use this when a message contains [#attachment id=... name=...] markers.
+            Downloads the file to local storage so you can read or process it.
+
+            Args:
+                attachment_id: The attachment ID from the [#attachment] marker
+
+            Returns:
+                Local file path where the attachment was saved
+            """
+            sc = SkillContext(ctx)
+            await sc.send_toolcall_message("Downloading attachment...")
+            return await sc.download_attachment(attachment_id)
+
+        return ToolRegistration(
+            name="download_attachment",
+            description=(
+                "Download a file attachment by its ID. Use when a message "
+                "contains [#attachment id=... name=...] markers. Returns "
+                "the local file path so you can read or process the file. "
+                "Args: attachment_id (the ID from the attachment marker)."
+            ),
+            function=download_attachment,
+            priority=25,
+        )
 
     def get_message_list(self) -> MessageList:
         """Get the list of messages available to the agent.

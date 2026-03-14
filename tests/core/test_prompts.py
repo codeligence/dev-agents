@@ -1,10 +1,11 @@
 from pathlib import Path
+from unittest.mock import patch
 import os
 import tempfile
 
 import pytest
 
-from core.prompts import BasePrompts
+from core.prompts import _BUNDLED_PROMPTS_DIR, BasePrompts
 
 
 class TestBasePrompts:
@@ -157,3 +158,54 @@ multiline:
 
         followup_prompt = prompts.get_prompt("agents.changelog.followup")
         assert followup_prompt is None or isinstance(followup_prompt, str)
+
+
+class TestLayeredPromptsResolution:
+    """Test cases for the layered prompts resolution strategy."""
+
+    def test_cwd_prompts_replaces_bundled(self):
+        """Test that CWD config/prompts.yaml replaces bundled defaults entirely."""
+        prompts = BasePrompts()
+        cwd_prompts = Path.cwd() / "config" / "prompts.yaml"
+        if cwd_prompts.is_file():
+            assert prompts._prompts_path == str(cwd_prompts)
+
+    def test_bundled_defaults_used_when_no_cwd_prompts(self, tmp_path: Path):
+        """Test that bundled defaults are used when CWD has no config/."""
+        with patch("core.prompts.Path.cwd", return_value=tmp_path):
+            prompts = BasePrompts()
+            bundled = _BUNDLED_PROMPTS_DIR / "prompts.yaml"
+            assert prompts._prompts_path == str(bundled)
+
+    def test_cwd_custom_overlay_merges(self, tmp_path: Path):
+        """Test that prompts.custom.yaml merges on top of the base."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+
+        base_yaml = config_dir / "prompts.yaml"
+        base_yaml.write_text("base_prompt: base_value\nshared: from_base\n")
+
+        custom_yaml = config_dir / "prompts.custom.yaml"
+        custom_yaml.write_text("custom_prompt: custom_value\nshared: from_custom\n")
+
+        with patch("core.prompts.Path.cwd", return_value=tmp_path):
+            prompts = BasePrompts()
+            assert prompts.get_prompt("base_prompt") == "base_value"
+            assert prompts.get_prompt("custom_prompt") == "custom_value"
+            assert prompts.get_prompt("shared") == "from_custom"
+
+    def test_bundled_defaults_exist(self):
+        """Test that bundled default prompts files are present in the package."""
+        bundled_prompts = _BUNDLED_PROMPTS_DIR / "prompts.yaml"
+        assert (
+            bundled_prompts.is_file()
+        ), f"Bundled prompts not found: {bundled_prompts}"
+
+    def test_error_when_no_prompts_found(self, tmp_path: Path):
+        """Test that a clear error is raised when no prompts found anywhere."""
+        with (
+            patch("core.prompts.Path.cwd", return_value=tmp_path),
+            patch("core.prompts._BUNDLED_PROMPTS_DIR", tmp_path / "nonexistent"),
+            pytest.raises(FileNotFoundError, match="No prompts.yaml found"),
+        ):
+            BasePrompts()

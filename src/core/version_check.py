@@ -8,7 +8,7 @@ from core.config import get_default_config
 from core.log import get_logger
 
 # Version is managed by commitizen and kept in sync with pyproject.toml
-__version__ = "1.0.0"
+__version__ = "1.0.2"
 
 logger = get_logger("VersionCheck")
 

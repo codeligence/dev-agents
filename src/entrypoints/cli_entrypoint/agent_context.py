@@ -142,6 +142,16 @@ class CLIAgentContext(AgentExecutionContext):
             logger.error(f"Error posting attachment '{name}': {str(e)}")
             raise Exception(f"Failed to post attachment '{name}': {str(e)}")
 
+    async def download_attachment(self, attachment_id: str) -> str:
+        """Download an attachment by ID.
+
+        Not supported in CLI context.
+
+        Raises:
+            NotImplementedError: CLI does not support attachment downloads
+        """
+        raise NotImplementedError("Attachment downloads not supported in CLI context")
+
     def get_message_list(self) -> MessageList:
         """Get the list of messages available to the agent.
 

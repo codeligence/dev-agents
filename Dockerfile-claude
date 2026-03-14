@@ -48,7 +48,7 @@ FROM python:3.12 AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
-ARG VERSION=1.0.0
+ARG VERSION=1.0.2
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
@@ -85,9 +85,8 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Copy application files
+# Copy application files (config ships inside src/core/defaults/)
 COPY --chown=appuser:appuser src/ ./src/
-COPY --chown=appuser:appuser config/ ./config/
 COPY --chown=appuser:appuser README.md LICENSE pyproject.toml ./
 
 # Create logs directory structure

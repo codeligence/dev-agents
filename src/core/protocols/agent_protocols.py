@@ -56,6 +56,23 @@ class AgentExecutionContext(Protocol):
         """
         ...
 
+    async def download_attachment(self, attachment_id: str) -> str:
+        """Download an attachment by ID and return the local file path.
+
+        Implementations should download the file to local storage and return
+        the path. The agent can then decide to read or process the file.
+
+        Args:
+            attachment_id: Platform-specific attachment identifier
+
+        Returns:
+            Local file path where the attachment was saved
+
+        Raises:
+            NotImplementedError: If the platform doesn't support attachment downloads
+        """
+        raise NotImplementedError("Attachment downloads not supported in this context")
+
     @abstractmethod
     def get_message_list(self) -> MessageList:
         """Get the list of messages available to the agent.
@@ -185,6 +202,18 @@ class AgentExecutionContext(Protocol):
 
         usage_storage = get_usage_storage(self.get_storage())
         usage_storage.track(model_name, usage)
+
+    def is_bot_mentioned(self) -> bool:
+        """Check if the bot was mentioned in the current message.
+
+        Default implementation returns True, meaning the agent always responds.
+        Override in entrypoint-specific implementations (e.g. Slack) that
+        support mention detection.
+
+        Returns:
+            True if the bot was mentioned or mention detection is unsupported.
+        """
+        return True
 
     def log_run_usages(self) -> None:
         """Log all RunUsage statistics accumulated during agent execution.

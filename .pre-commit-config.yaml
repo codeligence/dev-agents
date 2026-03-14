@@ -95,6 +95,14 @@ repos:
           - 'slack_sdk'
         exclude: ^(tests/|scripts/|docs/)
 
+  # Secret detection with Gitleaks
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+        name: Gitleaks - Detect hardcoded secrets
+        description: Scan for hardcoded secrets, API keys, and tokens
+
   # Security scanning with Bandit
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.9

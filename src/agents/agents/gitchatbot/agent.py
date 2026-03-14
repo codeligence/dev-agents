@@ -2,7 +2,6 @@ from typing import cast
 
 from pydantic_ai import Agent as PydanticAgent
 from pydantic_ai import RunContext
-from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets.function import FunctionToolset
 
 from agents.agents.gitchatbot.config import GitChatbotAgentConfig
@@ -20,7 +19,6 @@ from core.hooks import hooks
 from core.skills.context import SkillContext
 from core.storage import get_storage
 from core.usage import get_usage_storage
-from entrypoints.slack_entrypoint.agent_context import SlackAgentContext
 from integrations.git.git_repository import GitRepository
 
 AGENT_NAME = "gitchatbot"
@@ -74,33 +72,6 @@ class GitChatbotAgent(PydanticAIAgent):
             output_type=str,
             instructions=self.prompts.get_chatbot_prompt(),
         )
-
-        async def bot_not_mentioned(
-            _ctx: RunContext[PersistentAgentDeps], tool_def: ToolDefinition
-        ) -> ToolDefinition | None:
-            # Only enable skip_reply tool if bot is NOT mentioned in Slack contexts - this allows the bot to reply without mentions
-            context = get_current_agent_execution_context()
-            if (
-                isinstance(context, SlackAgentContext)
-                and not context.is_bot_mentioned()
-            ):
-                return tool_def
-            return None
-
-        @self.agent.tool(prepare=bot_not_mentioned)
-        async def skip_reply(_ctx: RunContext[PersistentAgentDeps], reason: str) -> str:
-            """
-            Call this function if the message is not directed at the chatbot agent.
-
-            This will gracefully exit the conversation processing.
-
-            Returns:
-                Instruction for further processing
-            """
-            self.logger.info(
-                f"skip_reply tool called - raising AgentGracefulExit. Reason: {reason}"
-            )
-            raise AgentGracefulExit("Conversation ended gracefully via skip_reply tool")
 
         @self.agent.tool
         async def update_context(

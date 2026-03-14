@@ -287,7 +287,7 @@ run_file_checks() {
         "python -c '
 import yaml
 import sys
-files = [\"config/config.yaml\", \"config/prompts.yaml\", \".pre-commit-config.yaml\"]
+files = [\"src/core/defaults/config.yaml\", \"src/core/defaults/prompts.yaml\", \".pre-commit-config.yaml\"]
 for f in files:
     try:
         with open(f) as file:

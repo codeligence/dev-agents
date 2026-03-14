@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC
+from pathlib import Path
 from typing import Any, cast
 import threading
 
@@ -41,6 +42,7 @@ class SlackClientService:
 
         self.bot_token = slack_config.get_bot_token()
         app_token = slack_config.get_app_token()
+        self._always_respond = slack_config.get_always_respond()
 
         self.client = WebClient(token=self.bot_token)
         self.user_info_cache = {}
@@ -201,6 +203,22 @@ class SlackClientService:
         processed_content = (
             self.replace_user_mentions_with_names(raw_content) if raw_content else ""
         )
+
+        # Append attachment markers for any files in the message
+        files = slack_msg.get("files", [])
+        if files:
+            attachment_lines = []
+            for f in files:
+                file_id = f.get("id", "")
+                file_name = f.get("name", "unknown")
+                if file_id:
+                    attachment_lines.append(
+                        f"[#attachment id={file_id} name={file_name}]"
+                    )
+            if attachment_lines:
+                processed_content = (
+                    processed_content + "\n" + "\n".join(attachment_lines)
+                )
 
         return SlackMessage(
             channel_id=channel_id,
@@ -489,12 +507,81 @@ class SlackClientService:
 
             return None
 
+    def download_file(self, file_id: str, target_dir: Path) -> Path | None:
+        """Download a Slack file by ID to a target directory.
+
+        Uses the files.info API to get file metadata, then downloads
+        the file using url_private_download with bot token authentication.
+        Uses urllib (same as the Slack SDK internally) for the download.
+
+        Args:
+            file_id: Slack file ID (e.g., "F123ABC")
+            target_dir: Directory to save the file into
+
+        Returns:
+            Path to the downloaded file, or None on failure
+        """
+        from urllib.error import URLError
+        from urllib.request import Request, urlopen
+
+        try:
+            # Get file metadata via Slack SDK
+            file_info = self.client.files_info(file=file_id)
+            file_data: dict[str, Any] = file_info.get("file", {})
+
+            download_url: str | None = file_data.get("url_private_download")
+            original_name: str = file_data.get("name", "file")
+
+            # Use file_id as filename on disk, preserving the original extension
+            suffix = Path(original_name).suffix
+            safe_name = f"{file_id}{suffix}" if suffix else file_id
+
+            if not download_url:
+                self.log.error(f"No download URL available for file {file_id}")
+                return None
+
+            # Validate URL scheme before opening (B310 audit)
+            if not download_url.startswith("https://"):
+                self.log.error(
+                    f"Refusing to download file {file_id}: " f"URL scheme is not HTTPS"
+                )
+                return None
+
+            # Download using urllib with bot token (same HTTP lib the SDK uses)
+            req = Request(download_url)
+            req.add_header("Authorization", f"Bearer {self.client.token}")
+            resp = urlopen(req, timeout=120)  # nosec B310
+
+            # Ensure target directory exists and save
+            target_dir.mkdir(parents=True, exist_ok=True)
+            file_path = target_dir / safe_name
+
+            file_path.write_bytes(resp.read())
+            self.log.info(f"Downloaded file {file_id} ({original_name}) to {file_path}")
+            return file_path
+
+        except SlackApiError as e:
+            self.log.error(
+                f"Slack API error downloading file {file_id}: " f"{e.response['error']}"
+            )
+            return None
+        except URLError as e:
+            self.log.error(f"HTTP error downloading file {file_id}: {e}")
+            return None
+        except Exception as e:
+            self.log.error(f"Error downloading file {file_id}: {e}")
+            return None
+
     def is_bot_mentioned(self, content: str) -> bool:
         """Check if the bot was mentioned using proper Slack mention format.
 
         Only detects actual Slack mentions (e.g., <@BOTID>), not plain text
         containing the bot's name.
+
+        Returns True unconditionally when always_respond mode is enabled.
         """
+        if self._always_respond:
+            return True
         if self.bot_mention and content:
             return self.bot_mention in content
         return False
@@ -569,8 +656,8 @@ class SlackClientService:
         if (
             req.type == "events_api"
             and event.get("type") == "message"
-            and "subtype" not in event
-            and "bot_id" not in event
+            and event.get("subtype") in (None, "file_share")
+            and event.get("user") != self.bot_id
             and self.message_callback
         ):
             try:

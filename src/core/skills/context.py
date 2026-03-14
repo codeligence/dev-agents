@@ -111,6 +111,17 @@ class SkillContext(Generic[DepsT]):
         """
         await self._exec_ctx.send_attachment(name, content, is_binary)
 
+    async def download_attachment(self, attachment_id: str) -> str:
+        """Download an attachment and return the local file path.
+
+        Args:
+            attachment_id: Platform-specific attachment identifier.
+
+        Returns:
+            Local file path where the attachment was saved.
+        """
+        return await self._exec_ctx.download_attachment(attachment_id)
+
     # --- Artifacts ---
 
     def save_artifact(

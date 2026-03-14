@@ -1,7 +1,7 @@
 """Tests for git utility functions.
 
-These tests use a "test" branch with a known state of the codebase
-to ensure predictable test results.
+These tests use HEAD as the git ref so they work in any local checkout
+without requiring a specific branch to exist.
 """
 
 from pathlib import Path
@@ -31,8 +31,8 @@ def repo_path() -> Path:
 
 @pytest.fixture
 def test_ref() -> str:
-    """Git ref for test branch with known state."""
-    return "test"
+    """Git ref pointing to the current commit."""
+    return "HEAD"
 
 
 class TestGitGrepSearch:
@@ -146,7 +146,7 @@ class TestGitGrepSearch:
         result = git_grep_search(
             repo_path=repo_path,
             git_ref=test_ref,
-            pattern="nonexistent_pattern_xyz_123_abc",
+            pattern="zzz_no_match_" + "qqqxxx",
         )
         assert result.total_lines == 0
         assert len(result.matches) == 0

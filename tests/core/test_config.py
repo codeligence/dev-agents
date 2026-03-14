@@ -1,11 +1,12 @@
 from pathlib import Path
+from unittest.mock import patch
 import os
 import tempfile
 import threading
 
 import pytest
 
-from core.config import BaseConfig, get_default_config
+from core.config import _BUNDLED_CONFIG_DIR, BaseConfig, get_default_config
 
 
 class TestBaseConfig:
@@ -339,3 +340,182 @@ class TestDefaultConfigSingleton:
         finally:
             if test_key in os.environ:
                 del os.environ[test_key]
+
+
+class TestLayeredConfigResolution:
+    """Test cases for the layered config resolution strategy."""
+
+    def test_cwd_config_replaces_bundled(self):
+        """Test that CWD config/config.yaml replaces bundled defaults entirely."""
+        # When running from project root, CWD config/ exists and should be used
+        config = BaseConfig()
+
+        # CWD config should be the primary path (not the bundled one)
+        cwd_config = Path.cwd() / "config" / "config.yaml"
+        if cwd_config.is_file():
+            assert config._config_path == str(cwd_config)
+
+    def test_bundled_defaults_used_when_no_cwd_config(self, tmp_path: Path):
+        """Test that bundled defaults are used when CWD has no config/."""
+        # Simulate a CWD without config/ by patching Path.cwd()
+        with patch("core.config.Path.cwd", return_value=tmp_path):
+            config = BaseConfig()
+            bundled = _BUNDLED_CONFIG_DIR / "config.yaml"
+            assert config._config_path == str(bundled)
+
+    def test_cwd_custom_overlay_merges(self, tmp_path: Path):
+        """Test that config.custom.yaml merges on top of the base."""
+        # Create a config dir with base and custom files
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+
+        base_yaml = config_dir / "config.yaml"
+        base_yaml.write_text("base_key: base_value\nshared_key: from_base\n")
+
+        custom_yaml = config_dir / "config.custom.yaml"
+        custom_yaml.write_text("custom_key: custom_value\nshared_key: from_custom\n")
+
+        with patch("core.config.Path.cwd", return_value=tmp_path):
+            config = BaseConfig()
+            # Base value should be present
+            assert config.get_value("base_key") == "base_value"
+            # Custom value should be present
+            assert config.get_value("custom_key") == "custom_value"
+            # Custom should override base for shared keys
+            assert config.get_value("shared_key") == "from_custom"
+
+    def test_bundled_defaults_exist(self):
+        """Test that bundled default config files are present in the package."""
+        bundled_config = _BUNDLED_CONFIG_DIR / "config.yaml"
+        assert bundled_config.is_file(), f"Bundled config not found: {bundled_config}"
+
+    def test_error_when_no_config_found(self, tmp_path: Path):
+        """Test that a clear error is raised when no config is found anywhere."""
+        # Empty temp dir: no CWD config, and sabotage the bundled path
+        with (
+            patch("core.config.Path.cwd", return_value=tmp_path),
+            patch("core.config._BUNDLED_CONFIG_DIR", tmp_path / "nonexistent"),
+            pytest.raises(FileNotFoundError, match="No config.yaml found"),
+        ):
+            BaseConfig()
+
+
+class TestBundledProjectPruning:
+    """Test that bundled-only project entries are pruned when a custom overlay defines its own projects."""
+
+    def test_custom_overlay_prunes_bundled_projects(self, tmp_path: Path):
+        """Custom overlay defines only my_app — bundled 'default' should be pruned."""
+        defaults_dir = tmp_path / "defaults"
+        defaults_dir.mkdir()
+        bundled = defaults_dir / "config.yaml"
+        bundled.write_text(
+            "projects:\n"
+            "  default:\n"
+            "    git:\n"
+            "      path: /code\n"
+            "models:\n"
+            "  large: openai:gpt-4\n"
+        )
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        custom = config_dir / "config.custom.yaml"
+        custom.write_text(
+            "projects:\n" "  my_app:\n" "    git:\n" "      path: /my-repo\n"
+        )
+
+        with (
+            patch("core.config.Path.cwd", return_value=tmp_path),
+            patch("core.config._BUNDLED_CONFIG_DIR", defaults_dir),
+        ):
+            config = BaseConfig()
+            projects = config.get_available_projects()
+            assert "my_app" in projects
+            assert "default" not in projects
+            # Non-entity sections should be unaffected
+            assert config.get_value("models.large") == "openai:gpt-4"
+
+    def test_custom_overlay_keeps_user_defined_default(self, tmp_path: Path):
+        """Custom overlay explicitly defines 'default' — it should be kept."""
+        defaults_dir = tmp_path / "defaults"
+        defaults_dir.mkdir()
+        bundled = defaults_dir / "config.yaml"
+        bundled.write_text(
+            "projects:\n" "  default:\n" "    git:\n" "      path: /code\n"
+        )
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        custom = config_dir / "config.custom.yaml"
+        custom.write_text(
+            "projects:\n"
+            "  default:\n"
+            "    git:\n"
+            "      path: /my-default\n"
+            "  my_app:\n"
+            "    git:\n"
+            "      path: /my-repo\n"
+        )
+
+        with (
+            patch("core.config.Path.cwd", return_value=tmp_path),
+            patch("core.config._BUNDLED_CONFIG_DIR", defaults_dir),
+        ):
+            config = BaseConfig()
+            projects = config.get_available_projects()
+            assert "default" in projects
+            assert "my_app" in projects
+            # User's override should win
+            assert config.get_value("projects.default.git.path") == "/my-default"
+
+    def test_no_pruning_without_custom_overlay(self, tmp_path: Path):
+        """No custom overlay — bundled 'default' project should be present."""
+        defaults_dir = tmp_path / "defaults"
+        defaults_dir.mkdir()
+        bundled = defaults_dir / "config.yaml"
+        bundled.write_text(
+            "projects:\n" "  default:\n" "    git:\n" "      path: /code\n"
+        )
+
+        with (
+            patch("core.config.Path.cwd", return_value=tmp_path),
+            patch("core.config._BUNDLED_CONFIG_DIR", defaults_dir),
+        ):
+            config = BaseConfig()
+            assert "default" in config.get_available_projects()
+
+    def test_no_pruning_when_cwd_replaces_bundled(self, tmp_path: Path):
+        """CWD config.yaml replaces bundled — no merge, no pruning needed."""
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        cwd_config = config_dir / "config.yaml"
+        cwd_config.write_text(
+            "projects:\n" "  my_app:\n" "    git:\n" "      path: /my-repo\n"
+        )
+
+        with patch("core.config.Path.cwd", return_value=tmp_path):
+            config = BaseConfig()
+            projects = config.get_available_projects()
+            assert "my_app" in projects
+            assert "default" not in projects
+
+    def test_custom_overlay_without_projects_keeps_bundled(self, tmp_path: Path):
+        """Custom overlay doesn't touch projects — bundled 'default' should remain."""
+        defaults_dir = tmp_path / "defaults"
+        defaults_dir.mkdir()
+        bundled = defaults_dir / "config.yaml"
+        bundled.write_text(
+            "projects:\n" "  default:\n" "    git:\n" "      path: /code\n"
+        )
+
+        config_dir = tmp_path / "config"
+        config_dir.mkdir()
+        custom = config_dir / "config.custom.yaml"
+        custom.write_text("models:\n  large: openai:gpt-4.1\n")
+
+        with (
+            patch("core.config.Path.cwd", return_value=tmp_path),
+            patch("core.config._BUNDLED_CONFIG_DIR", defaults_dir),
+        ):
+            config = BaseConfig()
+            assert "default" in config.get_available_projects()
