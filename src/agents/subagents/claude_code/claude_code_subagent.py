@@ -9,7 +9,11 @@ from claude_agent_sdk import (
     create_sdk_mcp_server,
     tool,
 )
-from claude_agent_sdk.types import SystemPromptPreset
+from claude_agent_sdk.types import (
+    HookEvent,
+    HookMatcher,
+    SystemPromptPreset,
+)
 from pydantic_ai.usage import RunUsage
 
 from core.agents.context import get_current_agent_execution_context
@@ -17,6 +21,7 @@ from core.integrations.context_integration_loader import ContextIntegrationLoade
 from core.log import get_logger
 
 from .models import ClaudeCodeConfig
+from .permissions import pretool_noop_hook, read_only_tool_handler
 
 logger = get_logger(__name__)
 
@@ -160,39 +165,11 @@ class ClaudeCodeSubagent:
 
         # Create custom tools if context_loader is available
         mcp_servers = {}
-        allowed_tools = [
-            # Git read-only tools
-            "Bash(git log:*)",
-            "Bash(git diff:*)",
-            "Bash(git show:*)",
-            # File reading and search tools
-            "Read",
-            "Grep",
-            "Glob",
-        ]
-        # Configure Claude SDK with repository working directory and full read toolset
-        disallowed_tools = [
-            # Git mutation commands
-            "Bash(git add:*)",
-            "Bash(git rm:*)",
-            "Bash(git mv:*)",
-            "Bash(git commit:*)",
-            "Bash(git push:*)",
-            "Bash(git pull:*)",
-            "Bash(git merge:*)",
-            "Bash(git rebase:*)",
-            "Bash(git reset:*)",
-            "Bash(git checkout:*)",
-            "Bash(git stash:*)",
-            "Bash(git tag:*)",
-            "Bash(git branch:*)",
-            "Bash(git clean:*)",
-            "Bash(git worktree:*)",
-            "Bash(git gc:*)",
-            # File modification tools
-            "Write",
-            "Edit",
-        ]
+        # Bash is intentionally NOT in allowed_tools so permission requests
+        # go through the can_use_tool callback for fine-grained command filtering.
+        # The Bash(subcommand:*) pattern syntax does not work in the Agent SDK.
+        allowed_tools: list[str] = ["Read", "Grep", "Glob"]
+        disallowed_tools = ["Write", "Edit"]
 
         if self._context_loader is not None:
             # Create project-specific tools based on available providers
@@ -212,6 +189,13 @@ class ClaudeCodeSubagent:
                     f"Added {len(project_tools)} project tool(s) to Claude SDK"
                 )
 
+        # Required workaround for Python SDK: PreToolUse hook keeps the stream
+        # open so can_use_tool callback is invoked for Bash commands.
+        # See: https://github.com/anthropics/claude-code/issues/18735
+        hooks: dict[HookEvent, list[HookMatcher]] = {
+            "PreToolUse": [HookMatcher(matcher=None, hooks=[pretool_noop_hook])]
+        }
+
         if mcp_servers:
             options = ClaudeAgentOptions(
                 cwd=repo_path,
@@ -220,14 +204,19 @@ class ClaudeCodeSubagent:
                 mcp_servers=mcp_servers,  # type: ignore[arg-type]
                 allowed_tools=allowed_tools,
                 disallowed_tools=disallowed_tools,
+                can_use_tool=read_only_tool_handler,
+                hooks=hooks,
             )
         else:
             options = ClaudeAgentOptions(
+                max_buffer_size=10 * 1024 * 1024,
                 cwd=repo_path,
                 cli_path=self._cli_path,
                 system_prompt=SystemPromptPreset(type="preset", preset="claude_code"),
                 allowed_tools=allowed_tools,
                 disallowed_tools=disallowed_tools,
+                can_use_tool=read_only_tool_handler,
+                hooks=hooks,
             )
 
         # Use Claude SDK to perform the analysis

@@ -1,6 +1,7 @@
 """Slack implementation of AgentExecutionContext."""
 
 from typing import Any
+import asyncio
 import contextlib
 import uuid
 
@@ -13,6 +14,10 @@ from core.protocols.agent_protocols import AgentExecutionContext
 from integrations.slack.slack_client_service import SlackClientService
 
 logger = get_logger("SlackAgentContext")
+
+# Slack message delivery retry settings
+MAX_SLACK_SEND_ATTEMPTS = 2
+SLACK_RETRY_DELAY_SECONDS = 0.75
 
 
 class SlackAgentContext(AgentExecutionContext):
@@ -59,6 +64,10 @@ class SlackAgentContext(AgentExecutionContext):
     ) -> str | None:
         """Send a new message or update the last message if it exists.
 
+        When updating an existing message, retries up to ``MAX_SLACK_SEND_ATTEMPTS``
+        times (with a short delay between attempts).  On the final attempt the
+        method falls back to sending a brand-new message.
+
         Args:
             text: Message text to send
             is_status: Whether this is a status message - if True, stores timestamp for future updates;
@@ -68,25 +77,59 @@ class SlackAgentContext(AgentExecutionContext):
             Message timestamp if successful, None otherwise
         """
         try:
+            message_ts: str | None = None
+            action = "Sent"
+
             if self.last_message_ts:
-                # Update existing message
-                logger.debug(f"Updating existing message {self.last_message_ts}")
-                message_ts = self.slack_client.update_message(
-                    channel_id=self.channel_id,
-                    message_ts=self.last_message_ts,
-                    text=text,
-                    thread_ts=self.thread_ts or self.channel_id,
-                )
-                action = "Updated"
+                existing_ts = self.last_message_ts
+                for attempt in range(1, MAX_SLACK_SEND_ATTEMPTS + 1):
+                    is_last_attempt = attempt == MAX_SLACK_SEND_ATTEMPTS
+
+                    if not is_last_attempt:
+                        # Try updating the existing message
+                        if attempt > 1:
+                            await asyncio.sleep(SLACK_RETRY_DELAY_SECONDS)
+                        logger.debug(
+                            f"Update attempt {attempt}/{MAX_SLACK_SEND_ATTEMPTS} "
+                            f"for message {existing_ts}"
+                        )
+                        message_ts = self.slack_client.update_message(
+                            channel_id=self.channel_id,
+                            message_ts=existing_ts,
+                            text=text,
+                            thread_ts=self.thread_ts or self.channel_id,
+                        )
+                        if message_ts:
+                            action = (
+                                "Updated"
+                                if attempt == 1
+                                else f"Updated (attempt {attempt})"
+                            )
+                            break
+                        logger.warning(
+                            f"Update attempt {attempt} failed for {existing_ts}"
+                        )
+                    else:
+                        # Final attempt: fall back to sending a new message
+                        logger.warning(
+                            f"All update attempts exhausted for {existing_ts}, "
+                            "falling back to new message"
+                        )
+                        self.last_message_ts = None
+                        message_ts = self.slack_client.send_reply(
+                            channel_id=self.channel_id,
+                            thread_ts=self.thread_ts or self.channel_id,
+                            text=text,
+                        )
+                        action = "Sent (fallback)"
             else:
-                # Send new message
+                # No existing message — send a new one
                 logger.debug("Sending new message")
                 message_ts = self.slack_client.send_reply(
                     channel_id=self.channel_id,
                     thread_ts=self.thread_ts or self.channel_id,
                     text=text,
                 )
-                action = "Sent"
 
             if message_ts:
                 msg_type = "status" if is_status else "response"
@@ -142,8 +185,7 @@ class SlackAgentContext(AgentExecutionContext):
         message_ts = await self._send_or_update_message(response, is_status=False)
 
         if not message_ts:
-            logger.error("Failed to send response to Slack - message_ts is None")
-            # Try to send an error message
+            logger.error("Failed to send response to Slack — all attempts exhausted")
             with contextlib.suppress(Exception):
                 await self._send_or_update_message(
                     "❌ Sorry, I encountered an error while sending my response.",

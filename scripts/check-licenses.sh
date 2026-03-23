@@ -145,12 +145,26 @@ if [ "$UNKNOWN_COUNT" -gt 0 ]; then
     echo -e "\n${YELLOW}Action required: Manually investigate these dependencies${NC}"
 fi
 
+# Multi-licensed dependencies where we choose the MIT-compatible license
+# docutils: BSD/GPL/Public Domain — we use it under BSD (transitive dep via fastmcp)
+MULTI_LICENSED_ALLOWLIST=("docutils")
+
 # Check for GPL licenses (incompatible with commercial licensing)
-GPL_COUNT=$(jq '[.[] | select(.License | contains("GNU General Public License") and (contains("GNU Affero") | not))] | length' "$REPORT_JSON")
+GPL_COUNT=$(jq --argjson allow "$(printf '%s\n' "${MULTI_LICENSED_ALLOWLIST[@]}" | jq -R . | jq -s .)" \
+  '[.[] | select(
+    (.License | contains("GNU General Public License")) and
+    (.License | contains("GNU Affero") | not) and
+    (.Name as $n | $allow | index($n) | not)
+  )] | length' "$REPORT_JSON")
 
 if [ "$GPL_COUNT" -gt 0 ]; then
     echo -e "\n${RED}❌ GPL-licensed dependencies found (incompatible with commercial licensing):${NC}"
-    jq -r '.[] | select(.License | contains("GNU General Public License") and (contains("GNU Affero") | not)) | "- \(.Name) \(.Version) (\(.License))"' "$REPORT_JSON"
+    jq --argjson allow "$(printf '%s\n' "${MULTI_LICENSED_ALLOWLIST[@]}" | jq -R . | jq -s .)" \
+      -r '.[] | select(
+        (.License | contains("GNU General Public License")) and
+        (.License | contains("GNU Affero") | not) and
+        (.Name as $n | $allow | index($n) | not)
+      ) | "- \(.Name) \(.Version) (\(.License))"' "$REPORT_JSON"
     exit 1
 fi
 

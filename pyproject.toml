@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dev-agents"
-version = "1.0.2"
+version = "1.0.3"
 description = "AI Agents for Agile Dev Teams"
 readme = "README.md"
 license = 'MIT'
@@ -380,7 +380,7 @@ cache = true
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.0.2"
+version = "1.0.3"
 tag_format = "v$major.$minor.$patch"
 version_files = [
     "pyproject.toml:version",
