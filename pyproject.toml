@@ -70,7 +70,7 @@ slack = [
     "slack_sdk>=3.19.5,<4.0.0",
 ]
 jira = [
-    "markdown-it-py>=3.0.0,<4.0.0",
+    "markdown-it-py>=3.0.0,<5.0.0",
 ]
 azure = [
     "azure-devops>=7.1.0b4,<8.0.0",
