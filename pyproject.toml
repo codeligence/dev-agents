@@ -130,7 +130,7 @@ dev = [
     # Performance & Profiling
     "py-spy>=0.3.14,<1.0.0",
     "memory-profiler>=0.61.0,<1.0.0",
-    "psutil>=5.9.0,<6.0.0",
+    "psutil>=5.9.0,<8.0.0",
 ]
 docs = [
     "zensical>=0.0.11",
