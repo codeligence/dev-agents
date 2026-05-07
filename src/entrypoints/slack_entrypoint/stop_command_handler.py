@@ -16,32 +16,41 @@ class StopCommandHandler:
         default_factory=lambda: get_logger("StopCommandHandler")
     )
 
-    def is_stop_command(self, content: str, thread_id: str, message_id: str) -> bool:
+    def is_stop_command(
+        self,
+        content: str,
+        thread_id: str,
+        message_id: str,
+        *,
+        require_mention: bool = True,
+    ) -> bool:
         """Check if message is a stop command (@bot stop).
 
         Args:
             content: The message content to check.
             thread_id: The thread identifier (parent ts for replies, own ts for top-level).
             message_id: The message's own timestamp.
+            require_mention: When True, require an explicit ``<@BOTID>``
+                mention. Pass False for contexts where every message is
+                already addressed to the bot (assistant side panel, DMs).
 
         Returns:
             True if this is a stop command, False otherwise.
         """
-        is_stop = (
-            len(content) <= 25
-            and self.slack_service.is_bot_mentioned(content)
-            and "stop" in content.lower()
-        )
+        if require_mention and not self.slack_service.is_bot_mentioned(content):
+            return False
+
+        is_stop = len(content) <= 25 and "stop" in content.lower()
 
         if is_stop and thread_id == message_id:
             self._logger.warning(
                 "Stop command sent as top-level message (thread_id == message_id). "
-                "To stop processing, reply with '@bot stop' in the same thread."
+                "To stop processing, reply with 'stop' in the same thread."
             )
 
         return is_stop
 
-    def handle_stop(self, channel_id: str, thread_id: str) -> bool:
+    async def handle_stop(self, channel_id: str, thread_id: str) -> bool:
         """Handle stop command by cancelling the task and notifying the user.
 
         Args:
@@ -52,7 +61,7 @@ class StopCommandHandler:
             True if task was cancelled, False otherwise.
         """
         if self.task_manager.cancel_task(thread_id):
-            self.slack_service.send_reply(
+            await self.slack_service.send_reply(
                 channel_id, thread_id, "Ok, processing stopped."
             )
             self._logger.info(f"Stopped processing for thread {thread_id}")

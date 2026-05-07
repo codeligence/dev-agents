@@ -1,0 +1,84 @@
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "identifier": "ENG-123",
+  "title": "Implement Linear integration for dev-agents",
+  "description": "We need to implement Linear integration following the same pattern as our GitLab and Jira integrations.\n\n## Requirements\n\n- Follow the existing integration pattern (config, models, provider, mock)\n- Use Linear's GraphQL API\n- Support issue loading by identifier\n- Extract issue IDs from text\n\n## Acceptance Criteria\n\n- All tests pass\n- Configuration works with API key\n- Mock mode functions properly",
+  "url": "https://linear.app/example-team/issue/ENG-123",
+  "priority": 2,
+  "estimate": 3,
+  "dueDate": "2026-04-15",
+  "createdAt": "2026-03-20T10:30:00.000Z",
+  "updatedAt": "2026-03-28T14:15:22.000Z",
+  "completedAt": null,
+  "canceledAt": null,
+  "state": {
+    "id": "state-001",
+    "name": "In Progress",
+    "type": "started"
+  },
+  "assignee": {
+    "id": "user-001",
+    "name": "Test Developer",
+    "email": "developer@example.com"
+  },
+  "creator": {
+    "id": "user-002",
+    "name": "Project Manager",
+    "email": "pm@example.com"
+  },
+  "team": {
+    "id": "team-001",
+    "name": "Engineering",
+    "key": "ENG"
+  },
+  "project": {
+    "id": "project-001",
+    "name": "Platform Integrations"
+  },
+  "cycle": {
+    "id": "cycle-001",
+    "name": "Sprint 12"
+  },
+  "labels": {
+    "nodes": [
+      {
+        "id": "label-001",
+        "name": "enhancement",
+        "color": "#4EA7FC"
+      },
+      {
+        "id": "label-002",
+        "name": "integration",
+        "color": "#BB87FC"
+      }
+    ]
+  },
+  "parent": null,
+  "children": {
+    "nodes": []
+  },
+  "comments": {
+    "nodes": [
+      {
+        "id": "comment-001",
+        "body": "Started working on the GraphQL client. The API is straightforward.",
+        "createdAt": "2026-03-21T09:00:00.000Z",
+        "user": {
+          "id": "user-001",
+          "name": "Test Developer",
+          "email": "developer@example.com"
+        }
+      },
+      {
+        "id": "comment-002",
+        "body": "Please make sure to handle pagination for large result sets.",
+        "createdAt": "2026-03-22T11:30:00.000Z",
+        "user": {
+          "id": "user-002",
+          "name": "Project Manager",
+          "email": "pm@example.com"
+        }
+      }
+    ]
+  }
+}

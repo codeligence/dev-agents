@@ -8,6 +8,10 @@
         "bot_user": {
             "display_name": "DevAgents",
             "always_online": true
+        },
+        "assistant_view": {
+            "assistant_description": "DevAgents help us developing our software",
+            "suggested_prompts": []
         }
     },
     "oauth_config": {
@@ -39,6 +43,8 @@
         "event_subscriptions": {
             "bot_events": [
                 "app_mention",
+                "assistant_thread_started",
+                "assistant_thread_context_changed",
                 "message.channels",
                 "message.groups",
                 "message.im"

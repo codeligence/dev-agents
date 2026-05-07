@@ -4,3 +4,4 @@ import integrations.devops  # noqa: F401
 import integrations.github  # noqa: F401
 import integrations.gitlab  # noqa: F401
 import integrations.jira  # noqa: F401
+import integrations.linear  # noqa: F401

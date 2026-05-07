@@ -1,6 +1,5 @@
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from typing import Any
-import json
 import ssl
 
 from nats.aio.client import Client as NATS
@@ -9,7 +8,8 @@ from nats.aio.msg import Msg
 
 from core.log import get_logger
 from integrations.nats.config import NatsConfig
-from integrations.nats.models import NatsJob
+
+MessageHandler = Callable[[Msg], Awaitable[None]]
 
 
 class NatsClientService:
@@ -24,26 +24,19 @@ class NatsClientService:
         self.log = get_logger(logger_name="NatsClientService", level="INFO")
         self.config = nats_config
         self.nc: NATS | None = None
-        self.message_callback: Callable[[NatsJob], None] | None = None
 
         # Validate configuration
         if not self.config.is_configured():
             raise ValueError("NATS configuration is incomplete")
 
     def _create_tls_context(self) -> ssl.SSLContext | None:
-        """Create TLS context for secure NATS connection.
-
-        Returns:
-            SSL context if CA cert path is configured, None otherwise
-        """
+        """Create TLS context for secure NATS connection."""
         ca_cert_path = self.config.get_ca_cert_path()
         if not ca_cert_path:
             return None
 
         ctx = ssl.create_default_context(purpose=ssl.Purpose.SERVER_AUTH)
-        # Trust the server certificate
         ctx.load_verify_locations(cafile=ca_cert_path)
-        # Hostname verification is enabled by default
         ctx.check_hostname = True
         ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         return ctx
@@ -60,7 +53,6 @@ class NatsClientService:
         self.nc = NATS()
 
         try:
-            # Prepare connection options
             connect_options: dict[str, Any] = {
                 "servers": [server_url],
                 "allow_reconnect": True,
@@ -69,12 +61,10 @@ class NatsClientService:
                 "name": "dev-agents-worker",
             }
 
-            # Add authentication if configured
             if user and password:
                 connect_options["user"] = user
                 connect_options["password"] = password
 
-            # Add TLS context if CA cert is configured
             tls_context = self._create_tls_context()
             if tls_context:
                 connect_options["tls"] = tls_context
@@ -96,57 +86,28 @@ class NatsClientService:
                 self.log.error(f"Error during NATS disconnect: {e}")
 
     def is_connected(self) -> bool:
-        """Check if client is connected to NATS server.
-
-        Returns:
-            True if connected, False otherwise
-        """
+        """Check if client is connected to NATS server."""
         return self.nc is not None and self.nc.is_connected
 
-    async def subscribe(self, subject: str) -> None:
+    async def subscribe(self, subject: str, cb: MessageHandler) -> None:
         """Subscribe to a NATS subject.
 
+        The callback receives the raw :class:`nats.aio.msg.Msg`. Parsing,
+        dispatching and reply logic are the caller's responsibility — the
+        client only carries bytes.
+
         Args:
-            subject: NATS subject to subscribe to
+            subject: NATS subject (supports wildcards ``*`` / ``>``)
+            cb: Async handler invoked for each received message
         """
         if not self.nc or not self.nc.is_connected:
             raise RuntimeError("Not connected to NATS server")
 
-        async def message_handler(msg: Msg) -> None:
-            """Handle incoming NATS messages."""
-            try:
-                data = msg.data.decode()
-                self.log.debug(f"Received message on {msg.subject}: {data}")
-
-                # Parse JSON message to NatsJob
-                job_data = json.loads(data)
-                job = NatsJob(
-                    id=job_data["id"],
-                    project=job_data["project"],
-                    prompt=job_data["prompt"],
-                )
-
-                # Call registered callback if available
-                if self.message_callback:
-                    self.message_callback(job)
-
-            except json.JSONDecodeError as e:
-                self.log.error(f"Failed to parse JSON message: {e}")
-            except KeyError as e:
-                self.log.error(f"Missing required field in job message: {e}")
-            except Exception as e:
-                self.log.error(f"Error handling message: {e}")
-
-        await self.nc.subscribe(subject, cb=message_handler)
+        await self.nc.subscribe(subject, cb=cb)
         self.log.info(f"Subscribed to NATS subject: {subject}")
 
     async def publish(self, subject: str, message: str) -> None:
-        """Publish a message to a NATS subject.
-
-        Args:
-            subject: NATS subject to publish to
-            message: Message content to publish
-        """
+        """Publish a message to a NATS subject."""
         if not self.nc or not self.nc.is_connected:
             raise RuntimeError("Not connected to NATS server")
 
@@ -156,11 +117,3 @@ class NatsClientService:
         except Exception as e:
             self.log.error(f"Failed to publish message: {e}")
             raise
-
-    def set_message_callback(self, callback: Callable[[NatsJob], None]) -> None:
-        """Set callback function for handling incoming messages.
-
-        Args:
-            callback: Function to call when a message is received
-        """
-        self.message_callback = callback

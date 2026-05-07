@@ -2,12 +2,9 @@ from pathlib import Path
 from typing import Any
 import threading
 
-from dotenv import load_dotenv
 from dynaconf import Dynaconf
 
 from core.log import get_logger
-
-load_dotenv()
 
 logger = get_logger("BasePrompts")
 

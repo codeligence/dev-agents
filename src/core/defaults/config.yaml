@@ -113,18 +113,44 @@ slack:
     botToken:    "@jinja {{ env.SLACK_BOT_TOKEN or '' }}"
     appToken:    "@jinja {{ env.SLACK_APP_TOKEN or '' }}"
     processingTimeout: "@jinja {{ env.SLACK_PROCESSING_TIMEOUT or 6000 }}"
-    maxConnectionFailures: "@jinja {{ env.SLACK_MAX_CONNECTION_FAILURES or 5 }}"
     alwaysRespond: "@jinja {{ env.ALWAYS_RESPOND or false }}"
+  assistant:
+    welcomeMessage: "Hi! Ask me anything about the codebase, pull requests, or work items."
+    includeFeedbackButtons: "@jinja {{ env.SLACK_INCLUDE_FEEDBACK_BUTTONS or false }}"
+    suggestedPrompts:
+      - title: "Write testing notes"
+        message: "Write testing notes for work item <id>"
+      - title: "Analyze a pull request"
+        message: "Analyze the changes in PR <id>"
+      - title: "Explain code"
+        message: "Explain how <area of the codebase> works"
+      - title: "Debug help"
+        message: "Help me investigate <bug or behaviour>"
+
+http:
+  server:
+    host: "@jinja {{env.HTTP_HOST or '0.0.0.0'}}"
+    port: "@jinja {{env.HTTP_PORT or 8000}}"
+    corsOrigins: "@jinja {{env.HTTP_CORS_ORIGINS or ''}}"
 
 agui:
   server:
-    host: "@jinja {{env.AGUI_HOST or '0.0.0.0'}}"
-    port: "@jinja {{env.AGUI_PORT or 8000}}"
-    reload: "@jinja {{env.AGUI_RELOAD or false}}"
+    enabled: "@jinja {{env.AGUI_ENABLED or false}}"
   agent:
     defaultTimeout: "@jinja {{env.AGUI_DEFAULT_TIMEOUT or 300}}"
     defaultAgentType: "@jinja {{env.AGUI_DEFAULT_AGENT_TYPE or 'chatbot'}}"
     maxMessageLength: "@jinja {{env.AGUI_MAX_MESSAGE_LENGTH or 10000}}"
+
+openai:
+  server:
+    enabled: "@jinja {{env.OPENAI_ENTRYPOINT_ENABLED or false}}"
+    apiKeys: "@jinja {{env.OPENAI_API_KEYS or ''}}"
+    modelName: "@jinja {{env.OPENAI_MODEL_NAME or 'dev-agents'}}"
+    streaming: "@jinja {{env.OPENAI_STREAMING_ENABLED or true}}"
+    thinking: "@jinja {{env.OPENAI_THINKING_ENABLED or true}}"
+  agent:
+    defaultTimeout: "@jinja {{env.OPENAI_DEFAULT_TIMEOUT or 300}}"
+    defaultAgentType: "@jinja {{env.OPENAI_DEFAULT_AGENT_TYPE or 'gitchatbot'}}"
 
 nats:
   server_url: "@jinja {{ env.get('NATS_SERVER_URL', '') }}"
@@ -132,7 +158,7 @@ nats:
   user: "@jinja {{ env.get('NATS_USER', '') }}"
   password: "@jinja {{ env.get('NATS_PASSWORD', '') }}"
   ca_cert_path: "@jinja {{ env.get('NATS_CA_CERT_PATH', '') }}"
-  subject_job_data: "@jinja {{ env.get('NATS_SUBJECT_JOB_DATA', 'jobdata') }}"
+  subject_job_data: "@jinja {{ env.get('NATS_SUBJECT_JOB_DATA', 'jobs') }}"
   subject_job_updates: "@jinja {{ env.get('NATS_SUBJECT_JOB_UPDATES', 'jobupdates') }}"
 
 cli:

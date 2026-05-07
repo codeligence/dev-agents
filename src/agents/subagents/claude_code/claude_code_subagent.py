@@ -201,6 +201,7 @@ class ClaudeCodeSubagent:
                 cwd=repo_path,
                 cli_path=self._cli_path,
                 system_prompt=SystemPromptPreset(type="preset", preset="claude_code"),
+                setting_sources=["user", "project"],
                 mcp_servers=mcp_servers,  # type: ignore[arg-type]
                 allowed_tools=allowed_tools,
                 disallowed_tools=disallowed_tools,
@@ -213,6 +214,7 @@ class ClaudeCodeSubagent:
                 cwd=repo_path,
                 cli_path=self._cli_path,
                 system_prompt=SystemPromptPreset(type="preset", preset="claude_code"),
+                setting_sources=["user", "project"],
                 allowed_tools=allowed_tools,
                 disallowed_tools=disallowed_tools,
                 can_use_tool=read_only_tool_handler,

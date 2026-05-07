@@ -1,7 +1,6 @@
 """Slack implementation of AgentExecutionContext."""
 
 from typing import Any
-import asyncio
 import contextlib
 import uuid
 
@@ -11,13 +10,10 @@ from core.log import get_logger
 from core.message import MessageList
 from core.prompts import BasePrompts
 from core.protocols.agent_protocols import AgentExecutionContext
+from integrations.slack.models import SlackBotConfig
 from integrations.slack.slack_client_service import SlackClientService
 
 logger = get_logger("SlackAgentContext")
-
-# Slack message delivery retry settings
-MAX_SLACK_SEND_ATTEMPTS = 2
-SLACK_RETRY_DELAY_SECONDS = 0.75
 
 
 class SlackAgentContext(AgentExecutionContext):
@@ -44,6 +40,7 @@ class SlackAgentContext(AgentExecutionContext):
         self.prompts = prompts
         self.context_id = str(uuid.uuid4())
         self.last_message_ts: str | None = None
+        self._include_feedback = SlackBotConfig(config).get_include_feedback_buttons()
 
         # Check if bot is mentioned in the last message
         self._bot_mentioned = False
@@ -62,97 +59,60 @@ class SlackAgentContext(AgentExecutionContext):
     async def _send_or_update_message(
         self, text: str, is_status: bool = False
     ) -> str | None:
-        """Send a new message or update the last message if it exists.
+        """Send a new message or update the last one.
 
-        When updating an existing message, retries up to ``MAX_SLACK_SEND_ATTEMPTS``
-        times (with a short delay between attempts).  On the final attempt the
-        method falls back to sending a brand-new message.
+        Tries to update an existing message first.  If the update fails,
+        falls back to sending a new message.
 
         Args:
             text: Message text to send
-            is_status: Whether this is a status message - if True, stores timestamp for future updates;
-                      if False, clears timestamp after sending (final response)
+            is_status: If True, stores timestamp for future updates;
+                      if False, clears it (final response)
 
         Returns:
             Message timestamp if successful, None otherwise
         """
+        thread = self.thread_ts or self.channel_id
+        message_ts: str | None = None
+
         try:
-            message_ts: str | None = None
-            action = "Sent"
-
+            include_feedback = self._include_feedback and not is_status
             if self.last_message_ts:
-                existing_ts = self.last_message_ts
-                for attempt in range(1, MAX_SLACK_SEND_ATTEMPTS + 1):
-                    is_last_attempt = attempt == MAX_SLACK_SEND_ATTEMPTS
-
-                    if not is_last_attempt:
-                        # Try updating the existing message
-                        if attempt > 1:
-                            await asyncio.sleep(SLACK_RETRY_DELAY_SECONDS)
-                        logger.debug(
-                            f"Update attempt {attempt}/{MAX_SLACK_SEND_ATTEMPTS} "
-                            f"for message {existing_ts}"
-                        )
-                        message_ts = self.slack_client.update_message(
-                            channel_id=self.channel_id,
-                            message_ts=existing_ts,
-                            text=text,
-                            thread_ts=self.thread_ts or self.channel_id,
-                        )
-                        if message_ts:
-                            action = (
-                                "Updated"
-                                if attempt == 1
-                                else f"Updated (attempt {attempt})"
-                            )
-                            break
-                        logger.warning(
-                            f"Update attempt {attempt} failed for {existing_ts}"
-                        )
-                    else:
-                        # Final attempt: fall back to sending a new message
-                        logger.warning(
-                            f"All update attempts exhausted for {existing_ts}, "
-                            "falling back to new message"
-                        )
-                        self.last_message_ts = None
-                        message_ts = self.slack_client.send_reply(
-                            channel_id=self.channel_id,
-                            thread_ts=self.thread_ts or self.channel_id,
-                            text=text,
-                        )
-                        action = "Sent (fallback)"
-            else:
-                # No existing message — send a new one
-                logger.debug("Sending new message")
-                message_ts = self.slack_client.send_reply(
+                # Try updating the existing message
+                message_ts = await self.slack_client.update_message(
                     channel_id=self.channel_id,
-                    thread_ts=self.thread_ts or self.channel_id,
+                    message_ts=self.last_message_ts,
                     text=text,
+                    thread_ts=thread,
+                    include_feedback=include_feedback,
+                )
+                if not message_ts:
+                    # Update failed — fall back to new message
+                    logger.warning(
+                        f"Update failed for {self.last_message_ts}, sending new message"
+                    )
+                    self.last_message_ts = None
+                    message_ts = await self.slack_client.send_reply(
+                        channel_id=self.channel_id,
+                        thread_ts=thread,
+                        text=text,
+                        include_feedback=include_feedback,
+                    )
+            else:
+                message_ts = await self.slack_client.send_reply(
+                    channel_id=self.channel_id,
+                    thread_ts=thread,
+                    text=text,
+                    include_feedback=include_feedback,
                 )
 
             if message_ts:
-                msg_type = "status" if is_status else "response"
-                logger.info(f"{action} {msg_type} message: {message_ts}")
-
-                # Manage last_message_ts based on message type
-                if is_status:
-                    # Status messages - store timestamp for future updates
-                    self.last_message_ts = message_ts
-                else:
-                    # Response messages - clear timestamp (final message)
-                    self.last_message_ts = None
+                self.last_message_ts = message_ts if is_status else None
 
             return message_ts
 
         except Exception as e:
-            logger.error(
-                f"Failed to send/update message: {type(e).__name__}: {str(e)}",
-                exc_info=True,
-            )
-            logger.error(
-                f"Context: channel_id={self.channel_id}, thread_ts={self.thread_ts}, last_message_ts={self.last_message_ts}"
-            )
+            logger.error(f"Failed to send/update message: {e}")
             return None
 
     async def send_status(self, message: str) -> None:
@@ -223,11 +183,12 @@ class SlackAgentContext(AgentExecutionContext):
                 else content.decode("utf-8", errors="replace")
             )
 
-            canvas_id = self.slack_client.post_canvas(
+            canvas_id = await self.slack_client.post_canvas(
                 channel_id=self.channel_id,
                 title=name,
                 markdown_content=content_str,
                 thread_ts=self.thread_ts,
+                include_feedback=self._include_feedback,
             )
 
             if canvas_id:
@@ -265,7 +226,7 @@ class SlackAgentContext(AgentExecutionContext):
         if not isinstance(storage, FileStorage):
             raise RuntimeError("Attachment downloads require FileStorage backend")
         target_dir = storage.storage_dir / "attachments"
-        result = self.slack_client.download_file(attachment_id, target_dir)
+        result = await self.slack_client.download_file(attachment_id, target_dir)
         if result is None:
             raise RuntimeError(f"Failed to download attachment {attachment_id}")
         logger.info(f"Downloaded attachment {attachment_id} to {result}")
@@ -368,6 +329,18 @@ class SlackAgentContext(AgentExecutionContext):
             "context_id": self.context_id,
         }
 
+    def get_origin_info(self) -> dict[str, Any]:
+        """Serialize Slack context for deferred recreation.
+
+        Returns:
+            Dict with Slack-specific fields needed to recreate this context.
+        """
+        return {
+            "type": "slack",
+            "channel_id": self.channel_id,
+            "thread_ts": self.thread_ts,
+        }
+
     def is_bot_mentioned(self) -> bool:
         """Check if the bot was mentioned in the last message.
 
@@ -375,3 +348,42 @@ class SlackAgentContext(AgentExecutionContext):
             True if the bot was mentioned in the last message, False otherwise
         """
         return self._bot_mentioned
+
+
+class ScheduledSlackContext(SlackAgentContext):
+    """SlackAgentContext variant for scheduled (deferred) execution.
+
+    Status updates are silenced to avoid Slack spam; only the final
+    response and attachments are posted.
+    """
+
+    async def send_status(self, message: str) -> None:
+        logger.debug(f"[scheduled] status silenced: {message[:200]}")
+
+
+def register_slack_origin_factory(slack_client: SlackClientService) -> None:
+    """Register the Slack origin context factory.
+
+    Should be called once during Slack entrypoint startup so that deferred
+    execution paths (e.g. the scheduler skill) can recreate Slack contexts.
+
+    Args:
+        slack_client: A connected SlackClientService for posting messages.
+    """
+    from core.context_factory import register_origin_factory
+
+    def _factory(
+        origin_info: dict[str, Any],
+        config: BaseConfig,
+        prompts: BasePrompts,
+    ) -> ScheduledSlackContext:
+        return ScheduledSlackContext(
+            slack_client=slack_client,
+            channel_id=origin_info["channel_id"],
+            thread_ts=origin_info.get("thread_ts"),
+            message_list=MessageList([]),
+            config=config,
+            prompts=prompts,
+        )
+
+    register_origin_factory("slack", _factory)

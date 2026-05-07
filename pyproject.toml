@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dev-agents"
-version = "1.0.3"
+version = "1.1.0"
 description = "AI Agents for Agile Dev Teams"
 readme = "README.md"
 license = 'MIT'
@@ -68,6 +68,8 @@ Homepage = "https://github.com/codeligence/dev-agents"
 [project.optional-dependencies]
 slack = [
     "slack_sdk>=3.19.5,<4.0.0",
+    "slack_bolt>=1.20.0,<2.0.0",
+    "aiohttp>=3.9.0,<4.0.0",
 ]
 jira = [
     "markdown-it-py>=3.0.0,<5.0.0",
@@ -80,6 +82,9 @@ nats = [
 ]
 claude = [
     "claude-agent-sdk>=0.1.0,<1.0.0",
+]
+scheduler = [
+    "apscheduler>=3.10.0,<4.0.0",
 ]
 dev = [
     # Testing
@@ -293,6 +298,7 @@ mypy_path = "src"
 [[tool.mypy.overrides]]
 module = [
     "slack_sdk.*",
+    "slack_bolt.*",
     "dynaconf.*",
     "pydantic_ai.*",
     "fastapi.*",
@@ -380,7 +386,7 @@ cache = true
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.0.3"
+version = "1.1.0"
 tag_format = "v$major.$minor.$patch"
 version_files = [
     "pyproject.toml:version",

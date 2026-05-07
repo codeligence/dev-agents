@@ -58,7 +58,7 @@ class AgentMessageConsumer(MessageConsumer):
             if messages:
                 first_message = messages.get_messages()[0]
                 # Cast to SlackMessage to access channel_id
-                from entrypoints.slack_entrypoint.slack_bot_service import SlackMessage
+                from entrypoints.slack_entrypoint.models import SlackMessage
 
                 slack_message = first_message
                 if isinstance(slack_message, SlackMessage):

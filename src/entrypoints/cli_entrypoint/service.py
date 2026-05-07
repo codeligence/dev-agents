@@ -7,7 +7,7 @@ import asyncio
 import sys
 import threading
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from agents.agents.gitchatbot.agent import AGENT_NAME
 from core.agents.service import AgentService
@@ -76,7 +76,7 @@ def _print_banner() -> None:
 
 
 # Load environment variables
-load_dotenv()
+load_dotenv(find_dotenv(usecwd=True))
 
 # Set up logging (console logging will be configured based on -v flag in main)
 base_config = get_default_config()

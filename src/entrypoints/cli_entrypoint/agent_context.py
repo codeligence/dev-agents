@@ -1,6 +1,7 @@
 """CLI implementation of AgentExecutionContext."""
 
 from datetime import datetime
+from typing import Any
 import sys
 import uuid
 
@@ -183,6 +184,14 @@ class CLIAgentContext(AgentExecutionContext):
             Unique identifier that can be used for state persistence
         """
         return self.execution_id
+
+    def get_origin_info(self) -> dict[str, Any]:
+        """Serialize CLI context origin.
+
+        CLI contexts cannot be meaningfully recreated for deferred execution,
+        but the interface is implemented for completeness.
+        """
+        return {"type": "cli", "thread_id": self.thread_id}
 
     def add_user_message(self, content: str) -> None:
         """Add a user message to the conversation history.

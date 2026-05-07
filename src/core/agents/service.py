@@ -166,7 +166,10 @@ class AgentService:
                 f"Agent timeout: type={agent_type}, time={execution_time_ms}ms"
             )
 
-            await context.send_status(
+            # Use send_response so the failure reaches the user on every
+            # platform, including non-updatable ones (email) where
+            # send_status is suppressed to avoid spam.
+            await context.send_response(
                 f"Agent execution timed out after {timeout} seconds"
             )
             raise AgentTimeoutError(error_msg, agent_type)
@@ -186,7 +189,7 @@ class AgentService:
                 f"Agent execution error: type={agent_type}, error={error_msg}, time={execution_time_ms}ms"
             )
 
-            await context.send_status(f"Agent execution failed: {str(e)}")
+            await context.send_response(f"Agent execution failed: {str(e)}")
             raise AgentExecutionError(error_msg, agent_type) from e
 
         finally:

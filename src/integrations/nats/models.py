@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from pydantic import BaseModel, ConfigDict
 
 
-@dataclass
-class NatsJob:
-    """Model for incoming NATS job messages.
+class SubmitJobRequest(BaseModel):
+    """Payload for ``jobs.{job_id}.submit``.
 
     Attributes:
         id: Unique identifier for the job
@@ -11,6 +10,14 @@ class NatsJob:
         prompt: Multi-line prompt text to be written to prompts/{id}
     """
 
-    id: str
-    project: str
-    prompt: str
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = ""
+    project: str = ""
+    prompt: str = ""
+
+
+class ListSkillsRequest(BaseModel):
+    """Payload for ``jobs.{job_id}.list-skills``. Currently no fields."""
+
+    model_config = ConfigDict(extra="ignore")

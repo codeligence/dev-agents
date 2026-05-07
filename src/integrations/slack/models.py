@@ -19,16 +19,41 @@ class SlackBotConfig:
     def get_processing_timeout(self) -> int:
         return int(self._base_config.get_value("slack.bot.processingTimeout", 6000))
 
-    def get_max_connection_failures(self) -> int:
-        """Get the maximum number of consecutive connection failures before shutdown."""
-        return int(self._base_config.get_value("slack.bot.maxConnectionFailures", 5))
-
     def get_always_respond(self) -> bool:
         """Get whether the bot should always respond, bypassing mention checks."""
-        value = self._base_config.get_value("slack.bot.alwaysRespond", False)
-        if isinstance(value, str):
-            return value.lower() in ("true", "1", "yes")
-        return bool(value)
+        return self._base_config.get_bool("slack.bot.alwaysRespond", False)
+
+    def get_welcome_message(self) -> str | None:
+        """Welcome text for new Assistant threads. ``None`` to skip."""
+        value = self._base_config.get_value("slack.assistant.welcomeMessage", None)
+        if value is None or value == "":
+            return None
+        return str(value)
+
+    def get_suggested_prompts(self) -> list[dict[str, str]]:
+        """Suggested prompts surfaced when an Assistant thread starts.
+
+        Each entry is a ``{"title": str, "message": str}`` dict, matching
+        the shape Slack's ``set_suggested_prompts`` expects.
+        """
+        raw = self._base_config.get_value("slack.assistant.suggestedPrompts", [])
+        if not isinstance(raw, list):
+            return []
+        prompts: list[dict[str, str]] = []
+        for entry in raw:
+            if not isinstance(entry, dict):
+                continue
+            title = entry.get("title")
+            message = entry.get("message")
+            if isinstance(title, str) and isinstance(message, str):
+                prompts.append({"title": title, "message": message})
+        return prompts
+
+    def get_include_feedback_buttons(self) -> bool:
+        """Whether to attach feedback buttons to final responses."""
+        return self._base_config.get_bool(
+            "slack.assistant.includeFeedbackButtons", False
+        )
 
     def is_configured(self) -> bool:
         """Check if all required Slack configuration is present."""

@@ -10,14 +10,14 @@ import signal
 import sys
 import threading
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from core.config import get_default_config
 from core.log import get_logger, setup_thread_logging
 from core.version_check import check_for_updates
 
 # Load environment variables
-load_dotenv()
+load_dotenv(find_dotenv(usecwd=True))
 
 # Set up basic logging first
 base_config = get_default_config()
@@ -28,7 +28,7 @@ def detect_configured_services() -> list[str]:
     """Detect all configured services.
 
     Returns:
-        List of configured service names (e.g., ['slack', 'agui']).
+        List of configured service names (e.g., ['slack', 'nats']).
     """
     configured: list[str] = []
 
@@ -52,17 +52,40 @@ def detect_configured_services() -> list[str]:
     except Exception as e:
         logger.debug(f"Slack configuration check failed: {e}")
 
-    # Check AGUI configuration
-    try:
-        from entrypoints.agui_entrypoint.service import AGUIConfig
-
-        agui_config = AGUIConfig(base_config)
-        if agui_config.is_configured():
-            configured.append("agui")
-    except Exception as e:
-        logger.debug(f"AGUI configuration check failed: {e}")
-
     return configured
+
+
+def register_http_entrypoints() -> bool:
+    """Let each HTTP-based entrypoint register itself on the shared HTTP server.
+
+    Each entrypoint checks its own config and registers routes if enabled.
+    Returns True if at least one entrypoint registered.
+    """
+    any_registered = False
+
+    # AGUI entrypoint
+    try:
+        from entrypoints.agui_entrypoint.service import (
+            register_if_configured as agui_register,
+        )
+
+        if agui_register():
+            any_registered = True
+    except Exception as e:
+        logger.debug(f"AGUI entrypoint registration check failed: {e}")
+
+    # OpenAI-compatible entrypoint
+    try:
+        from entrypoints.openai_entrypoint.service import (
+            register_if_configured as openai_register,
+        )
+
+        if openai_register():
+            any_registered = True
+    except Exception as e:
+        logger.debug(f"OpenAI entrypoint registration check failed: {e}")
+
+    return any_registered
 
 
 class ServiceOrchestrator:
@@ -189,10 +212,14 @@ All configured services are started in parallel. CLI is added
 automatically when a TTY is available.
 
 Service Detection:
-  NATS        - if NATS_SERVER_URL and NATS_JOB_ID are configured
-  Slack Bot   - if SLACK_BOT_TOKEN and SLACK_APP_TOKEN are configured
-  AG-UI Server - if agui.server.enabled=true in configuration
-  CLI Chat    - if stdin is a TTY (interactive terminal)
+  NATS          - if NATS_SERVER_URL and NATS_JOB_ID are configured
+  Slack Bot     - if SLACK_BOT_TOKEN and SLACK_APP_TOKEN are configured
+  HTTP Server   - if any HTTP entrypoint is enabled (agui, openai)
+  CLI Chat      - if stdin is a TTY (interactive terminal)
+
+HTTP Entrypoints (share single uvicorn server):
+  AG-UI         - if agui.server.enabled=true in configuration
+  OpenAI        - if openai.server.enabled=true in configuration
 
 Examples:
   %(prog)s                          # Start all configured services
@@ -247,9 +274,15 @@ Examples:
             sys.exit(1)
         sys.exit(0)
 
-    # Detect all configured services
+    # Detect non-HTTP services
     configured = detect_configured_services()
     logger.info(f"Configured services: {configured if configured else '(none)'}")
+
+    # Let HTTP entrypoints register themselves on the shared server
+    http_registered = register_http_entrypoints()
+    if http_registered:
+        configured.append("http")
+        logger.info("HTTP server will start (at least one HTTP entrypoint registered)")
 
     # Build orchestrator
     orchestrator = ServiceOrchestrator()
@@ -268,12 +301,12 @@ Examples:
             )
 
             orchestrator.add_service("slack", slack_start)
-        elif service_name == "agui":
-            from entrypoints.agui_entrypoint.service import (
-                start_service as agui_start,
+        elif service_name == "http":
+            from entrypoints.http_server.server import (
+                start_service as http_start,
             )
 
-            orchestrator.add_service("agui", agui_start)
+            orchestrator.add_service("http", http_start)
 
     # Add CLI if stdin is a TTY
     if sys.stdin.isatty():

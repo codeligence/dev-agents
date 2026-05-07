@@ -30,7 +30,7 @@ agents:
          - "Test plan complete. All set for your review."
          - "Changelog generated. Ready for your release notes."
          - "Done. I'm here if you need more."
-      
+
       If the user asks for anything not related to the project, kindly tell him you can only reply to project related questions
 
       {{ this.agents.chatbot.custom }}

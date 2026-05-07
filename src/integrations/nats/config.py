@@ -58,9 +58,22 @@ class NatsConfig:
         return str(value) if value is not None else None
 
     def get_subject_job_data(self) -> str:
-        """Get the NATS subject for job data."""
-        value = self._base_config.get_value("nats.subject_job_data", "jobdata")
+        """Get the NATS subject prefix for job RPC messages.
+
+        The full subject structure is ``{prefix}.{job_id}.{action}`` — use
+        :meth:`subject_for_action` and :meth:`subject_wildcard_for_job`
+        rather than formatting this by hand.
+        """
+        value = self._base_config.get_value("nats.subject_job_data", "jobs")
         return str(value)
+
+    def subject_for_action(self, job_id: str, action: str) -> str:
+        """Build the semantic subject for a specific action."""
+        return f"{self.get_subject_job_data()}.{job_id}.{action}"
+
+    def subject_wildcard_for_job(self, job_id: str) -> str:
+        """Build the wildcard subject matching every action for a job."""
+        return f"{self.get_subject_job_data()}.{job_id}.>"
 
     def get_subject_job_updates(self) -> str:
         """Get the NATS subject for job updates."""

@@ -48,7 +48,7 @@ FROM python:3.11-slim AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
-ARG VERSION=1.0.3
+ARG VERSION=1.1.0
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \

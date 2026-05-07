@@ -2,10 +2,10 @@
 
 from .agent_context import SlackAgentContext
 from .agent_message_consumer import AgentMessageConsumer
-from .slack_bot_service import SlackBotService
+from .slack_bot_runtime import SlackBotRuntime
 
 __all__ = [
     "SlackAgentContext",
     "AgentMessageConsumer",
-    "SlackBotService",
+    "SlackBotRuntime",
 ]

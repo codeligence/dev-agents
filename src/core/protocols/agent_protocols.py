@@ -215,6 +215,19 @@ class AgentExecutionContext(Protocol):
         """
         return True
 
+    def get_origin_info(self) -> dict[str, Any]:
+        """Serialize this context's origin so it can be recreated later.
+
+        Returns a dict with at least a ``"type"`` key identifying the
+        entrypoint (e.g. ``"slack"``, ``"cli"``).  Entrypoint implementations
+        override this to include whatever data is needed to reconstruct the
+        context for deferred execution (e.g. scheduled tasks).
+
+        Returns:
+            Serializable dict describing how to recreate this context.
+        """
+        return {"type": "unknown"}
+
     def log_run_usages(self) -> None:
         """Log all RunUsage statistics accumulated during agent execution.
 

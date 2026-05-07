@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""AG-UI entrypoint for streaming agent events via HTTP."""
+"""AG-UI entrypoint for streaming agent events via HTTP.
+
+Routes are registered on the shared HTTP server when configured.
+"""
 
 from collections.abc import AsyncGenerator
 from typing import Any, cast
 import asyncio
-import os
-import threading
 import traceback
 
 from ag_ui.core import (
@@ -16,63 +17,28 @@ from ag_ui.core import (
     RunStartedEvent,
 )
 from ag_ui.encoder import EventEncoder
-from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from agents.agents.gitchatbot.agent import AGENT_NAME
-from core.agents.service import AgentService
 from core.config import BaseConfig, get_default_config
-from core.log import (
-    get_logger,
-    reset_context_token,
-    set_context_token,
-    setup_thread_logging,
-)
+from core.log import get_logger, reset_context_token, set_context_token
 from core.prompts import get_default_prompts
 from entrypoints.agui_entrypoint.agent_context import AGUIAgentContext
 from entrypoints.agui_entrypoint.message import convert_agui_messages_to_message_list
+from entrypoints.shared.agent_setup import ensure_agents_registered
 
-# Load environment variables
-load_dotenv()
-
-# Set up logging
-base_config = get_default_config()
-# Check for verbose logging from main entrypoint
-
-enable_console = bool(os.environ.get("DEV_AGENTS_CONSOLE_LOGGING"))
-setup_thread_logging(base_config, enable_console_logging=enable_console)
 logger = get_logger("AGUIEntrypoint", level="INFO")
 
-# Create FastAPI app
-app = FastAPI(title="Agent AI API", description="Streaming agent execution API")
-
-# Initialize agent service and register agents
-agent_service = AgentService()
-
-
-def _register_agents() -> None:
-    """Register available agents with the service."""
-    # Import and register the GitChatbot agent
-    from agents.agents.gitchatbot.agent import GitChatbotAgent
-
-    def create_chatbot_agent() -> type[GitChatbotAgent]:
-        return GitChatbotAgent
-
-    agent_service.register_agent(AGENT_NAME, create_chatbot_agent)
-    logger.info("Registered agents: " + AGENT_NAME)
-
-
-# Register agents at startup
-_register_agents()
+# Router — mounted on the shared HTTP app
+router = APIRouter()
 
 
 class AGUIConfig:
     """Configuration for AG-UI service."""
 
-    def __init__(self, base_config: BaseConfig):
+    def __init__(self, base_config: BaseConfig) -> None:
         self._base_config = base_config
-        self._config_data = base_config.get_config_data()
 
     def get_default_timeout(self) -> int:
         return int(self._base_config.get_value("agui.agent.defaultTimeout", 300))
@@ -86,22 +52,12 @@ class AGUIConfig:
     def get_max_message_length(self) -> int:
         return int(self._base_config.get_value("agui.agent.maxMessageLength", 10000))
 
-    def get_server_host(self) -> str:
-        return cast("str", self._base_config.get_value("agui.server.host", "0.0.0.0"))
-
-    def get_server_port(self) -> int:
-        return int(self._base_config.get_value("agui.server.port", 8000))
-
-    def get_server_reload(self) -> bool:
-        return bool(self._base_config.get_value("agui.server.reload", False))
-
     def is_configured(self) -> bool:
         """Check if AGUI service is configured and enabled."""
-        # Check if AGUI is explicitly enabled via configuration
-        return bool(self._base_config.get_value("agui.server.enabled", False))
+        return self._base_config.get_bool("agui.server.enabled", False)
 
 
-@app.post("/agent")
+@router.post("/agent")
 async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingResponse:
     """Run an agent and stream events back to client.
 
@@ -117,21 +73,17 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
         f"Received agent run request: thread_id={input_data.thread_id}, run_id={input_data.run_id}"
     )
 
-    # Get configuration
+    base_config = get_default_config()
     config_instance = AGUIConfig(base_config)
 
     if not input_data.thread_id or not input_data.run_id:
         logger.error("Missing required thread_id or run_id")
-        from fastapi import HTTPException
-
         raise HTTPException(
             status_code=400, detail="Missing required thread_id or run_id"
         )
 
     if not input_data.messages:
         logger.error("No messages provided in request")
-        from fastapi import HTTPException
-
         raise HTTPException(status_code=400, detail="At least one message is required")
 
     # Validate message length
@@ -142,8 +94,6 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
             logger.error(
                 f"Message content exceeds maximum length: {len(content)} > {max_length}"
             )
-            from fastapi import HTTPException
-
             raise HTTPException(
                 status_code=400,
                 detail=f"Message content exceeds maximum length of {max_length} characters",
@@ -187,9 +137,9 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
                 event_queue=event_queue,
             )
 
-            # Use existing config_instance
             agent_type = config_instance.get_default_agent_type()
             timeout = config_instance.get_default_timeout()
+            agent_service = ensure_agents_registered()
 
             logger.info(f"Executing agent: type={agent_type}, timeout={timeout}s")
 
@@ -295,80 +245,28 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
     )
 
 
-def main() -> None:
-    """Main entry point for AG-UI service."""
-    import uvicorn
-
-    logger.info("Starting AG-UI service")
-
-    # Load configuration
-    try:
-        agui_config = AGUIConfig(base_config)
-        host = agui_config.get_server_host()
-        port = agui_config.get_server_port()
-        reload = agui_config.get_server_reload()
-
-        logger.info(f"AG-UI service starting on {host}:{port} (reload={reload})")
-        logger.info("AG-UI service ready to accept requests")
-
-        # Start the FastAPI server
-        # Use import string when reload is enabled, direct app object otherwise
-        uvicorn.run(
-            "src.entrypoints.ag_ui_server:app" if reload else app,
-            host=host,
-            port=port,
-            reload=reload,
-            log_level="info",
-        )
-    except KeyboardInterrupt:
-        logger.info("Received interrupt signal, shutting down...")
-    except Exception as startup_error:
-        logger.error(f"Failed to start AG-UI service: {str(startup_error)}")
-        raise
+# ── Self-registration ───────────────────────────────────────────────────────
 
 
-def start_service(shutdown_event: threading.Event) -> None:
-    """Start the AG-UI service, managed by the orchestrator.
+def register_if_configured() -> bool:
+    """Check config and register routes on the shared HTTP server if enabled.
 
-    Args:
-        shutdown_event: Shared shutdown event from the orchestrator.
-            When set, the service should shut down gracefully.
+    Returns:
+        True if routes were registered, False otherwise.
     """
-    import uvicorn
-
-    logger.info("Starting AG-UI service (orchestrated)")
-
     try:
-        agui_config = AGUIConfig(base_config)
-        host = agui_config.get_server_host()
-        port = agui_config.get_server_port()
+        base_config = get_default_config()
+        config = AGUIConfig(base_config)
+        if not config.is_configured():
+            logger.debug("AGUI entrypoint not enabled")
+            return False
 
-        logger.info(f"AG-UI service starting on {host}:{port}")
+        from entrypoints.http_server.server import register_router
 
-        # Use uvicorn.Server directly for programmatic shutdown control
-        config = uvicorn.Config(
-            app=app,
-            host=host,
-            port=port,
-            log_level="info",
-        )
-        server = uvicorn.Server(config)
-        # Signal handlers are automatically skipped by uvicorn when not on main thread
+        register_router(router)
+        logger.info("AG-UI entrypoint registered on shared HTTP server")
+        return True
 
-        # Watcher thread: bridge external shutdown_event to uvicorn shutdown
-        def _watch_shutdown() -> None:
-            shutdown_event.wait()
-            server.should_exit = True
-
-        watcher = threading.Thread(target=_watch_shutdown, daemon=True)
-        watcher.start()
-
-        server.run()
     except Exception as e:
-        logger.error(f"Error in AG-UI service: {str(e)}")
-    finally:
-        logger.info("AG-UI service shut down")
-
-
-if __name__ == "__main__":
-    main()
+        logger.debug(f"AGUI entrypoint registration failed: {e}")
+        return False
