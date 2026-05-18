@@ -41,6 +41,17 @@ RUN pip install --upgrade pip setuptools wheel \
     && pip install .[prod]
 
 # =============================================================================
+# Quality stage - Adds dev dependencies for CI quality checks.
+# Source is mounted at /workspace at runtime; this image only ships deps.
+# =============================================================================
+
+FROM builder AS quality
+
+RUN pip install .[dev]
+
+WORKDIR /workspace
+
+# =============================================================================
 # Runtime stage - Create minimal runtime image
 # =============================================================================
 
@@ -75,7 +86,7 @@ RUN mkdir -p /data && chown -R appuser:appuser /data
 WORKDIR /app
 
 # Copy Python environment from builder stage
-COPY --from=builder /usr/local/lib/python3.14/site-packages/ /usr/local/lib/python3.14/site-packages/
+COPY --from=builder /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy entrypoint script
