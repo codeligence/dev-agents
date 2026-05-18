@@ -16,6 +16,11 @@ Environment variables:
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from email.header import decode_header
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import TYPE_CHECKING, Any
 import asyncio
 import email as email_lib
 import imaplib
@@ -24,24 +29,31 @@ import re
 import smtplib
 import ssl
 import uuid
-from datetime import datetime, timezone
-from email import encoders
-from email.header import decode_header
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from typing import Any, Dict, List, Optional, Tuple
 
 from integrations.platforms.base import BasePlatformService, PlatformMessage
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 # Automated sender patterns — emails from these are silently ignored
 _NOREPLY_PATTERNS = (
-    "noreply", "no-reply", "no_reply", "donotreply", "do-not-reply",
-    "mailer-daemon", "postmaster", "bounce", "notifications@",
-    "automated@", "auto-confirm", "auto-reply", "automailer",
+    "noreply",
+    "no-reply",
+    "no_reply",
+    "donotreply",
+    "do-not-reply",
+    "mailer-daemon",
+    "postmaster",
+    "bounce",
+    "notifications@",
+    "automated@",
+    "auto-confirm",
+    "auto-reply",
+    "automailer",
 )
 
 # RFC headers that indicate bulk/automated mail
-_AUTOMATED_HEADERS = {
+_AUTOMATED_HEADERS: dict[str, Callable[[str], bool]] = {
     "Auto-Submitted": lambda v: v.lower() != "no",
     "Precedence": lambda v: v.lower() in ("bulk", "list", "junk"),
     "X-Auto-Response-Suppress": lambda v: bool(v),
@@ -56,7 +68,8 @@ MAX_MESSAGE_LENGTH = 50_000
 # Helpers (ported from hermes-agent)
 # ---------------------------------------------------------------------------
 
-def _is_automated_sender(address: str, headers: dict) -> bool:
+
+def _is_automated_sender(address: str, headers: dict[str, str]) -> bool:
     """Return True if this email is from an automated/noreply source."""
     addr = address.lower()
     if any(pattern in addr for pattern in _NOREPLY_PATTERNS):
@@ -90,7 +103,7 @@ def _extract_text_body(msg: email_lib.message.Message) -> str:
                 continue
             if content_type == "text/plain":
                 payload = part.get_payload(decode=True)
-                if payload:
+                if isinstance(payload, bytes):
                     charset = part.get_content_charset() or "utf-8"
                     return payload.decode(charset, errors="replace")
         # Fallback: try text/html and strip tags
@@ -101,14 +114,14 @@ def _extract_text_body(msg: email_lib.message.Message) -> str:
                 continue
             if content_type == "text/html":
                 payload = part.get_payload(decode=True)
-                if payload:
+                if isinstance(payload, bytes):
                     charset = part.get_content_charset() or "utf-8"
                     html = payload.decode(charset, errors="replace")
                     return _strip_html(html)
         return ""
     else:
         payload = msg.get_payload(decode=True)
-        if payload:
+        if isinstance(payload, bytes):
             charset = msg.get_content_charset() or "utf-8"
             text = payload.decode(charset, errors="replace")
             if msg.get_content_type() == "text/html":
@@ -143,6 +156,7 @@ def _extract_email_address(raw: str) -> str:
 # EmailService
 # ---------------------------------------------------------------------------
 
+
 class EmailService(BasePlatformService):
     """Email platform service using IMAP (receive) and SMTP (send)."""
 
@@ -160,13 +174,13 @@ class EmailService(BasePlatformService):
         self._allowed_users = self.get_authorized_ids("EMAIL_ALLOWED_USERS")
 
         # UID-based deduplication
-        self._seen_uids: set = set()
+        self._seen_uids: set[bytes] = set()
         self._seen_uids_max: int = 2000
 
         # Thread context: (recipient, incoming Message-ID) -> {subject}
         # Keyed by both so a single sender with multiple concurrent threads
         # does not have later messages overwrite earlier reply headers.
-        self._thread_context: Dict[Tuple[str, str], Dict[str, str]] = {}
+        self._thread_context: dict[tuple[str, str], dict[str, str]] = {}
         self._thread_context_max: int = 2000
 
     # -- BasePlatformService interface ----------------------------------------
@@ -179,14 +193,15 @@ class EmailService(BasePlatformService):
             imap.login(self._address, self._password)
             imap.select("INBOX")
             # Seed seen UIDs so we only process messages arriving after startup
-            status, data = imap.uid("search", None, "ALL")
+            status, data = imap.uid("search", "ALL")
             if status == "OK" and data and data[0]:
                 for uid in data[0].split():
                     self._seen_uids.add(uid)
             self._trim_seen_uids()
             imap.logout()
             self.logger.info(
-                "IMAP connection OK — %d existing messages skipped", len(self._seen_uids)
+                "IMAP connection OK — %d existing messages skipped",
+                len(self._seen_uids),
             )
         except Exception as e:
             self.logger.error("IMAP connection failed: %s", e)
@@ -212,7 +227,7 @@ class EmailService(BasePlatformService):
 
     async def send_response(
         self, chat_id: str, thread_id: str, text: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Send an email reply to *chat_id* (a sender address).
 
         Returns the outgoing Message-ID on success, or ``None`` on failure.
@@ -250,16 +265,16 @@ class EmailService(BasePlatformService):
         for msg_data in messages:
             await self._handle_email(msg_data)
 
-    def _fetch_new_messages(self) -> List[Dict[str, Any]]:
+    def _fetch_new_messages(self) -> list[dict[str, Any]]:
         """Fetch new (unseen) messages from IMAP. Runs in executor thread."""
-        results: list[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         try:
             imap = imaplib.IMAP4_SSL(self._imap_host, self._imap_port, timeout=30)
             try:
                 imap.login(self._address, self._password)
                 imap.select("INBOX")
 
-                status, data = imap.uid("search", None, "UNSEEN")
+                status, data = imap.uid("search", "UNSEEN")
                 if status != "OK" or not data or not data[0]:
                     return results
 
@@ -294,28 +309,30 @@ class EmailService(BasePlatformService):
 
                     body = _extract_text_body(msg)
 
-                    results.append({
-                        "uid": uid,
-                        "sender_addr": sender_addr,
-                        "sender_name": sender_name,
-                        "subject": subject,
-                        "message_id": message_id,
-                        "in_reply_to": in_reply_to,
-                        "body": body,
-                        "date": msg.get("Date", ""),
-                    })
+                    results.append(
+                        {
+                            "uid": uid,
+                            "sender_addr": sender_addr,
+                            "sender_name": sender_name,
+                            "subject": subject,
+                            "message_id": message_id,
+                            "in_reply_to": in_reply_to,
+                            "body": body,
+                            "date": msg.get("Date", ""),
+                        }
+                    )
             finally:
                 try:
                     imap.logout()
-                except Exception:
-                    pass
+                except Exception as logout_exc:
+                    self.logger.debug("IMAP logout failed: %s", logout_exc)
         except Exception as e:
             self.logger.error("IMAP fetch error: %s", e)
         return results
 
     # -- Message handling -----------------------------------------------------
 
-    async def _handle_email(self, msg_data: Dict[str, Any]) -> None:
+    async def _handle_email(self, msg_data: dict[str, Any]) -> None:
         """Convert a fetched email into a PlatformMessage and dispatch it."""
         sender_addr = msg_data["sender_addr"]
 
@@ -351,7 +368,7 @@ class EmailService(BasePlatformService):
             user_name=msg_data["sender_name"] or sender_addr,
             user_id=sender_addr,
             content=text or "(empty email)",
-            date=datetime.now(timezone.utc),
+            date=datetime.now(UTC),
             thread_id=msg_data["message_id"],
             channel_id=sender_addr,
             platform_name="email",
@@ -412,9 +429,7 @@ class EmailService(BasePlatformService):
                 if thread_id:
                     follow_up["In-Reply-To"] = thread_id
                     follow_up["References"] = thread_id
-                follow_up["Message-ID"] = (
-                    f"<claw-{uuid.uuid4().hex[:12]}@{domain}>"
-                )
+                follow_up["Message-ID"] = f"<claw-{uuid.uuid4().hex[:12]}@{domain}>"
                 follow_up.attach(MIMEText(chunk, "plain", "utf-8"))
 
                 smtp2 = smtplib.SMTP(self._smtp_host, self._smtp_port, timeout=30)
@@ -443,11 +458,9 @@ class EmailService(BasePlatformService):
             keep = self._seen_uids_max // 2
             self._seen_uids = set(sorted_uids[-keep:])
         except (ValueError, TypeError):
-            self._seen_uids = set(list(self._seen_uids)[-self._seen_uids_max // 2:])
+            self._seen_uids = set(list(self._seen_uids)[-self._seen_uids_max // 2 :])
 
     def _trim_thread_context(self) -> None:
         """Drop oldest thread contexts. Relies on dict insertion order."""
         keep = self._thread_context_max // 2
-        self._thread_context = dict(
-            list(self._thread_context.items())[-keep:]
-        )
+        self._thread_context = dict(list(self._thread_context.items())[-keep:])

@@ -1,7 +1,7 @@
 """Tests for TelegramService — message handling and formatting without real connections."""
 
-import os
 from unittest.mock import AsyncMock, MagicMock, patch
+import os
 
 import pytest
 
@@ -12,10 +12,10 @@ from integrations.platforms.telegram import (
     _strip_mdv2,
 )
 
-
 # ---------------------------------------------------------------------------
 # MarkdownV2 formatting tests
 # ---------------------------------------------------------------------------
+
 
 class TestMarkdownV2:
     def test_escape_special_chars(self):
@@ -104,7 +104,9 @@ class TestMarkdownV2:
 
     def test_format_link_with_parens_in_url(self):
         """URL with parentheses should be escaped properly."""
-        result = _format_mdv2("[wiki](https://en.wikipedia.org/wiki/Test_(disambiguation))")
+        result = _format_mdv2(
+            "[wiki](https://en.wikipedia.org/wiki/Test_(disambiguation))"
+        )
         assert "wikipedia" in result
         assert "click" not in result  # sanity: 'click' not in this text
 
@@ -173,6 +175,7 @@ class TestMarkdownV2:
 # TelegramService tests
 # ---------------------------------------------------------------------------
 
+
 class TestTelegramService:
     def _make_service(self, **env_overrides):
         env = {
@@ -210,9 +213,16 @@ class TestTelegramService:
 
     # -- Mention gating -------------------------------------------------------
 
-    def _make_message_mock(self, *, chat_type="private", chat_id="123",
-                           text="hello", from_user_id=1, reply_to_bot=False,
-                           bot_id=99):
+    def _make_message_mock(
+        self,
+        *,
+        chat_type="private",
+        chat_id="123",
+        text="hello",
+        from_user_id=1,
+        reply_to_bot=False,
+        bot_id=99,
+    ):
         msg = MagicMock()
         # Use a real string for type so str().split(".")[-1].lower() works
         msg.chat = MagicMock()
@@ -265,7 +275,9 @@ class TestTelegramService:
         svc = self._make_service(TELEGRAM_REQUIRE_MENTION="true")
         svc._bot_id = 99
         svc._bot_username = "mybot"
-        msg = self._make_message_mock(chat_type="supergroup", reply_to_bot=True, bot_id=99)
+        msg = self._make_message_mock(
+            chat_type="supergroup", reply_to_bot=True, bot_id=99
+        )
         assert svc._should_process_message(msg) is True
 
     def test_should_process_group_command_always(self):
@@ -290,6 +302,7 @@ class TestTelegramService:
     def test_looks_like_polling_conflict(self):
         class Conflict(Exception):
             pass
+
         e = Conflict("Conflict: terminated by other getUpdates request")
         assert TelegramService._looks_like_polling_conflict(e) is True
 
@@ -298,7 +311,10 @@ class TestTelegramService:
         assert TelegramService._looks_like_polling_conflict(e) is False
 
     def test_looks_like_network_error(self):
-        assert TelegramService._looks_like_network_error(OSError("connection reset")) is True
+        assert (
+            TelegramService._looks_like_network_error(OSError("connection reset"))
+            is True
+        )
 
     def test_looks_like_network_error_false(self):
         assert TelegramService._looks_like_network_error(ValueError("bad")) is False

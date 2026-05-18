@@ -6,12 +6,12 @@ and routes incoming messages through the existing ClawAgent pipeline.
 
 from __future__ import annotations
 
-import asyncio
-import os
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Optional
+from datetime import UTC, datetime
+from typing import Any
+import asyncio
+import contextlib
+import os
 
 from core.log import get_logger
 from core.message import BaseMessage
@@ -22,6 +22,7 @@ logger = get_logger("integrations.platforms")
 # ---------------------------------------------------------------------------
 # PlatformMessage — concrete BaseMessage for all non-Slack platforms
 # ---------------------------------------------------------------------------
+
 
 class PlatformMessage(BaseMessage):
     """A BaseMessage implementation usable by Email, Mattermost, Telegram, etc.
@@ -46,7 +47,7 @@ class PlatformMessage(BaseMessage):
         self._user_name = user_name
         self._user_id = user_id
         self._content = content
-        self._date = date if date.tzinfo else date.replace(tzinfo=timezone.utc)
+        self._date = date if date.tzinfo else date.replace(tzinfo=UTC)
         self._thread_id = thread_id
         self._is_bot = is_bot
         self._platform_name = platform_name
@@ -100,6 +101,7 @@ class PlatformMessage(BaseMessage):
 # BasePlatformService — abstract base for all platform adapters
 # ---------------------------------------------------------------------------
 
+
 class BasePlatformService(ABC):
     """Lifecycle and messaging contract that every platform service implements.
 
@@ -116,7 +118,7 @@ class BasePlatformService(ABC):
     def __init__(self, name: str) -> None:
         self.name = name
         self._agent_service: Any = None
-        self._task: Optional[asyncio.Task] = None
+        self._task: asyncio.Task[None] | None = None
         self._running = False
         self.logger = get_logger(f"integrations.platforms.{name}")
 
@@ -139,7 +141,7 @@ class BasePlatformService(ABC):
         chat_id: str,
         thread_id: str,
         text: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Send a text response back to the platform.
 
         Returns the platform-specific message ID on success, or ``None`` on
@@ -149,9 +151,9 @@ class BasePlatformService(ABC):
 
     async def update_response(
         self,
-        chat_id: str,
-        message_id: str,
-        text: str,
+        _chat_id: str,
+        _message_id: str,
+        _text: str,
     ) -> bool:
         """Edit an existing message in place.
 
@@ -181,10 +183,8 @@ class BasePlatformService(ABC):
         self._running = False
         if self._task and not self._task.done():
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
         await self.disconnect()
         self.logger.info(f"{self.name}: stopped")
 
@@ -196,7 +196,9 @@ class BasePlatformService(ABC):
             try:
                 ok = await self.connect()
                 if not ok:
-                    self.logger.error(f"{self.name}: connect() returned False, retrying in {backoff}s")
+                    self.logger.error(
+                        f"{self.name}: connect() returned False, retrying in {backoff}s"
+                    )
                     await asyncio.sleep(backoff)
                     backoff = min(backoff * 2, max_backoff)
                     continue
@@ -207,7 +209,9 @@ class BasePlatformService(ABC):
             except asyncio.CancelledError:
                 break
             except Exception:
-                self.logger.exception(f"{self.name}: error in run loop, retrying in {backoff}s")
+                self.logger.exception(
+                    f"{self.name}: error in run loop, retrying in {backoff}s"
+                )
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, max_backoff)
 

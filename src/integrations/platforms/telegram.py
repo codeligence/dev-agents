@@ -23,29 +23,28 @@ Dependencies: python-telegram-bot>=22.6,<23
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from typing import Any
 import asyncio
 import os
 import re
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
 
 from integrations.platforms.base import BasePlatformService, PlatformMessage
 
 try:
-    from telegram import Update, Bot, Message
+    from telegram import Update
+    from telegram.constants import ParseMode
+    from telegram.ext import Application, filters
     from telegram.ext import (
-        Application,
         MessageHandler as TelegramMessageHandler,
-        ContextTypes,
-        filters,
     )
-    from telegram.constants import ParseMode, ChatType
+
     TELEGRAM_AVAILABLE = True
 except ImportError:
     TELEGRAM_AVAILABLE = False
 
 # MarkdownV2 escape pattern
-_MDV2_ESCAPE_RE = re.compile(r'([_*\[\]()~`>#\+\-=|{}.!\\])')
+_MDV2_ESCAPE_RE = re.compile(r"([_*\[\]()~`>#\+\-=|{}.!\\])")
 
 # Telegram message length limit
 MAX_MESSAGE_LENGTH = 4096
@@ -53,16 +52,16 @@ MAX_MESSAGE_LENGTH = 4096
 
 def _escape_mdv2(text: str) -> str:
     """Escape Telegram MarkdownV2 special characters."""
-    return _MDV2_ESCAPE_RE.sub(r'\\\1', text)
+    return _MDV2_ESCAPE_RE.sub(r"\\\1", text)
 
 
 def _strip_mdv2(text: str) -> str:
     """Strip MarkdownV2 escape backslashes to produce clean plain text."""
-    cleaned = re.sub(r'\\([_*\[\]()~`>#\+\-=|{}.!\\])', r'\1', text)
-    cleaned = re.sub(r'\*([^*]+)\*', r'\1', cleaned)
-    cleaned = re.sub(r'(?<!\w)_([^_]+)_(?!\w)', r'\1', cleaned)
-    cleaned = re.sub(r'~([^~]+)~', r'\1', cleaned)
-    cleaned = re.sub(r'\|\|([^|]+)\|\|', r'\1', cleaned)
+    cleaned = re.sub(r"\\([_*\[\]()~`>#\+\-=|{}.!\\])", r"\1", text)
+    cleaned = re.sub(r"\*([^*]+)\*", r"\1", cleaned)
+    cleaned = re.sub(r"(?<!\w)_([^_]+)_(?!\w)", r"\1", cleaned)
+    cleaned = re.sub(r"~([^~]+)~", r"\1", cleaned)
+    cleaned = re.sub(r"\|\|([^|]+)\|\|", r"\1", cleaned)
     return cleaned
 
 
@@ -75,7 +74,7 @@ def _format_mdv2(content: str) -> str:
     if not content:
         return content
 
-    placeholders: dict = {}
+    placeholders: dict[str, str] = {}
     counter = [0]
 
     def _ph(value: str) -> str:
@@ -87,64 +86,64 @@ def _format_mdv2(content: str) -> str:
     text = content
 
     # Protect fenced code blocks
-    def _protect_fenced(m: re.Match) -> str:
+    def _protect_fenced(m: re.Match[str]) -> str:
         raw = m.group(0)
-        open_end = raw.index('\n') + 1 if '\n' in raw[3:] else 3
+        open_end = raw.index("\n") + 1 if "\n" in raw[3:] else 3
         opening = raw[:open_end]
         body = raw[open_end:-3]
-        body = body.replace('\\', '\\\\').replace('`', '\\`')
-        return _ph(opening + body + '```')
+        body = body.replace("\\", "\\\\").replace("`", "\\`")
+        return _ph(opening + body + "```")
 
-    text = re.sub(r'(```(?:[^\n]*\n)?[\s\S]*?```)', _protect_fenced, text)
+    text = re.sub(r"(```(?:[^\n]*\n)?[\s\S]*?```)", _protect_fenced, text)
 
     # Protect inline code
     text = re.sub(
-        r'(`[^`]+`)',
-        lambda m: _ph(m.group(0).replace('\\', '\\\\')),
+        r"(`[^`]+`)",
+        lambda m: _ph(m.group(0).replace("\\", "\\\\")),
         text,
     )
 
     # Convert markdown links
-    def _convert_link(m: re.Match) -> str:
+    def _convert_link(m: re.Match[str]) -> str:
         display = _escape_mdv2(m.group(1))
-        url = m.group(2).replace('\\', '\\\\').replace(')', '\\)')
-        return _ph(f'[{display}]({url})')
+        url = m.group(2).replace("\\", "\\\\").replace(")", "\\)")
+        return _ph(f"[{display}]({url})")
 
-    text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', _convert_link, text)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _convert_link, text)
 
     # Headers -> bold
-    def _convert_header(m: re.Match) -> str:
+    def _convert_header(m: re.Match[str]) -> str:
         inner = m.group(1).strip()
-        inner = re.sub(r'\*\*(.+?)\*\*', r'\1', inner)
-        return _ph(f'*{_escape_mdv2(inner)}*')
+        inner = re.sub(r"\*\*(.+?)\*\*", r"\1", inner)
+        return _ph(f"*{_escape_mdv2(inner)}*")
 
-    text = re.sub(r'^#{1,6}\s+(.+)$', _convert_header, text, flags=re.MULTILINE)
+    text = re.sub(r"^#{1,6}\s+(.+)$", _convert_header, text, flags=re.MULTILINE)
 
     # Bold **text** -> *text*
     text = re.sub(
-        r'\*\*(.+?)\*\*',
-        lambda m: _ph(f'*{_escape_mdv2(m.group(1))}*'),
+        r"\*\*(.+?)\*\*",
+        lambda m: _ph(f"*{_escape_mdv2(m.group(1))}*"),
         text,
     )
 
     # Italic *text* -> _text_
     text = re.sub(
-        r'\*([^*\n]+)\*',
-        lambda m: _ph(f'_{_escape_mdv2(m.group(1))}_'),
+        r"\*([^*\n]+)\*",
+        lambda m: _ph(f"_{_escape_mdv2(m.group(1))}_"),
         text,
     )
 
     # Strikethrough ~~text~~ -> ~text~
     text = re.sub(
-        r'~~(.+?)~~',
-        lambda m: _ph(f'~{_escape_mdv2(m.group(1))}~'),
+        r"~~(.+?)~~",
+        lambda m: _ph(f"~{_escape_mdv2(m.group(1))}~"),
         text,
     )
 
     # Blockquotes
     text = re.sub(
-        r'^(>{1,3}) (.+)$',
-        lambda m: _ph(m.group(1) + ' ' + _escape_mdv2(m.group(2))),
+        r"^(>{1,3}) (.+)$",
+        lambda m: _ph(m.group(1) + " " + _escape_mdv2(m.group(2))),
         text,
         flags=re.MULTILINE,
     )
@@ -198,12 +197,18 @@ class TelegramService(BasePlatformService):
             self._bot = self._app.bot
 
             # Register handlers
-            self._app.add_handler(TelegramMessageHandler(
-                filters.TEXT & ~filters.COMMAND, self._handle_text_message,
-            ))
-            self._app.add_handler(TelegramMessageHandler(
-                filters.COMMAND, self._handle_command,
-            ))
+            self._app.add_handler(
+                TelegramMessageHandler(
+                    filters.TEXT & ~filters.COMMAND,
+                    self._handle_text_message,
+                )
+            )
+            self._app.add_handler(
+                TelegramMessageHandler(
+                    filters.COMMAND,
+                    self._handle_command,
+                )
+            )
 
             # Initialize with retry for transient TLS errors
             try:
@@ -217,10 +222,12 @@ class TelegramService(BasePlatformService):
                     break
                 except (NetworkError, TimedOut, OSError) as e:
                     if attempt < 2:
-                        wait = 2 ** attempt
+                        wait = 2**attempt
                         self.logger.warning(
                             "Connect attempt %d/3 failed: %s — retrying in %ds",
-                            attempt + 1, e, wait,
+                            attempt + 1,
+                            e,
+                            wait,
                         )
                         await asyncio.sleep(wait)
                     else:
@@ -233,7 +240,9 @@ class TelegramService(BasePlatformService):
             self._bot_username = me.username or ""
             self._bot_id = me.id
             self.logger.info(
-                "Connected as @%s (%s)", self._bot_username, self._bot_id,
+                "Connected as @%s (%s)",
+                self._bot_username,
+                self._bot_id,
             )
 
             # Start polling with error callback
@@ -247,7 +256,9 @@ class TelegramService(BasePlatformService):
                         self._handle_polling_conflict(error)
                     )
                 elif self._looks_like_network_error(error):
-                    self.logger.warning("Network error, scheduling reconnect: %s", error)
+                    self.logger.warning(
+                        "Network error, scheduling reconnect: %s", error
+                    )
                     self._polling_error_task = loop.create_task(
                         self._handle_polling_network_error(error)
                     )
@@ -290,7 +301,7 @@ class TelegramService(BasePlatformService):
 
     async def send_response(
         self, chat_id: str, thread_id: str, text: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Send a message to a Telegram chat with MarkdownV2, falling back to plain text.
 
         Returns the message ID of the last sent chunk on success so the
@@ -306,17 +317,17 @@ class TelegramService(BasePlatformService):
         # Escape chunk indicators for MarkdownV2
         if len(chunks) > 1:
             chunks = [
-                re.sub(r" \((\d+)/(\d+)\)$", r" \\(\1/\2\\)", chunk)
-                for chunk in chunks
+                re.sub(r" \((\d+)/(\d+)\)$", r" \\(\1/\2\\)", chunk) for chunk in chunks
             ]
 
         try:
-            from telegram.error import NetworkError as _NetErr, BadRequest as _BadReq
+            from telegram.error import BadRequest as _BadReq
+            from telegram.error import NetworkError as _NetErr
         except ImportError:
             _NetErr = OSError
             _BadReq = None
 
-        last_message_id: Optional[str] = None
+        last_message_id: str | None = None
 
         for chunk in chunks:
             for attempt in range(3):
@@ -330,8 +341,13 @@ class TelegramService(BasePlatformService):
                             message_thread_id=int(thread_id) if thread_id else None,
                         )
                     except Exception as md_err:
-                        if "parse" in str(md_err).lower() or "markdown" in str(md_err).lower():
-                            self.logger.warning("MarkdownV2 failed, falling back to plain: %s", md_err)
+                        if (
+                            "parse" in str(md_err).lower()
+                            or "markdown" in str(md_err).lower()
+                        ):
+                            self.logger.warning(
+                                "MarkdownV2 failed, falling back to plain: %s", md_err
+                            )
                             sent = await self._bot.send_message(
                                 chat_id=int(chat_id),
                                 text=_strip_mdv2(chunk),
@@ -351,16 +367,14 @@ class TelegramService(BasePlatformService):
                             continue
                         raise
                     if isinstance(send_err, (_NetErr, OSError)) and attempt < 2:
-                        await asyncio.sleep(2 ** attempt)
+                        await asyncio.sleep(2**attempt)
                         continue
                     self.logger.error("Send failed to %s: %s", chat_id, send_err)
                     return None
 
         return last_message_id
 
-    async def update_response(
-        self, chat_id: str, message_id: str, text: str
-    ) -> bool:
+    async def update_response(self, chat_id: str, message_id: str, text: str) -> bool:
         """Edit a previously-sent Telegram message in place.
 
         Returns ``False`` if the new text exceeds the per-message limit
@@ -401,9 +415,12 @@ class TelegramService(BasePlatformService):
         except Exception as edit_err:
             # "message is not modified" means the new text matches the old —
             # treat as success so the caller doesn't send a duplicate.
-            if _BadReq and isinstance(edit_err, _BadReq):
-                if "message is not modified" in str(edit_err).lower():
-                    return True
+            if (
+                _BadReq
+                and isinstance(edit_err, _BadReq)
+                and "message is not modified" in str(edit_err).lower()
+            ):
+                return True
             self.logger.warning("Edit failed for message %s: %s", message_id, edit_err)
             return False
 
@@ -425,6 +442,7 @@ class TelegramService(BasePlatformService):
             return True
         try:
             from telegram.error import NetworkError, TimedOut
+
             if isinstance(error, (NetworkError, TimedOut)):
                 return True
         except ImportError:
@@ -440,13 +458,16 @@ class TelegramService(BasePlatformService):
         if self._polling_conflict_count <= MAX_RETRIES:
             self.logger.warning(
                 "Polling conflict (%d/%d), retrying in %ds: %s",
-                self._polling_conflict_count, MAX_RETRIES, RETRY_DELAY, error,
+                self._polling_conflict_count,
+                MAX_RETRIES,
+                RETRY_DELAY,
+                error,
             )
             try:
                 if self._app and self._app.updater and self._app.updater.running:
                     await self._app.updater.stop()
-            except Exception:
-                pass
+            except Exception as stop_exc:
+                self.logger.debug("Updater stop failed: %s", stop_exc)
             await asyncio.sleep(RETRY_DELAY)
             try:
                 await self._app.updater.start_polling(
@@ -460,7 +481,8 @@ class TelegramService(BasePlatformService):
         else:
             self.logger.error(
                 "Polling conflict persists after %d retries. "
-                "Ensure only one bot instance uses this token.", MAX_RETRIES,
+                "Ensure only one bot instance uses this token.",
+                MAX_RETRIES,
             )
 
     async def _handle_polling_network_error(self, error: Exception) -> None:
@@ -475,22 +497,26 @@ class TelegramService(BasePlatformService):
         if attempt > MAX_RETRIES:
             self.logger.error(
                 "Could not reconnect after %d network error retries: %s",
-                MAX_RETRIES, error,
+                MAX_RETRIES,
+                error,
             )
             return
 
         delay = min(BASE_DELAY * (2 ** (attempt - 1)), MAX_DELAY)
         self.logger.warning(
             "Network error (attempt %d/%d), reconnecting in %ds: %s",
-            attempt, MAX_RETRIES, delay, error,
+            attempt,
+            MAX_RETRIES,
+            delay,
+            error,
         )
         await asyncio.sleep(delay)
 
         try:
             if self._app and self._app.updater and self._app.updater.running:
                 await self._app.updater.stop()
-        except Exception:
-            pass
+        except Exception as stop_exc:
+            self.logger.debug("Updater stop failed: %s", stop_exc)
 
         try:
             await self._app.updater.start_polling(
@@ -498,7 +524,9 @@ class TelegramService(BasePlatformService):
                 drop_pending_updates=False,
                 error_callback=self._polling_error_callback_ref,
             )
-            self.logger.info("Polling resumed after network error (attempt %d)", attempt)
+            self.logger.info(
+                "Polling resumed after network error (attempt %d)", attempt
+            )
             self._polling_network_error_count = 0
         except Exception as e:
             self.logger.warning("Polling reconnect failed: %s", e)
@@ -506,7 +534,7 @@ class TelegramService(BasePlatformService):
 
     # -- Message handlers -----------------------------------------------------
 
-    async def _handle_text_message(self, update: "Update", context: Any) -> None:
+    async def _handle_text_message(self, update: Update, _context: Any) -> None:
         """Handle incoming text messages."""
         if not update.message or not update.message.text:
             return
@@ -517,7 +545,7 @@ class TelegramService(BasePlatformService):
         text = self._clean_bot_mention(msg.text)
         await self._dispatch_telegram_message(msg, text)
 
-    async def _handle_command(self, update: "Update", context: Any) -> None:
+    async def _handle_command(self, update: Update, _context: Any) -> None:
         """Handle incoming /command messages."""
         if not update.message or not update.message.text:
             return
@@ -546,7 +574,7 @@ class TelegramService(BasePlatformService):
             user_name=user_name,
             user_id=user_id,
             content=text,
-            date=msg.date if msg.date else datetime.now(timezone.utc),
+            date=msg.date if msg.date else datetime.now(UTC),
             thread_id=thread_id,
             channel_id=str(chat.id),
             platform_name="telegram",
@@ -554,15 +582,23 @@ class TelegramService(BasePlatformService):
 
         self.logger.info(
             "New message from %s in %s: %s",
-            user_name, chat.id, text[:80],
+            user_name,
+            chat.id,
+            text[:80],
         )
         await self._dispatch_message(message)
 
     # -- Mention-gating -------------------------------------------------------
 
-    def _should_process_message(self, message: Any, *, is_command: bool = False) -> bool:
+    def _should_process_message(
+        self, message: Any, *, is_command: bool = False
+    ) -> bool:
         """Apply group mention-gating rules. DMs are always processed."""
-        chat_type = str(getattr(getattr(message, "chat", None), "type", "")).split(".")[-1].lower()
+        chat_type = (
+            str(getattr(getattr(message, "chat", None), "type", ""))
+            .split(".")[-1]
+            .lower()
+        )
         if chat_type not in ("group", "supergroup"):
             return True
 
@@ -575,7 +611,8 @@ class TelegramService(BasePlatformService):
             return True
 
         require_mention = os.getenv(
-            "TELEGRAM_REQUIRE_MENTION", "false",
+            "TELEGRAM_REQUIRE_MENTION",
+            "false",
         ).lower() in ("true", "1", "yes", "on")
 
         if not require_mention:
@@ -592,15 +629,19 @@ class TelegramService(BasePlatformService):
 
         # Check for @mention
         text = getattr(message, "text", "") or getattr(message, "caption", "") or ""
-        if self._bot_username and f"@{self._bot_username}".lower() in text.lower():
-            return True
-
-        return False
+        return bool(
+            self._bot_username and f"@{self._bot_username}".lower() in text.lower()
+        )
 
     def _clean_bot_mention(self, text: str | None) -> str:
         """Strip @bot_username from message text."""
         if not text or not self._bot_username:
             return text or ""
-        return re.sub(
-            rf"(?i)@{re.escape(self._bot_username)}\b[,:\-]*\s*", "", text,
-        ).strip() or text
+        return (
+            re.sub(
+                rf"(?i)@{re.escape(self._bot_username)}\b[,:\-]*\s*",
+                "",
+                text,
+            ).strip()
+            or text
+        )

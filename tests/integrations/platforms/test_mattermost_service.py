@@ -1,10 +1,9 @@
 """Tests for MattermostService — WebSocket event handling without real connections."""
 
+from unittest.mock import AsyncMock, patch
 import json
 import os
 import time
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -81,12 +80,14 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p1",
-                    "user_id": "bot123",
-                    "channel_id": "ch1",
-                    "message": "I said this",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p1",
+                        "user_id": "bot123",
+                        "channel_id": "ch1",
+                        "message": "I said this",
+                    }
+                ),
                 "channel_type": "D",
             },
         }
@@ -102,13 +103,15 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p2",
-                    "user_id": "user1",
-                    "channel_id": "ch1",
-                    "message": "joined",
-                    "type": "system_join_channel",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p2",
+                        "user_id": "user1",
+                        "channel_id": "ch1",
+                        "message": "joined",
+                        "type": "system_join_channel",
+                    }
+                ),
                 "channel_type": "O",
             },
         }
@@ -124,12 +127,14 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p3",
-                    "user_id": "user1",
-                    "channel_id": "ch1",
-                    "message": "Hello bot",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p3",
+                        "user_id": "user1",
+                        "channel_id": "ch1",
+                        "message": "Hello bot",
+                    }
+                ),
                 "channel_type": "D",
                 "sender_name": "@alice",
             },
@@ -149,12 +154,14 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p4",
-                    "user_id": "user1",
-                    "channel_id": "ch1",
-                    "message": "Hello",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p4",
+                        "user_id": "user1",
+                        "channel_id": "ch1",
+                        "message": "Hello",
+                    }
+                ),
                 "channel_type": "D",
                 "sender_name": "alice",
             },
@@ -172,12 +179,14 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p5",
-                    "user_id": "stranger",
-                    "channel_id": "ch1",
-                    "message": "Hi",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p5",
+                        "user_id": "stranger",
+                        "channel_id": "ch1",
+                        "message": "Hi",
+                    }
+                ),
                 "channel_type": "D",
                 "sender_name": "stranger",
             },
@@ -197,12 +206,14 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p6",
-                    "user_id": "user1",
-                    "channel_id": "ch1",
-                    "message": "Hello everyone",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p6",
+                        "user_id": "user1",
+                        "channel_id": "ch1",
+                        "message": "Hello everyone",
+                    }
+                ),
                 "channel_type": "O",  # public channel
                 "sender_name": "alice",
             },
@@ -220,12 +231,14 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p7",
-                    "user_id": "user1",
-                    "channel_id": "ch1",
-                    "message": "@claw what is this?",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p7",
+                        "user_id": "user1",
+                        "channel_id": "ch1",
+                        "message": "@claw what is this?",
+                    }
+                ),
                 "channel_type": "O",
                 "sender_name": "alice",
             },
@@ -248,20 +261,25 @@ class TestMattermostService:
         event = {
             "event": "posted",
             "data": {
-                "post": json.dumps({
-                    "id": "p8",
-                    "user_id": "user1",
-                    "channel_id": "ch-free",
-                    "message": "No mention needed",
-                }),
+                "post": json.dumps(
+                    {
+                        "id": "p8",
+                        "user_id": "user1",
+                        "channel_id": "ch-free",
+                        "message": "No mention needed",
+                    }
+                ),
                 "channel_type": "O",
                 "sender_name": "alice",
             },
         }
         # Env vars are read at event-handling time, so patch must be active
-        with patch.dict(os.environ, {
-            "MATTERMOST_REQUIRE_MENTION": "true",
-            "MATTERMOST_FREE_RESPONSE_CHANNELS": "ch-free",
-        }):
+        with patch.dict(
+            os.environ,
+            {
+                "MATTERMOST_REQUIRE_MENTION": "true",
+                "MATTERMOST_FREE_RESPONSE_CHANNELS": "ch-free",
+            },
+        ):
             await svc._handle_ws_event(event)
         svc._dispatch_message.assert_called_once()

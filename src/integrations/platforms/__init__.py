@@ -2,17 +2,23 @@
 
 from __future__ import annotations
 
-import os
 from typing import Any
+import os
 
 from core.log import get_logger
-
 from integrations.platforms.agent_context import PlatformAgentContext
 from integrations.platforms.base import BasePlatformService, PlatformMessage
 
 logger = get_logger("integrations.platforms")
 
-__all__ = ["BasePlatformService", "PlatformAgentContext", "PlatformMessage", "detect_platforms", "start_platforms", "stop_platforms"]
+__all__ = [
+    "BasePlatformService",
+    "PlatformAgentContext",
+    "PlatformMessage",
+    "detect_platforms",
+    "start_platforms",
+    "stop_platforms",
+]
 
 # Active service instances (populated by start_platforms)
 _services: list[BasePlatformService] = []
@@ -38,12 +44,15 @@ def _create_service(name: str) -> BasePlatformService:
     """Lazily import and instantiate a platform service by name."""
     if name == "email":
         from integrations.platforms.email import EmailService
+
         return EmailService()
     elif name == "mattermost":
         from integrations.platforms.mattermost import MattermostService
+
         return MattermostService()
     elif name == "telegram":
         from integrations.platforms.telegram import TelegramService
+
         return TelegramService()
     else:
         raise ValueError(f"Unknown platform: {name}")

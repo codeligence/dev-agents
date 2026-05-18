@@ -1,11 +1,9 @@
 """Tests for EmailService — IMAP/SMTP logic without real connections."""
 
-import email as email_lib
-import os
-from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from unittest.mock import AsyncMock, MagicMock, patch
+import os
 
 import pytest
 
@@ -18,14 +16,16 @@ from integrations.platforms.email import (
     _strip_html,
 )
 
-
 # ---------------------------------------------------------------------------
 # Helper function tests
 # ---------------------------------------------------------------------------
 
+
 class TestHelpers:
     def test_extract_email_address_angle_brackets(self):
-        assert _extract_email_address("Alice <alice@example.com>") == "alice@example.com"
+        assert (
+            _extract_email_address("Alice <alice@example.com>") == "alice@example.com"
+        )
 
     def test_extract_email_address_bare(self):
         assert _extract_email_address("bob@example.com") == "bob@example.com"
@@ -52,12 +52,20 @@ class TestHelpers:
         assert _is_automated_sender("alice@example.com", {}) is False
 
     def test_is_automated_sender_headers(self):
-        assert _is_automated_sender("x@x.com", {"Auto-Submitted": "auto-generated"}) is True
+        assert (
+            _is_automated_sender("x@x.com", {"Auto-Submitted": "auto-generated"})
+            is True
+        )
         assert _is_automated_sender("x@x.com", {"Precedence": "bulk"}) is True
         assert _is_automated_sender("x@x.com", {"Auto-Submitted": "no"}) is False
 
     def test_is_automated_sender_list_unsubscribe(self):
-        assert _is_automated_sender("x@x.com", {"List-Unsubscribe": "<mailto:unsub@x.com>"}) is True
+        assert (
+            _is_automated_sender(
+                "x@x.com", {"List-Unsubscribe": "<mailto:unsub@x.com>"}
+            )
+            is True
+        )
 
 
 class TestExtractTextBody:
@@ -87,6 +95,7 @@ class TestExtractTextBody:
 # ---------------------------------------------------------------------------
 # EmailService tests
 # ---------------------------------------------------------------------------
+
 
 class TestEmailService:
     def _make_service(self, **env_overrides):
@@ -128,15 +137,17 @@ class TestEmailService:
         svc = self._make_service()
         svc._thread_context_max = 10
         for i in range(25):
-            await svc._handle_email({
-                "sender_addr": f"user{i}@example.com",
-                "sender_name": f"User {i}",
-                "subject": f"Subject {i}",
-                "message_id": f"<{i}@x>",
-                "in_reply_to": "",
-                "body": "body",
-                "date": "",
-            })
+            await svc._handle_email(
+                {
+                    "sender_addr": f"user{i}@example.com",
+                    "sender_name": f"User {i}",
+                    "subject": f"Subject {i}",
+                    "message_id": f"<{i}@x>",
+                    "in_reply_to": "",
+                    "body": "body",
+                    "date": "",
+                }
+            )
         assert len(svc._thread_context) <= svc._thread_context_max
 
     @pytest.mark.asyncio

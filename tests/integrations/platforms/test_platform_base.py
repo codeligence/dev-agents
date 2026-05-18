@@ -1,18 +1,18 @@
 """Tests for PlatformMessage and BasePlatformService."""
 
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 import asyncio
 import os
-from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from integrations.platforms.base import BasePlatformService, PlatformMessage
 
-
 # ---------------------------------------------------------------------------
 # PlatformMessage tests
 # ---------------------------------------------------------------------------
+
 
 class TestPlatformMessage:
     def test_basic_fields(self):
@@ -20,7 +20,7 @@ class TestPlatformMessage:
             user_name="Alice",
             user_id="U123",
             content="Hello world",
-            date=datetime(2025, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            date=datetime(2025, 1, 1, 12, 0, 0, tzinfo=UTC),
             platform_name="test",
         )
         assert msg.get_user_id() == "U123"
@@ -33,7 +33,7 @@ class TestPlatformMessage:
             user_name="Bot",
             user_id="B1",
             content="Reply",
-            date=datetime(2025, 1, 1, tzinfo=timezone.utc),
+            date=datetime(2025, 1, 1, tzinfo=UTC),
             is_bot=True,
         )
         assert msg.is_bot() is True
@@ -43,7 +43,7 @@ class TestPlatformMessage:
             user_name="Bob",
             user_id="U456",
             content="Test message",
-            date=datetime(2025, 6, 15, 14, 30, 0, tzinfo=timezone.utc),
+            date=datetime(2025, 6, 15, 14, 30, 0, tzinfo=UTC),
             platform_name="email",
         )
         formatted = msg.get_formatted_message()
@@ -66,7 +66,7 @@ class TestPlatformMessage:
             user_name="X",
             user_id="X",
             content="",
-            date=datetime(2025, 1, 1, tzinfo=timezone.utc),
+            date=datetime(2025, 1, 1, tzinfo=UTC),
             thread_id="T1",
             channel_id="C1",
         )
@@ -77,6 +77,7 @@ class TestPlatformMessage:
 # ---------------------------------------------------------------------------
 # BasePlatformService tests
 # ---------------------------------------------------------------------------
+
 
 class ConcreteService(BasePlatformService):
     """Minimal concrete implementation for testing."""
@@ -142,7 +143,7 @@ class TestBasePlatformService:
             user_name="Alice",
             user_id="U1",
             content="Hello",
-            date=datetime(2025, 1, 1, tzinfo=timezone.utc),
+            date=datetime(2025, 1, 1, tzinfo=UTC),
             channel_id="C1",
             thread_id="T1",
         )
@@ -160,7 +161,7 @@ class TestBasePlatformService:
             user_name="X",
             user_id="X",
             content="",
-            date=datetime(2025, 1, 1, tzinfo=timezone.utc),
+            date=datetime(2025, 1, 1, tzinfo=UTC),
         )
         # Should not raise — just logs error
         await svc._dispatch_message(msg)
@@ -168,10 +169,12 @@ class TestBasePlatformService:
     @pytest.mark.asyncio
     async def test_start_stop(self):
         svc = ConcreteService()
+
         # Override connect to block briefly then return
         async def _connect():
             await asyncio.sleep(0.05)
             return True
+
         svc.connect = _connect
 
         await svc.start()

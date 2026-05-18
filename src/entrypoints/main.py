@@ -61,7 +61,6 @@ def detect_configured_services() -> list[str]:
     except Exception as e:
         logger.debug(f"Platforms configuration check failed: {e}")
 
-
     return configured
 
 

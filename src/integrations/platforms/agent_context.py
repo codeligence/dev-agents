@@ -62,9 +62,7 @@ class PlatformAgentContext(AgentExecutionContext):
 
     # -- Internal helpers -----------------------------------------------------
 
-    async def _send_or_update_message(
-        self, text: str, is_status: bool
-    ) -> str | None:
+    async def _send_or_update_message(self, text: str, is_status: bool) -> str | None:
         """Send a new message or update the last one (mirrors SlackAgentContext).
 
         Tries to edit ``_last_message_id`` first when the platform supports
@@ -131,9 +129,17 @@ class PlatformAgentContext(AgentExecutionContext):
             raise NotImplementedError(
                 "Binary attachments not supported on this platform"
             )
-        text = content if isinstance(content, str) else content.decode("utf-8", errors="replace")
+        text = (
+            content
+            if isinstance(content, str)
+            else content.decode("utf-8", errors="replace")
+        )
         header = f"**{name}**\n\n"
         await self._send_or_update_message(header + text, is_status=False)
+
+    async def download_attachment(self, attachment_id: str) -> str:
+        """Attachment downloads not supported by generic platform contexts."""
+        raise NotImplementedError("Attachment downloads not supported on this platform")
 
     def get_message_list(self) -> MessageList:
         """Get the list of messages available to the agent."""

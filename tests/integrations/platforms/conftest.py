@@ -8,9 +8,10 @@ all providers and their heavy dependencies) with a lightweight stub that only
 contains the ``platforms`` sub-package.
 """
 
+from pathlib import Path
+from unittest.mock import MagicMock
 import sys
 import types
-from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # 1. Stub out core.* framework modules
@@ -27,11 +28,13 @@ _core_agents_context = types.ModuleType("core.agents.context")
 
 class _BaseMessage:
     """Minimal BaseMessage stub for testing."""
+
     pass
 
 
 class _MessageList:
     """Minimal MessageList stub for testing."""
+
     def __init__(self, messages=None):
         self._messages = list(messages or [])
 
@@ -102,11 +105,8 @@ _integrations.__path__ = []  # make it a package
 sys.modules["integrations"] = _integrations
 
 # Now let Python discover integrations.platforms from the source tree
-import importlib
-import os
+_src_dir = Path(__file__).parent.parent.parent.parent / "src"
+_platforms_path = _src_dir / "integrations" / "platforms"
 
-_src_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "src")
-_platforms_path = os.path.join(_src_dir, "integrations", "platforms")
-
-if os.path.isdir(_platforms_path):
-    _integrations.__path__.append(os.path.join(_src_dir, "integrations"))
+if _platforms_path.is_dir():
+    _integrations.__path__.append(str(_src_dir / "integrations"))

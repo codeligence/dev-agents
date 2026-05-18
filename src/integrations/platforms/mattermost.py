@@ -16,13 +16,13 @@ Dependencies: aiohttp>=3.13.3,<4
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+from typing import Any
 import asyncio
 import json
 import os
 import re
 import time
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
 
 from integrations.platforms.base import BasePlatformService, PlatformMessage
 
@@ -66,65 +66,82 @@ class MattermostService(BasePlatformService):
         self._closing = False
 
         # Dedup cache: post_id -> timestamp
-        self._seen_posts: Dict[str, float] = {}
+        self._seen_posts: dict[str, float] = {}
         self._SEEN_MAX = 2000
         self._SEEN_TTL = 300  # 5 min
 
     # -- HTTP helpers ---------------------------------------------------------
 
-    def _headers(self) -> Dict[str, str]:
+    def _headers(self) -> dict[str, str]:
         return {
             "Authorization": f"Bearer {self._token}",
             "Content-Type": "application/json",
         }
 
-    async def _api_get(self, path: str) -> Dict[str, Any]:
+    async def _api_get(self, path: str) -> dict[str, Any]:
         import aiohttp
+
         url = f"{self._base_url}/api/v4/{path.lstrip('/')}"
         try:
             async with self._session.get(
-                url, headers=self._headers(),
+                url,
+                headers=self._headers(),
                 timeout=aiohttp.ClientTimeout(total=30),
             ) as resp:
                 if resp.status >= 400:
                     body = await resp.text()
-                    self.logger.error("API GET %s -> %s: %s", path, resp.status, body[:200])
+                    self.logger.error(
+                        "API GET %s -> %s: %s", path, resp.status, body[:200]
+                    )
                     return {}
-                return await resp.json()
+                data: dict[str, Any] = await resp.json()
+                return data
         except Exception as exc:
             self.logger.error("API GET %s error: %s", path, exc)
             return {}
 
-    async def _api_post(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def _api_post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         import aiohttp
+
         url = f"{self._base_url}/api/v4/{path.lstrip('/')}"
         try:
             async with self._session.post(
-                url, headers=self._headers(), json=payload,
+                url,
+                headers=self._headers(),
+                json=payload,
                 timeout=aiohttp.ClientTimeout(total=30),
             ) as resp:
                 if resp.status >= 400:
                     body = await resp.text()
-                    self.logger.error("API POST %s -> %s: %s", path, resp.status, body[:200])
+                    self.logger.error(
+                        "API POST %s -> %s: %s", path, resp.status, body[:200]
+                    )
                     return {}
-                return await resp.json()
+                data: dict[str, Any] = await resp.json()
+                return data
         except Exception as exc:
             self.logger.error("API POST %s error: %s", path, exc)
             return {}
 
-    async def _api_put(self, path: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    async def _api_put(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         import aiohttp
+
         url = f"{self._base_url}/api/v4/{path.lstrip('/')}"
         try:
             async with self._session.put(
-                url, headers=self._headers(), json=payload,
+                url,
+                headers=self._headers(),
+                json=payload,
                 timeout=aiohttp.ClientTimeout(total=30),
             ) as resp:
                 if resp.status >= 400:
                     body = await resp.text()
-                    self.logger.error("API PUT %s -> %s: %s", path, resp.status, body[:200])
+                    self.logger.error(
+                        "API PUT %s -> %s: %s", path, resp.status, body[:200]
+                    )
                     return {}
-                return await resp.json()
+                data: dict[str, Any] = await resp.json()
+                return data
         except Exception as exc:
             self.logger.error("API PUT %s error: %s", path, exc)
             return {}
@@ -147,7 +164,9 @@ class MattermostService(BasePlatformService):
         # Verify credentials and get bot identity
         me = await self._api_get("users/me")
         if not me or "id" not in me:
-            self.logger.error("Authentication failed — check MATTERMOST_TOKEN and MATTERMOST_URL")
+            self.logger.error(
+                "Authentication failed — check MATTERMOST_TOKEN and MATTERMOST_URL"
+            )
             await self._session.close()
             return False
 
@@ -155,7 +174,9 @@ class MattermostService(BasePlatformService):
         self._bot_username = me.get("username", "")
         self.logger.info(
             "Authenticated as @%s (%s) on %s",
-            self._bot_username, self._bot_user_id, self._base_url,
+            self._bot_username,
+            self._bot_user_id,
+            self._base_url,
         )
 
         # Run WebSocket loop (blocks until closed/error)
@@ -173,7 +194,7 @@ class MattermostService(BasePlatformService):
 
     async def send_response(
         self, chat_id: str, thread_id: str, text: str
-    ) -> Optional[str]:
+    ) -> str | None:
         """Send a message (or multiple chunks) to a channel.
 
         Returns the post ID of the last sent chunk on success so the context
@@ -185,10 +206,10 @@ class MattermostService(BasePlatformService):
         formatted = self._format_message(text)
         chunks = self.truncate_message(formatted, MAX_POST_LENGTH)
 
-        last_post_id: Optional[str] = None
+        last_post_id: str | None = None
 
         for chunk in chunks:
-            payload: Dict[str, Any] = {
+            payload: dict[str, Any] = {
                 "channel_id": chat_id,
                 "message": chunk,
             }
@@ -203,9 +224,7 @@ class MattermostService(BasePlatformService):
 
         return last_post_id
 
-    async def update_response(
-        self, chat_id: str, message_id: str, text: str
-    ) -> bool:
+    async def update_response(self, _chat_id: str, message_id: str, text: str) -> bool:
         """Edit an existing Mattermost post in place.
 
         Returns ``False`` if the new text exceeds ``MAX_POST_LENGTH`` or the
@@ -246,7 +265,8 @@ class MattermostService(BasePlatformService):
                 return
 
             import random
-            jitter = delay * _RECONNECT_JITTER * random.random()
+
+            jitter = delay * _RECONNECT_JITTER * random.random()  # nosec B311
             await asyncio.sleep(delay + jitter)
             delay = min(delay * 2, _RECONNECT_MAX_DELAY)
 
@@ -275,15 +295,17 @@ class MattermostService(BasePlatformService):
                     continue
                 await self._handle_ws_event(event)
             elif raw_msg.type in (
-                raw_msg.type.ERROR, raw_msg.type.CLOSE,
-                raw_msg.type.CLOSING, raw_msg.type.CLOSED,
+                raw_msg.type.ERROR,
+                raw_msg.type.CLOSE,
+                raw_msg.type.CLOSING,
+                raw_msg.type.CLOSED,
             ):
                 self.logger.info("WebSocket closed (%s)", raw_msg.type)
                 break
 
     # -- Event handling -------------------------------------------------------
 
-    async def _handle_ws_event(self, event: Dict[str, Any]) -> None:
+    async def _handle_ws_event(self, event: dict[str, Any]) -> None:
         """Process a single WebSocket event."""
         if event.get("event") != "posted":
             return
@@ -319,11 +341,14 @@ class MattermostService(BasePlatformService):
         # Mention-gating for non-DM channels
         if channel_type_raw != "D":
             require_mention = os.getenv(
-                "MATTERMOST_REQUIRE_MENTION", "true",
+                "MATTERMOST_REQUIRE_MENTION",
+                "true",
             ).lower() not in ("false", "0", "no")
 
             free_channels_raw = os.getenv("MATTERMOST_FREE_RESPONSE_CHANNELS", "")
-            free_channels = {ch.strip() for ch in free_channels_raw.split(",") if ch.strip()}
+            free_channels = {
+                ch.strip() for ch in free_channels_raw.split(",") if ch.strip()
+            }
             is_free_channel = channel_id in free_channels
 
             mention_patterns = [
@@ -341,7 +366,10 @@ class MattermostService(BasePlatformService):
             if has_mention:
                 for pattern in mention_patterns:
                     message_text = re.sub(
-                        re.escape(pattern), "", message_text, flags=re.IGNORECASE,
+                        re.escape(pattern),
+                        "",
+                        message_text,
+                        flags=re.IGNORECASE,
                     ).strip()
 
         # Authorization check
@@ -361,7 +389,7 @@ class MattermostService(BasePlatformService):
             user_name=sender_name,
             user_id=sender_id,
             content=message_text,
-            date=datetime.now(timezone.utc),
+            date=datetime.now(UTC),
             thread_id=thread_id,
             channel_id=channel_id,
             platform_name="mattermost",
@@ -369,7 +397,9 @@ class MattermostService(BasePlatformService):
 
         self.logger.info(
             "New message from @%s in %s: %s",
-            sender_name, channel_id, message_text[:80],
+            sender_name,
+            channel_id,
+            message_text[:80],
         )
         await self._dispatch_message(message)
 
@@ -386,6 +416,5 @@ class MattermostService(BasePlatformService):
             return
         now = time.time()
         self._seen_posts = {
-            pid: ts for pid, ts in self._seen_posts.items()
-            if now - ts < self._SEEN_TTL
+            pid: ts for pid, ts in self._seen_posts.items() if now - ts < self._SEEN_TTL
         }

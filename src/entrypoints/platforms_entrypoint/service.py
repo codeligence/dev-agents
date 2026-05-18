@@ -36,7 +36,7 @@ def start_service(shutdown_event: threading.Event) -> None:
     asyncio.set_event_loop(loop)
 
     try:
-        loop.run_until_complete(_run(shutdown_event, loop))
+        loop.run_until_complete(_run(shutdown_event))
     except Exception:
         logger.exception("Platforms entrypoint crashed")
     finally:
@@ -44,7 +44,7 @@ def start_service(shutdown_event: threading.Event) -> None:
         logger.info("Platforms entrypoint stopped")
 
 
-async def _run(shutdown_event: threading.Event, loop: asyncio.AbstractEventLoop) -> None:
+async def _run(shutdown_event: threading.Event) -> None:
     """Async entry: start platforms, wait for shutdown, then stop them."""
     from integrations.platforms import start_platforms, stop_platforms
 

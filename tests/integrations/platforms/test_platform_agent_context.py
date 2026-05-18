@@ -1,6 +1,6 @@
 """Tests for PlatformAgentContext."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -63,15 +63,15 @@ class EditableService(BasePlatformService):
 
 
 def _make_message(**kwargs):
-    defaults = dict(
-        user_name="Alice",
-        user_id="U1",
-        content="Hello",
-        date=datetime(2025, 1, 1, tzinfo=timezone.utc),
-        channel_id="C1",
-        thread_id="T1",
-        platform_name="test",
-    )
+    defaults = {
+        "user_name": "Alice",
+        "user_id": "U1",
+        "content": "Hello",
+        "date": datetime(2025, 1, 1, tzinfo=UTC),
+        "channel_id": "C1",
+        "thread_id": "T1",
+        "platform_name": "test",
+    }
     defaults.update(kwargs)
     return PlatformMessage(**defaults)
 
