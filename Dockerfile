@@ -7,7 +7,7 @@
 # /data: for storage / cache and logs
 
 # Build stage - Install dependencies and build the package
-FROM python:3.11-slim AS builder
+FROM python:3.13-slim AS builder
 
 # Set build arguments
 ARG PYTHONUNBUFFERED=1
@@ -44,11 +44,11 @@ RUN pip install --upgrade pip setuptools wheel \
 # Runtime stage - Create minimal runtime image
 # =============================================================================
 
-FROM python:3.11-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
-ARG VERSION=1.1.0
+ARG VERSION=1.2.0
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
@@ -75,7 +75,7 @@ RUN mkdir -p /data && chown -R appuser:appuser /data
 WORKDIR /app
 
 # Copy Python environment from builder stage
-COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/python3.11/site-packages/
+COPY --from=builder /usr/local/lib/python3.14/site-packages/ /usr/local/lib/python3.14/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy entrypoint script

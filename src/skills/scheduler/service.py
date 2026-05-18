@@ -7,6 +7,7 @@ full agent pipeline.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
 import asyncio
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -17,7 +18,10 @@ from core.config import BaseConfig, get_default_config
 from core.context_factory import create_context_from_origin
 from core.log import get_logger
 from core.prompts import get_default_prompts
-from skills.scheduler.storage import ScheduleEntry, ScheduleStorage
+
+if TYPE_CHECKING:
+    from core.message import MessageList
+    from skills.scheduler.storage import ScheduleEntry, ScheduleStorage
 
 logger = get_logger("skills.scheduler.service")
 

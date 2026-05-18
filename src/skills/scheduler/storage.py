@@ -6,12 +6,14 @@ An index key ``schedule_index`` tracks all schedule IDs for fast enumeration.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 import time
 import uuid
 
 from core.log import get_logger
-from core.storage import BaseStorage
+
+if TYPE_CHECKING:
+    from core.storage import BaseStorage
 
 logger = get_logger("skills.scheduler.storage")
 

@@ -19,7 +19,7 @@ from core.message import MessageList
 from core.protocols.message_consumer_protocols import MessageConsumer
 from entrypoints.slack_entrypoint.stop_command_handler import StopCommandHandler
 from entrypoints.slack_entrypoint.thread_task_manager import ThreadTaskManager
-from integrations.slack.feedback_blocks import FEEDBACK_ACTION_ID
+from integrations.slack.feedback_blocks import FEEDBACK_ACTION_ID, FeedbackEvent
 from integrations.slack.feedback_logger import log_feedback
 from integrations.slack.models import SlackBotConfig
 from integrations.slack.slack_client_service import SlackClientService
@@ -348,6 +348,8 @@ class SlackBotRuntime:
     # Feedback handling
     # ------------------------------------------------------------------
     def _record_feedback(self, body: dict[str, Any]) -> None:
+        from core.hooks import hooks
+
         actions = body.get("actions") or []
         if not actions:
             return
@@ -358,11 +360,30 @@ class SlackBotRuntime:
         user = body.get("user", {})
         channel = body.get("channel", {})
         message = body.get("message", {})
+
+        user_id = user.get("id", "")
+        channel_id = channel.get("id", "")
+        thread_ts = message.get("thread_ts")
+        message_ts = message.get("ts")
+        action_id = action.get("action_id", FEEDBACK_ACTION_ID)
+        value_str = str(value)
+
         log_feedback(
-            user_id=user.get("id", ""),
-            channel_id=channel.get("id", ""),
-            thread_ts=message.get("thread_ts"),
-            message_ts=message.get("ts"),
-            value=str(value),
-            action_id=action.get("action_id", FEEDBACK_ACTION_ID),
+            user_id=user_id,
+            channel_id=channel_id,
+            thread_ts=thread_ts,
+            message_ts=message_ts,
+            value=value_str,
+            action_id=action_id,
         )
+
+        event = FeedbackEvent(
+            user_id=user_id,
+            channel_id=channel_id,
+            thread_ts=thread_ts,
+            message_ts=message_ts,
+            value=value_str,
+            action_id=action_id,
+            body=body,
+        )
+        hooks().do_action("slack.feedback", event=event)

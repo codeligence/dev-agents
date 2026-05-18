@@ -22,12 +22,12 @@ def _clean_registry():
 
 class TestRegisterOriginFactory:
     def test_register_and_list(self):
-        register_origin_factory("test_type", lambda info, cfg, p: None)
+        register_origin_factory("test_type", lambda _info, _cfg, _p: None)
         assert "test_type" in get_registered_origin_types()
 
     def test_overwrite_existing(self):
-        register_origin_factory("test_type", lambda info, cfg, p: "first")
-        register_origin_factory("test_type", lambda info, cfg, p: "second")
+        register_origin_factory("test_type", lambda _info, _cfg, _p: "first")
+        register_origin_factory("test_type", lambda _info, _cfg, _p: "second")
         result = _factories["test_type"]({"type": "test_type"}, None, None)
         assert result == "second"
 
@@ -35,7 +35,7 @@ class TestRegisterOriginFactory:
 class TestCreateContextFromOrigin:
     def test_calls_registered_factory(self):
         sentinel = object()
-        register_origin_factory("mock", lambda info, cfg, p: sentinel)
+        register_origin_factory("mock", lambda _info, _cfg, _p: sentinel)
         result = create_context_from_origin({"type": "mock"}, None, None)
         assert result is sentinel
 

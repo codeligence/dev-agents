@@ -9,13 +9,15 @@ Tools are exposed as PydanticAI ToolRegistrations via the
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from core.agents.models import ToolRegistration
 from core.config import get_default_config
 from core.hooks import hooks
 from core.log import get_logger
 from core.storage import get_storage
+
+if TYPE_CHECKING:
+    from core.agents.models import ToolRegistration
 
 logger = get_logger("skills.scheduler")
 

@@ -52,6 +52,16 @@ def detect_configured_services() -> list[str]:
     except Exception as e:
         logger.debug(f"Slack configuration check failed: {e}")
 
+    # Check platform configurations (Email, Mattermost, Telegram)
+    try:
+        from integrations.platforms import detect_platforms
+
+        if detect_platforms():
+            configured.append("platforms")
+    except Exception as e:
+        logger.debug(f"Platforms configuration check failed: {e}")
+
+
     return configured
 
 
@@ -215,6 +225,9 @@ Service Detection:
   NATS          - if NATS_SERVER_URL and NATS_JOB_ID are configured
   Slack Bot     - if SLACK_BOT_TOKEN and SLACK_APP_TOKEN are configured
   HTTP Server   - if any HTTP entrypoint is enabled (agui, openai)
+  Email         - if EMAIL_ADDRESS and EMAIL_PASSWORD are configured
+  Mattermost    - if MATTERMOST_URL and MATTERMOST_TOKEN are configured
+  Telegram      - if TELEGRAM_BOT_TOKEN is configured
   CLI Chat      - if stdin is a TTY (interactive terminal)
 
 HTTP Entrypoints (share single uvicorn server):
@@ -307,6 +320,12 @@ Examples:
             )
 
             orchestrator.add_service("http", http_start)
+        elif service_name == "platforms":
+            from entrypoints.platforms_entrypoint.service import (
+                start_service as platforms_start,
+            )
+
+            orchestrator.add_service("platforms", platforms_start)
 
     # Add CLI if stdin is a TTY
     if sys.stdin.isatty():

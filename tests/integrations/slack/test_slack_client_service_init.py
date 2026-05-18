@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 from slack_sdk.errors import SlackApiError
@@ -13,6 +14,15 @@ def slack_config() -> MagicMock:
     cfg.get_app_token.return_value = "xapp-test"
     cfg.get_always_respond.return_value = False
     return cfg
+
+
+@pytest.fixture(autouse=True)
+def _isolated_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point file storage at a tmp dir so initialize() doesn't touch /data."""
+    from core import storage as storage_mod
+
+    monkeypatch.setenv("CORE_STORAGE_FILE_DIR", str(tmp_path))
+    monkeypatch.setattr(storage_mod, "_storage_cache", {})
 
 
 class TestInitializePropagatesAuthFailure:

@@ -6,13 +6,14 @@ tools via the ``gitchatbot.register_tools`` hook.
 
 from __future__ import annotations
 
-from typing import Any
-
-from pydantic_ai import RunContext
+from typing import TYPE_CHECKING, Any
 
 from core.agents.models import ToolRegistration
 from core.log import get_logger
 from core.skills.context import SkillContext
+
+if TYPE_CHECKING:
+    from pydantic_ai import RunContext
 
 logger = get_logger("skills.scheduler.tools")
 
@@ -79,7 +80,7 @@ async def _create_schedule(
         return f"Scheduler error: {e}"
 
 
-async def _list_schedules(ctx: RunContext[Any]) -> str:
+async def _list_schedules(_ctx: RunContext[Any]) -> str:
     """List all scheduled tasks.
 
     Returns:
@@ -101,7 +102,7 @@ async def _list_schedules(ctx: RunContext[Any]) -> str:
     return "\n\n".join(lines)
 
 
-async def _delete_schedule(ctx: RunContext[Any], schedule_id: str) -> str:
+async def _delete_schedule(_ctx: RunContext[Any], schedule_id: str) -> str:
     """Delete a scheduled task by ID.
 
     Args:
