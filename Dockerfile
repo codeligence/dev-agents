@@ -7,7 +7,7 @@
 # /data: for storage / cache and logs
 
 # Build stage - Install dependencies and build the package
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Set build arguments
 ARG PYTHONUNBUFFERED=1
@@ -55,7 +55,7 @@ WORKDIR /workspace
 # Runtime stage - Create minimal runtime image
 # =============================================================================
 
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
