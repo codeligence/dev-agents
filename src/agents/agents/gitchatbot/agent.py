@@ -385,6 +385,7 @@ class GitChatbotAgent(PydanticAIAgent):
             if limit > 50:
                 limit = 50  # Cap at reasonable maximum
 
+            await project_loader.ensure_repository_available()
             git_repo = GitRepository(project_config=project_config)
             tags = git_repo.get_latest_tags(limit=limit)
 
@@ -432,6 +433,7 @@ class GitChatbotAgent(PydanticAIAgent):
                 return str(e)
 
             project_config = project_loader.get_project_config()
+            await project_loader.ensure_repository_available()
             git_repo = GitRepository(project_config=project_config)
 
             context_description = None
@@ -539,6 +541,7 @@ class GitChatbotAgent(PydanticAIAgent):
                 return str(e)
 
             project_config = project_loader.get_project_config()
+            await project_loader.ensure_repository_available()
             git_repo = GitRepository(project_config=project_config)
 
             # Determine git ref and context description
@@ -584,7 +587,7 @@ User Instructions:
 
             result = await run_agent_safely(agent, prompt, deps=deps)
 
-            get_current_agent_execution_context().track_usage(model, result.usage())
+            get_current_agent_execution_context().track_usage(model, result.usage)
 
             self.logger.info("Code research completed")
             return f"Code research completed. Results:\n\n{result.output}"
@@ -709,7 +712,7 @@ User Instructions:
             model_name = (
                 self.agent.model if self.agent and self.agent.model else "unknown"
             )
-            context.track_usage(model_name, result.usage())
+            context.track_usage(model_name, result.usage)
 
             response = result.output
 

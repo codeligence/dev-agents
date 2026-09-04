@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dev-agents"
-version = "1.2.0"
+version = "1.3.0"
 description = "AI Agents for Agile Dev Teams"
 readme = "README.md"
 license = 'MIT'
@@ -40,6 +40,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Software Development :: Quality Assurance",
     "Topic :: Software Development :: Testing",
@@ -52,9 +53,9 @@ dependencies = [
     "pyyaml>=6.0.2,<7.0.0",
     "dynaconf>=3.2.11,<4.0.0",
     "jinja2>=3.1.6,<4.0.0",
-    "pydantic-ai>=1.62,<1.88",
+    "pydantic-ai>=2.36,<3.0",
     "beautifulsoup4>=4.13.5,<4.15.0",
-    "fastapi~=0.116.1",
+    "fastapi>=0.130.0,<1.0.0",
     "pydriller~=2.9",
 ]
 
@@ -83,11 +84,18 @@ telegram = [
 mattermost = [
     "aiohttp>=3.11.0,<4.0.0",
 ]
+email = [
+    # DKIM verification of incoming mail — the From header alone is forgeable.
+    "dkimpy>=1.1.5,<2.0.0",
+]
 nats = [
     "nats-py>=2.0.0",
 ]
+agui = [
+    "ag-ui-protocol>=0.1.19,<1.0.0",
+]
 claude = [
-    "claude-agent-sdk>=0.1.0,<1.0.0",
+    "claude-agent-sdk>=0.2.128,<1.0.0",
 ]
 scheduler = [
     "apscheduler>=3.10.0,<4.0.0",
@@ -95,7 +103,7 @@ scheduler = [
 dev = [
     # Testing
     "pytest>=8.4.1,<10.0.0",
-    "pytest-asyncio>=0.21.0,<1.0.0",
+    "pytest-asyncio>=1.0.0,<2.0.0",
     "pytest-cov>=4.1.0,<8.0.0",
     "pytest-mock>=3.11.0,<4.0.0",
     "pytest-html>=4.1.0,<5.0.0",
@@ -104,8 +112,7 @@ dev = [
 
     # Code Quality & Formatting
     "black>=23.0.0,<27.0.0",
-    "isort>=5.12.0,<6.0.0",
-    "mypy>=1.5.0,<2.0.0",
+    "mypy>=1.5.0,<3.0.0",
     "ruff>=0.1.0,<1.0.0",
     "pre-commit>=4.3.0,<5.0.0",
 
@@ -135,7 +142,7 @@ dev = [
     "piprot>=0.9.11,<1.0.0",
 
     # Git & Release Management
-    "commitizen>=3.25.0,<4.0.0",
+    "commitizen>=3.25.0,<5.0.0",
     "gitpython>=3.1.40,<4.0.0",
 
     # Performance & Profiling
@@ -144,13 +151,13 @@ dev = [
     "psutil>=5.9.0,<8.0.0",
 ]
 docs = [
-    "zensical>=0.0.11",
+    "zensical>=0.0.53",
 ]
 prod = [
-    "dev-agents[slack,azure,nats,jira,telegram,mattermost]",
+    "dev-agents[slack,azure,nats,jira,telegram,mattermost,email,agui]",
 ]
 all = [
-    "dev-agents[slack,azure,dev,nats,jira,claude,scheduler,docs,telegram,mattermost]",
+    "dev-agents[slack,azure,dev,nats,jira,claude,scheduler,docs,telegram,mattermost,email,agui]",
 ]
 
 [tool.setuptools.packages.find]
@@ -279,18 +286,6 @@ extend-exclude = '''
 )/
 '''
 
-[tool.isort]
-profile = "black"
-line_length = 88
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-use_parentheses = true
-ensure_newline_before_comments = true
-src_paths = ["src", "tests"]
-known_first_party = ["dev_agents"]
-skip_glob = ["venv/*", "build/*"]
-
 [tool.mypy]
 python_version = "3.11"
 strict = true
@@ -313,6 +308,8 @@ module = [
     "yaml.*",
     "telegram.*",
     "aiohttp.*",
+    "apscheduler.*",
+    "dkim.*",
 ]
 ignore_missing_imports = true
 
@@ -395,7 +392,7 @@ cache = true
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "1.2.0"
+version = "1.3.0"
 tag_format = "v$major.$minor.$patch"
 version_files = [
     "pyproject.toml:version",
@@ -524,15 +521,4 @@ no-deps = false
 strict = true
 requirement = ["requirements.txt", "requirements-dev.txt"]
 
-# Performance testing configuration
-[tool.pytest.benchmark]
-auto_scale = "py311"
-sort = "mean"
-warmup = true
-warmup_iterations = 5
-disable_gc = true
-min_rounds = 3
-max_time = 0.1
-compare_fail = ["mean:5%", "stddev:10%"]
-histogram = true
 

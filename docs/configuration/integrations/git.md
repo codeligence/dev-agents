@@ -1,228 +1,73 @@
 # Git Integration
 
-Dev Agents requires access to your git repository to analyze code changes, understand project structure, and provide meaningful insights.
+Dev Agents analyzes a **local clone** of your repository. Everything the code research tools do —
+listing directories, reading files, grepping, diffing branches — runs against that checkout.
 
-## Repository Setup
-
-### Prerequisites
-
-1. **Git repository** - Your project must be a git repository
-2. **File permissions** - Dev Agents needs read access to the repository
-3. **Clean working directory** - Uncommitted changes may affect analysis
-
-### Configuration
-
-#### Method 1: Environment Variable
-
-Set the repository path using an environment variable:
+## Configuration
 
 ```bash
-# In your .env file
-GIT_REPO_PATH=/path/to/your/repository
+GIT_REPO_PATH=/path/to/your/repo
+GIT_AUTOPULL=false
+GIT_PULL_INTERVAL_SECONDS=120
 ```
 
-#### Method 2: config.yaml
-
-Configure in your `config/config.yaml`:
+Or per project in `config/config.custom.yaml`:
 
 ```yaml
-integrations:
-  git:
-    repository:
-      path: "/path/to/your/repository"
+projects:
+  backend:
+    git:
+      path: "/code/backend"
+      defaultBranch: "develop"
+      autoPull: true
+      pullIntervalSeconds: 300
 ```
 
-### Automatic Path Resolution
+| Key | Environment variable | Default | Description |
+|-----|----------------------|---------|-------------|
+| `path` | `GIT_REPO_PATH` | `/code` | Path to the checkout; falls back to the current directory when empty |
+| `defaultBranch` | — | `main` | Branch used as the comparison base |
+| `autoPull` | `GIT_AUTOPULL` | `false` | Run `git pull` before an analysis |
+| `pullIntervalSeconds` | `GIT_PULL_INTERVAL_SECONDS` | `120` | Rate limit for auto-pull |
 
-If no path is specified, Dev Agents will attempt to find the git repository:
-
-1. Check current working directory
-2. Search parent directories for `.git` folder
-3. Use the first valid git repository found
-
-## Repository Requirements
-
-### Git History
-
-Dev Agents works best with repositories that have:
-
-- **Commit history** - At least a few commits for context
-- **Branch structure** - Clear branching strategy (main/develop)
-- **Meaningful commit messages** - Descriptive commit messages help analysis
-
-### File Structure
-
-Optimize your repository for Dev Agents:
-
-```
-your-repo/
-├── .git/                    # Git metadata
-├── src/                     # Source code
-├── tests/                   # Test files  
-├── docs/                    # Documentation
-├── README.md               # Project overview
-├── .gitignore              # Git ignore rules
-└── requirements.txt        # Dependencies (Python)
-```
-
-### Recommended .gitignore
-
-Exclude files that don't need analysis:
-
-```gitignore
-# Dev Agents specific
-.env
-*.log
-
-# Build artifacts
-build/
-dist/
-*.egg-info/
-
-# IDE files
-.vscode/
-.idea/
-*.swp
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Language-specific
-__pycache__/
-node_modules/
-.pytest_cache/
-```
-
-## Analysis Configuration
-
-### File Size Limits
-
-Configure maximum file sizes for analysis:
-
-```yaml
-integrations:
-  git:
-    analysis:
-      max_file_size: 1048576  # 1MB in bytes
-      exclude_patterns:
-        - "*.log"
-        - "*.bin"
-        - "node_modules/*"
-        - ".git/*"
-        - "__pycache__/*"
-```
-
-### File Type Support
-
-Dev Agents analyzes these file types:
-
-- **Source code**: `.py`, `.js`, `.ts`, `.java`, `.go`, `.rust`, etc.
-- **Configuration**: `.yaml`, `.json`, `.toml`, `.ini`
-- **Documentation**: `.md`, `.rst`, `.txt`
-- **Web**: `.html`, `.css`, `.scss`
-
-## Repository Operations
-
-### Read Operations
-
-Dev Agents performs these read-only operations:
-
-- **File reading** - Analyze source code content
-- **Git log** - Review commit history and messages
-- **Git diff** - Compare changes between commits/branches
-- **Branch analysis** - Understand branching structure
-- **File tree** - Navigate project structure
-
-### No Write Operations
-
-Dev Agents **never** modifies your repository:
-
-- ❌ No commits
-- ❌ No branch creation
-- ❌ No file modifications
-- ❌ No git operations that change state
-
-## Troubleshooting
-
-### Common Issues
-
-#### Permission Denied
-```bash
-# Ensure read permissions
-chmod -R +r /path/to/your/repository
-```
-
-#### Repository Not Found
-```bash
-# Verify path exists and contains .git
-ls -la /path/to/your/repository/.git
-```
-
-#### Large Repository Performance
-```yaml
-# Increase exclusion patterns
-integrations:
-  git:
-    analysis:
-      exclude_patterns:
-        - "vendor/*"
-        - "third_party/*"
-        - "*.min.js"
-        - "*.bundle.*"
-```
-
-### Validation
-
-Test your git integration:
+In Docker, mount the repository at the configured path:
 
 ```bash
-python -c "
-from src.integrations.git.git_repository import GitRepository
-repo = GitRepository()
-print('✓ Git repository accessible')
-print(f'Repository path: {repo.repo_path}')
-"
+docker run --rm -it --env-file=.env -v /path/to/your/repo:/code codeligence/dev-agents
 ```
 
-## Security Considerations
+## Requirements
 
-### Repository Access
+- A real clone with a `.git` directory (not an export or a shallow archive).
+- Read access for the user running Dev Agents.
+- Full history where you want branch comparisons — a shallow clone limits diffs and `git log`.
+- For `autoPull`: a remote the process can fetch from non-interactively (deploy key or token in
+  the remote URL). Auto-pull failures are logged and never abort the request.
 
-- **Read-only access** - Dev Agents only reads, never writes
-- **Local repositories** - No remote repository access required
-- **Sensitive files** - Use `.gitignore` to exclude sensitive content
-- **File permissions** - Maintain appropriate file system permissions
+Multiple projects each point at their own checkout; the agent picks one via its project context.
 
-### Sensitive Data
+## What the agent can do
 
-Ensure sensitive information is not analyzed:
+Read-only git plumbing, run in the checkout:
 
-```gitignore
-# Sensitive configuration
-.env
-secrets/
-private_keys/
+- Diff two branches or refs (three-dot diff against the merge base), with per-file status and
+  line counts
+- Read commits between refs
+- List the most recent tags
+- Read files, list directories and grep at a given ref
 
-# Database files
-*.db
-*.sqlite
+Dev Agents never commits, pushes, or rewrites history. The only write operation is `git pull`,
+and only when `autoPull` is enabled.
 
-# Credential files
-credentials.json
-auth_keys.yml
-```
+## Notes
 
-## Best Practices
+- Files that reach the agent reach your LLM provider. Keep secrets out of the repository — a
+  checked-in `.env` or private key is readable by the code research tools.
+- Very large repositories work, but diffs across long ranges cost tokens; prefer narrow branch
+  comparisons.
 
-1. **Clean repository** - Keep your repository organized and clean
-2. **Meaningful commits** - Write descriptive commit messages
-3. **Regular branches** - Use consistent branching strategies
-4. **Documentation** - Include README and inline documentation
-5. **Ignore patterns** - Exclude unnecessary files from analysis
+## Next steps
 
-## Next Steps
-
-- Configure [Slack integration](slack.md)
-- Set up [Azure DevOps integration](azure-devops.md)
-- Review [environment variables](../environment-variables.md)
+- [config.yaml](../config-yaml.md#projects) — project and provider slots
+- [Azure DevOps](azure-devops.md), [GitLab](gitlab.md), [Linear](linear.md) — pull requests and
+  issues on top of the checkout

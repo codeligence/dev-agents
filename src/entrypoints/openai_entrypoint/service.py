@@ -17,6 +17,7 @@ from agents.agents.gitchatbot.agent import AGENT_NAME
 from core.config import BaseConfig, get_default_config
 from core.log import get_logger, reset_context_token, set_context_token
 from core.prompts import get_default_prompts
+from entrypoints.http_server.auth import ApiKeyAuth
 from entrypoints.openai_entrypoint.agent_context import OpenAIAgentContext
 from entrypoints.openai_entrypoint.message import (
     convert_openai_messages_to_message_list,
@@ -79,28 +80,19 @@ class OpenAIConfig:
         """Whether agent status updates are emitted as reasoning_content chunks."""
         return self._base_config.get_bool("openai.server.thinking", True)
 
-    def get_api_keys(self) -> list[str]:
-        """Get configured API keys for auth. Empty list = no auth required."""
-        keys = self._base_config.get_value("openai.server.apiKeys", [])
-        if isinstance(keys, str):
-            return [k.strip() for k in keys.split(",") if k.strip()]
-        if isinstance(keys, list):
-            return [str(k) for k in keys if k]
-        return []
+    def get_auth(self) -> ApiKeyAuth:
+        """Validated Bearer-token policy for the ``/v1`` routes.
+
+        Raises:
+            ConfigurationError: If ``openai.server.apiKeys`` is malformed or
+                empty without ``openai.server.allowUnauthenticated``.
+        """
+        return ApiKeyAuth.from_config(self._base_config, "openai")
 
 
 def _check_auth(request: Request, config: OpenAIConfig) -> None:
-    """Validate Bearer token if API keys are configured."""
-    api_keys = config.get_api_keys()
-    if not api_keys:
-        return
-
-    auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        _raise_error(401, "Missing Bearer token", error_type="invalid_request_error")
-
-    token = auth_header[7:]
-    if token not in api_keys:
+    """Reject the request with 401 unless it satisfies the configured auth policy."""
+    if not config.get_auth().is_authorized(request.headers.get("authorization", "")):
         _raise_error(401, "Invalid API key", error_type="invalid_request_error")
 
 
@@ -160,9 +152,10 @@ def _make_finish_chunk(completion_id: str, created: int, model: str) -> str:
 
 
 @router.get("/v1/models")
-async def list_models() -> ModelsResponse:
+async def list_models(request: Request) -> ModelsResponse:
     """List available models. Returns the single configured model."""
     config = OpenAIConfig(get_default_config())
+    _check_auth(request, config)
     return ModelsResponse(data=[ModelInfo(id=config.get_model_name())])
 
 
@@ -383,22 +376,31 @@ async def _stream_response(
 def register_if_configured() -> bool:
     """Check config and register routes on the shared HTTP server if enabled.
 
+    The auth policy is built here, before any route is mounted, so an enabled
+    endpoint without keys (and without the explicit unauthenticated opt-in)
+    aborts startup instead of serving the agent openly.
+
     Returns:
         True if routes were registered, False otherwise.
+
+    Raises:
+        ConfigurationError: If the entrypoint is enabled but its auth
+            configuration is invalid.
     """
-    try:
-        base_config = get_default_config()
-        config = OpenAIConfig(base_config)
-        if not config.is_configured():
-            logger.debug("OpenAI entrypoint not enabled")
-            return False
-
-        from entrypoints.http_server.server import register_router
-
-        register_router(router)
-        logger.info("OpenAI-compatible entrypoint registered on shared HTTP server")
-        return True
-
-    except Exception as e:
-        logger.debug(f"OpenAI entrypoint registration failed: {e}")
+    config = OpenAIConfig(get_default_config())
+    if not config.is_configured():
+        logger.debug("OpenAI entrypoint not enabled")
         return False
+
+    auth = config.get_auth()
+    if auth.allow_unauthenticated:
+        logger.warning(
+            "OpenAI-compatible entrypoint runs WITHOUT authentication "
+            "(openai.server.allowUnauthenticated=true)"
+        )
+
+    from entrypoints.http_server.server import register_router
+
+    register_router(router)
+    logger.info("OpenAI-compatible entrypoint registered on shared HTTP server")
+    return True

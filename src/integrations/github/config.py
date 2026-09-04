@@ -4,7 +4,12 @@ from core.config import BaseConfig
 
 
 class GitHubConfig:
-    """GitHub specific configuration class that works with BaseConfig composition."""
+    """GitHub specific configuration class that works with BaseConfig composition.
+
+    ``allowInsecureCloneUrl`` is **development-only**: it permits ``http://``
+    clone URLs. The clone URL must still point at the web host derived from
+    ``api_url``.
+    """
 
     def __init__(self, base_config: BaseConfig):
         """Initialize with a BaseConfig instance.
@@ -55,11 +60,11 @@ class GitHubConfig:
 
     def get_use_mocks(self) -> bool:
         """Get the GitHub mock mode setting."""
-        mock_value = self._base_config.get_value("github.mock", "false")
-        # Handle both boolean and string representations
-        if isinstance(mock_value, bool):
-            return mock_value
-        return str(mock_value).lower() in ("true", "1", "yes", "on")
+        return self._base_config.get_bool("github.mock")
+
+    def get_allow_insecure_clone_url(self) -> bool:
+        """Whether ``http://`` clone URLs are permitted (development only)."""
+        return self._base_config.get_bool("github.allowInsecureCloneUrl")
 
     def is_configured(self) -> bool:
         """Check if all required GitHub configuration is present."""

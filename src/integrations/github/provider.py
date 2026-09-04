@@ -4,7 +4,10 @@ import urllib.parse
 
 import httpx
 
+from core.exceptions import GitOperationError
+from core.git.clone import web_host_from_api_url
 from core.protocols.provider_protocols import (
+    CloneSpec,
     IssueModel,
     IssueProvider,
     PullRequestModel,
@@ -101,6 +104,29 @@ class GitHubPullRequestProvider(PullRequestProvider):
             refs.append(target_commit_id)
 
         return refs
+
+    async def _clone_spec(self) -> CloneSpec | None:
+        """Build the clone spec for the configured GitHub repository."""
+        if self.config.get_use_mocks():
+            return None
+
+        api_url = self.config.get_api_url()
+        owner = self.config.get_owner()
+        repo = self.config.get_repo()
+        token = self.config.get_token()
+        if not (api_url and owner and repo and token):
+            raise GitOperationError(
+                "GitHub provider is not fully configured for cloning"
+            )
+
+        host = web_host_from_api_url(api_url)
+        return CloneSpec(
+            url=f"https://{host}/{owner}/{repo}.git",
+            user="x-access-token",
+            password=token,
+            expected_host=host,
+            allow_insecure=self.config.get_allow_insecure_clone_url(),
+        )
 
     async def _fetch_pull_request(self, pull_request_id: str) -> PullRequest:
         """Fetch pull request from GitHub API."""

@@ -7,7 +7,7 @@
 # /data: for storage / cache and logs
 
 # Build stage - Install dependencies and build the package
-FROM python:3.13-slim AS builder
+FROM python:3.14-slim AS builder
 
 # Set build arguments
 ARG PYTHONUNBUFFERED=1
@@ -41,25 +41,29 @@ RUN pip install --upgrade pip setuptools wheel \
     && pip install .[prod]
 
 # =============================================================================
-# Quality stage - Adds dev dependencies for CI quality checks.
-# Source is mounted at /workspace at runtime; this image only ships deps.
+# Quality stage - Adds dev dependencies and source for CI quality checks.
+# Deps layer is cached while pyproject.toml is unchanged; only the COPY
+# layer rebuilds per commit.
 # =============================================================================
 
 FROM builder AS quality
 
-RUN pip install .[dev]
+# The full test suite imports the optional claude/scheduler integrations, so the
+# quality image needs those extras on top of [prod] to validate every test module.
+RUN pip install .[dev,claude,scheduler]
 
 WORKDIR /workspace
+COPY . /workspace
 
 # =============================================================================
 # Runtime stage - Create minimal runtime image
 # =============================================================================
 
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 # Set runtime arguments
 ARG PYTHONUNBUFFERED=1
-ARG VERSION=1.2.0
+ARG VERSION=1.3.0
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=${PYTHONUNBUFFERED} \
@@ -86,7 +90,7 @@ RUN mkdir -p /data && chown -R appuser:appuser /data
 WORKDIR /app
 
 # Copy Python environment from builder stage
-COPY --from=builder /usr/local/lib/python3.13/site-packages/ /usr/local/lib/python3.13/site-packages/
+COPY --from=builder /usr/local/lib/python3.14/site-packages/ /usr/local/lib/python3.14/site-packages/
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy entrypoint script

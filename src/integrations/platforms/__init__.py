@@ -30,13 +30,27 @@ _REQUIRED_ENV: dict[str, tuple[str, ...]] = {
     "telegram": ("TELEGRAM_BOT_TOKEN",),
 }
 
+# Each non-Slack platform exposes the agent to a public messaging surface, so
+# it must be opted into explicitly — having credentials present is not enough.
+_ENABLED_ENV: dict[str, str] = {
+    "email": "EMAIL_ENABLED",
+    "mattermost": "MATTERMOST_ENABLED",
+    "telegram": "TELEGRAM_ENABLED",
+}
+
 
 def detect_platforms() -> list[str]:
-    """Return names of platforms whose required env vars are set."""
+    """Return names of platforms that are explicitly enabled and configured.
+
+    A platform is only detected when its ``<NAME>_ENABLED`` flag is truthy
+    *and* all required credentials are present. The explicit enable flag is
+    mandatory because each platform opens the agent to an external audience.
+    """
     return [
         name
         for name, required in _REQUIRED_ENV.items()
-        if all(os.environ.get(v) for v in required)
+        if BasePlatformService.env_flag(_ENABLED_ENV[name])
+        and all(os.environ.get(v) for v in required)
     ]
 
 

@@ -1,192 +1,80 @@
 # Linear Integration
 
-Connect Dev Agents with Linear to analyze issues, track work items, and provide project management insights directly from your chat platform.
+Linear supplies **issues** to the agent. It is configured in YAML only — unlike the other
+providers, the bundled `config.yaml` ships no Linear block and no environment templates for it.
 
-## Linear Setup
+## Create an API key
 
-### Step 1: Create API Key
+1. In Linear: **Settings → API → Personal API keys → Create key**.
+2. Copy the key (`lin_api_…`).
 
-1. Go to [Linear Settings](https://linear.app/settings)
-2. Navigate to **Security & Access → API**
-3. Click **Create key**
-4. Give it a descriptive label (e.g., `Dev Agents Integration`)
-5. Copy the API key immediately (starts with `lin_api_`)
+## Configuration
 
-> **Note:** Linear API keys are scoped to the user who creates them. The integration will have the same access as the user.
+Add a `linear` entry to the `issues` slot of your project in `config/config.custom.yaml`:
 
-### Step 2: Gather Information
-
-No additional information is needed beyond the API key. Linear's GraphQL API automatically provides access to all teams, projects, and issues the authenticated user can see.
-
-## Environment Configuration
-
-Add to your `.env` file:
+```yaml
+projects:
+  default:
+    issues:
+      linear:
+        api_key: "@jinja {{ env.get('LINEAR_API_KEY', '') }}"
+        mock: false
+```
 
 ```bash
-# Linear Integration
-LINEAR_API_KEY=lin_api_your-api-key-here
+LINEAR_API_KEY=lin_api_...
 ```
 
-## Configuration File
+| Key | Required | Description |
+|-----|----------|-------------|
+| `api_key` | yes | Linear personal API key |
+| `mock` | no | `true` returns canned data instead of calling the API (default `false`) |
 
-Add to your project's `config.yaml`:
+The `@jinja` template is what makes `LINEAR_API_KEY` work — you can equally inline the key, but
+keeping it in the environment is preferable. See
+[config.yaml](../config-yaml.md#value-syntax) for the template syntax.
+
+## Multiple issue trackers
+
+A project can list several issue providers side by side; the agent picks the one that matches the
+identifier it was given:
 
 ```yaml
 projects:
-  my_project:
-    git:
-      path: "/path/to/repo"
+  default:
     issues:
       linear:
-        api_key: "@jinja {{env.LINEAR_API_KEY}}"
-```
-
-### Mock Mode
-
-For testing without Linear access:
-
-```yaml
-projects:
-  my_project:
-    issues:
-      linear:
-        mock: true
-```
-
-## Features
-
-### Issue Analysis
-
-Analyze Linear issues for requirements understanding, testing recommendations, and implementation planning:
-
-```slack
-@DevAgent analyze issue ENG-123
-
-@DevAgent what tests should I write for ENG-456?
-
-@DevAgent summarize the requirements in TEAM-789
-```
-
-### Automatic Issue Detection
-
-Dev Agents automatically detects Linear issue identifiers (e.g., `ENG-123`, `TEAM-456`) in conversations and can fetch context when needed. Issue identifiers follow the `TEAMKEY-NUMBER` pattern.
-
-### Issue Context
-
-When loading an issue, Dev Agents retrieves:
-
-- **Title and description** (Markdown)
-- **State** (workflow state like Backlog, In Progress, Done)
-- **Priority** (Urgent, High, Medium, Low)
-- **Assignee and creator**
-- **Team, project, and cycle**
-- **Labels**
-- **Estimate and due date**
-- **Parent and sub-issues**
-- **Comments** with author and timestamp
-
-## Multiple Issue Trackers
-
-Linear can be configured alongside other issue providers (GitLab, Jira). The first configured provider that matches will be used:
-
-```yaml
-projects:
-  my_project:
-    issues:
-      linear:
-        api_key: "@jinja {{env.LINEAR_API_KEY}}"
+        api_key: "@jinja {{ env.get('LINEAR_API_KEY', '') }}"
       jira:
-        domain: "company"
-        email: "user@company.com"
-        token: "@jinja {{env.JIRA_TOKEN}}"
+        domain: "@jinja {{ this.providers.jira.domain }}"
+        email: "@jinja {{ this.providers.jira.email }}"
+        token: "@jinja {{ this.providers.jira.token }}"
 ```
 
-## Testing and Validation
+## Using it
 
-### Test Connection
+Reference issues by their Linear identifier:
 
-Verify your Linear integration by loading an issue in mock mode first, then with your real API key:
-
-```bash
-# Test with mock mode
-# Set mock: true in your config and verify the agent responds with mock data
-
-# Test API connectivity
-curl -X POST https://api.linear.app/graphql \
-  -H "Content-Type: application/json" \
-  -H "Authorization: $LINEAR_API_KEY" \
-  -d '{"query": "{ viewer { id name email } }"}'
 ```
-
-### Mock Mode
-
-Mock mode uses local JSON fixtures to simulate Linear API responses. This is useful for:
-
-- Development and testing without API access
-- CI/CD pipelines
-- Demos and presentations
+@DevAgents what does ENG-1234 ask for?
+@DevAgents summarize ENG-1234 and find the code it touches
+```
 
 ## Troubleshooting
 
-### Common Issues
+| Symptom | Check |
+|---------|-------|
+| Provider not offered | The `issues.linear` block is missing, or `api_key` resolved to an empty string |
+| Authentication error | Key revoked, or copied with surrounding whitespace |
+| Issue not found | The key's user has no access to that team's issues |
 
-#### Authentication Failed
+## Notes
 
-```bash
-# Verify your API key is valid
-curl -X POST https://api.linear.app/graphql \
-  -H "Content-Type: application/json" \
-  -H "Authorization: $LINEAR_API_KEY" \
-  -d '{"query": "{ viewer { id name } }"}'
-```
+- Personal API keys inherit that user's permissions — create a dedicated integration user if you
+  want to limit what the agent can read.
+- Issue titles, descriptions and comments are sent to your LLM provider.
 
-If you receive a 401 error, your API key may be invalid or expired. Generate a new one from Linear Settings.
+## Next steps
 
-#### Issue Not Found
-
-Linear issue identifiers are case-insensitive but must follow the `TEAMKEY-NUMBER` format. Ensure:
-
-- The team key exists in your Linear workspace
-- The issue number is valid
-- The authenticated user has access to the team
-
-#### Rate Limiting
-
-Linear allows 5,000 requests per hour per user. If you hit rate limits:
-
-- Reduce polling frequency
-- Use webhooks for real-time updates instead of polling
-- Monitor `X-RateLimit-Requests-Remaining` response headers
-
-## Security Considerations
-
-### API Key Security
-
-- **Environment variables** — Store API keys in `.env` file only, never in config files
-- **Minimal access** — API keys inherit the creating user's permissions; consider using a dedicated service account
-- **Regular rotation** — Regenerate API keys periodically
-
-### Data Access
-
-Dev Agents accesses:
-- Issue metadata (title, description, state, priority)
-- Comments and discussions
-- Team and project information
-- User information (name, email)
-- No modification of Linear data (read-only)
-
-## Best Practices
-
-1. **Descriptive issues** — Write clear issue descriptions with acceptance criteria for better AI analysis
-2. **Consistent labeling** — Use consistent labels across teams for reliable filtering
-3. **Link issues** — Reference Linear issue IDs in commit messages and PR descriptions
-4. **Use sub-issues** — Break down large issues for better tracking and analysis
-
-## API Reference
-
-Dev Agents uses the Linear GraphQL API:
-
-- **API Endpoint**: `https://api.linear.app/graphql`
-- **Authentication**: API key in `Authorization` header
-- **Schema Explorer**: [Linear API Schema](https://studio.apollographql.com/public/Linear-API/variant/current/schema/reference)
-- **Developer Docs**: [Linear Developers](https://linear.app/developers)
+- [config.yaml](../config-yaml.md#projects)
+- [Environment variables](../environment-variables.md)

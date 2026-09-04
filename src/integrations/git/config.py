@@ -76,3 +76,23 @@ class GitRepositoryConfig:
         """
         repo_path = Path(self.get_repo_dir())
         return repo_path.exists() and repo_path.is_dir()
+
+    def has_git_repo(self) -> bool:
+        """Check whether the repository directory holds a git checkout.
+
+        Returns:
+            True if a ``.git`` entry exists in the configured repo directory
+        """
+        return (Path(self.get_repo_dir()) / ".git").exists()
+
+    def is_repo_dir_empty(self) -> bool:
+        """Check whether the repository directory is absent or empty.
+
+        Returns:
+            True if the configured repo directory does not exist or contains
+            no entries (a clone target must be empty or non-existent)
+        """
+        repo_path = Path(self.get_repo_dir())
+        if not repo_path.exists():
+            return True
+        return not any(repo_path.iterdir())

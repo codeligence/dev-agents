@@ -66,7 +66,7 @@ dev-agents is built using enterprise-grade software architecture patterns while 
 
 - **PEP 8 Compliance**: Follow Python style guidelines
 - **Black Formatting**: Use Black for consistent code formatting
-- **Import Sorting**: Use isort for organizing imports
+- **Import Sorting**: Use Ruff (`ruff check --fix`) for organizing imports
 - **Line Length**: Maximum 88 characters (Black default)
 
 ### Architecture Patterns
@@ -162,7 +162,7 @@ pytest -v
 2. **Testing**: Include tests for new functionality
 3. **Documentation**: Update relevant documentation
 4. **Type Safety**: Ensure mypy passes
-5. **Code Style**: Ensure Black and isort formatting
+5. **Code Style**: Ensure Black and Ruff formatting
 6. **Breaking Changes**: Clearly document any breaking changes
 
 ### Review Process

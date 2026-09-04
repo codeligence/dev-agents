@@ -334,7 +334,7 @@ class JiraClientService:
             return None
 
         # Use Pydantic AI agent for image description
-        agent: Agent[None, str] = Agent(model=model, output_type=str)
+        agent: Agent[object, str] = Agent(model=model, output_type=str)
         result = await agent.run(
             [prompt, BinaryContent(data=data, media_type=mime_type)]
         )

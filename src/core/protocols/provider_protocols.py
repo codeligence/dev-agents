@@ -2,6 +2,27 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Optional, Protocol
 
+from core.git.clone import clone_repository
+from core.git.clone_url import validate_clone_url
+
+
+@dataclass
+class CloneSpec:
+    """Where and how to clone a provider's repository.
+
+    The URL must be credential-free; ``clone_repository`` stores *user* and
+    *password* in git's credential store instead of embedding them. Before
+    cloning, the URL is checked against *expected_host* (hostname, optionally
+    with port) and must use ``https`` unless *allow_insecure* is set, so the
+    credential never travels in plaintext or to an unintended host.
+    """
+
+    url: str
+    user: str
+    password: str
+    expected_host: str
+    allow_insecure: bool = False
+
 
 @dataclass
 class PipelineModel:
@@ -68,6 +89,48 @@ class PullRequestProvider(Protocol):
             ProviderError: If pull request cannot be loaded
         """
         ...
+
+    async def clone(self, target_dir: str) -> None:
+        """Clone this provider's repository into *target_dir*.
+
+        Template method: obtains the provider's :class:`CloneSpec` via
+        :meth:`_clone_spec`, validates the clone URL against the spec's
+        expected host and scheme, and delegates to ``clone_repository``, which
+        keeps the credential out of process arguments and the cloned
+        repository by storing it in git's credential store.
+
+        Args:
+            target_dir: Filesystem path to clone the repository into
+
+        Raises:
+            NotImplementedError: If the provider does not support cloning
+            GitOperationError: If the provider is not configured for cloning,
+                the clone URL fails validation or the repository cannot be
+                cloned
+        """
+        spec = await self._clone_spec()
+        if spec is None:
+            return
+        validate_clone_url(
+            spec.url,
+            expected_host=spec.expected_host,
+            allow_insecure=spec.allow_insecure,
+        )
+        await clone_repository(
+            spec.url, target_dir, user=spec.user, password=spec.password
+        )
+
+    async def _clone_spec(self) -> CloneSpec | None:
+        """Return the clone URL and credentials for this provider.
+
+        Providers that support cloning override this hook. They must return
+        ``None`` when cloning should be skipped (mock mode) and raise
+        ``GitOperationError`` when required configuration is missing.
+
+        Raises:
+            NotImplementedError: If the provider does not support cloning
+        """
+        raise NotImplementedError(f"{type(self).__name__} does not support cloning")
 
 
 class IssueProvider(Protocol):

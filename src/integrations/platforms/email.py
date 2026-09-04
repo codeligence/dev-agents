@@ -12,6 +12,15 @@ Environment variables:
     EMAIL_SMTP_PORT     — SMTP server port (default: 587)
     EMAIL_POLL_INTERVAL — Seconds between mailbox checks (default: 15)
     EMAIL_ALLOWED_USERS — Comma-separated allowed sender addresses (optional)
+    EMAIL_VERIFY_DKIM   — Require a valid, aligned DKIM signature (default: true)
+
+Sender authentication:
+    A ``From:`` header is trivially forgeable, so on its own
+    ``EMAIL_ALLOWED_USERS`` authenticates nothing — anyone can claim to be an
+    allowed sender and drive the agent. Incoming mail is therefore DKIM-verified
+    and the signing domain must align with the ``From:`` domain before the
+    allowlist is consulted. Set ``EMAIL_VERIFY_DKIM=false`` only when something
+    upstream (a gateway, a trusted relay) already authenticates senders.
 """
 
 from __future__ import annotations
@@ -62,6 +71,57 @@ _AUTOMATED_HEADERS: dict[str, Callable[[str], bool]] = {
 
 # Gmail-safe max length per email body
 MAX_MESSAGE_LENGTH = 50_000
+
+
+# ---------------------------------------------------------------------------
+# DKIM sender authentication
+# ---------------------------------------------------------------------------
+
+
+def _domain_of(address: str) -> str:
+    """Return the lower-cased domain part of an email address."""
+    return address.rpartition("@")[2].strip().lower()
+
+
+def _is_aligned(signing_domain: str, from_domain: str) -> bool:
+    """Whether a DKIM ``d=`` domain covers *from_domain* (relaxed alignment).
+
+    Exact match, or the From domain is a subdomain of the signing domain.
+    Without this check any validly-signed mail would pass — a Gmail-signed
+    message claiming ``From: ceo@yourcompany.com`` included.
+    """
+    if not signing_domain or not from_domain:
+        return False
+    return from_domain == signing_domain or from_domain.endswith(f".{signing_domain}")
+
+
+def verify_dkim(raw_email: bytes, sender_addr: str) -> tuple[bool, str]:
+    """Verify the DKIM signature on *raw_email* and check domain alignment.
+
+    Returns ``(ok, reason)``; *reason* is empty when verification succeeded.
+    Performs blocking DNS lookups, so it must be called from a worker thread.
+    """
+    import dkim
+
+    try:
+        verifier = dkim.DKIM(raw_email)
+        if not verifier.verify():
+            return False, "DKIM signature failed verification"
+    except dkim.DKIMException as exc:
+        return False, f"DKIM signature malformed: {exc}"
+    except Exception as exc:  # DNS failures, malformed keys, …
+        return False, f"DKIM verification error: {exc}"
+
+    signing_domain = (verifier.signature_fields.get(b"d") or b"").decode(
+        "utf-8", errors="replace"
+    )
+    from_domain = _domain_of(sender_addr)
+    if not _is_aligned(signing_domain.lower(), from_domain):
+        return False, (
+            f"DKIM domain {signing_domain!r} does not align with From domain "
+            f"{from_domain!r}"
+        )
+    return True, ""
 
 
 # ---------------------------------------------------------------------------
@@ -172,6 +232,25 @@ class EmailService(BasePlatformService):
         self._poll_interval = int(os.getenv("EMAIL_POLL_INTERVAL", "15"))
 
         self._allowed_users = self.get_authorized_ids("EMAIL_ALLOWED_USERS")
+
+        # Sender authentication. Enabled by default: without it the From
+        # header — and therefore EMAIL_ALLOWED_USERS — is forgeable.
+        self._verify_dkim = self.env_flag("EMAIL_VERIFY_DKIM", default=True)
+        if self._verify_dkim:
+            try:
+                import dkim  # noqa: F401
+            except ImportError as exc:
+                raise RuntimeError(
+                    "DKIM verification is enabled but 'dkimpy' is not installed. "
+                    "Install it with: pip install 'dev-agents[email]' — or set "
+                    "EMAIL_VERIFY_DKIM=false if senders are already "
+                    "authenticated upstream."
+                ) from exc
+        else:
+            self.logger.warning(
+                "DKIM verification is disabled — the From header is forgeable, "
+                "so EMAIL_ALLOWED_USERS cannot authenticate senders on its own"
+            )
 
         # UID-based deduplication
         self._seen_uids: set[bytes] = set()
@@ -309,6 +388,14 @@ class EmailService(BasePlatformService):
 
                     body = _extract_text_body(msg)
 
+                    # Verified here rather than in _handle_email: this runs in
+                    # a worker thread and DKIM does blocking DNS lookups.
+                    dkim_ok, dkim_reason = (
+                        verify_dkim(raw_email, sender_addr)
+                        if self._verify_dkim
+                        else (True, "")
+                    )
+
                     results.append(
                         {
                             "uid": uid,
@@ -319,6 +406,8 @@ class EmailService(BasePlatformService):
                             "in_reply_to": in_reply_to,
                             "body": body,
                             "date": msg.get("Date", ""),
+                            "dkim_ok": dkim_ok,
+                            "dkim_reason": dkim_reason,
                         }
                     )
             finally:
@@ -342,6 +431,16 @@ class EmailService(BasePlatformService):
 
         if _is_automated_sender(sender_addr, {}):
             self.logger.debug("Dropping automated sender at dispatch: %s", sender_addr)
+            return
+
+        # Sender authentication precedes authorization: the allowlist below
+        # is only meaningful once the From address is known to be genuine.
+        if not msg_data.get("dkim_ok", False):
+            self.logger.warning(
+                "Ignoring email from %s — sender not authenticated (%s)",
+                sender_addr,
+                msg_data.get("dkim_reason") or "no DKIM signature",
+            )
             return
 
         # Check allowed users
@@ -374,7 +473,8 @@ class EmailService(BasePlatformService):
             platform_name="email",
         )
 
-        self.logger.info("New message from %s: %s", sender_addr, subject)
+        self.logger.info("New message from %s", sender_addr)
+        self.logger.debug("Subject from %s: %s", sender_addr, subject)
         await self._dispatch_message(message)
 
     # -- SMTP sending ---------------------------------------------------------
@@ -417,7 +517,8 @@ class EmailService(BasePlatformService):
             except Exception:
                 smtp.close()
 
-        self.logger.info("Sent reply to %s (subject: %s)", to_addr, subject)
+        self.logger.info("Sent reply to %s", to_addr)
+        self.logger.debug("Reply subject to %s: %s", to_addr, subject)
 
         # Send remaining chunks as follow-up emails (iterative, not recursive)
         for chunk in chunks[1:]:

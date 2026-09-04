@@ -4,7 +4,10 @@ import urllib.parse
 
 import httpx
 
+from core.exceptions import GitOperationError
+from core.git.clone_url import host_from_url
 from core.protocols.provider_protocols import (
+    CloneSpec,
     IssueModel,
     IssueProvider,
     PullRequestModel,
@@ -101,6 +104,34 @@ class AzureDevOpsPullRequestProvider(PullRequestProvider):
             refs.append(target_commit_id)
 
         return refs
+
+    async def _clone_spec(self) -> CloneSpec | None:
+        """Build the clone spec for the configured Azure DevOps repository.
+
+        Azure DevOps accepts the repository id in the ``_git`` clone path, so
+        the URL is built directly from configuration. The PAT is used as the
+        password (empty user), matching the basic-auth scheme used elsewhere.
+        """
+        if self.config.get_use_mocks():
+            return None
+
+        base_url = self.config.get_url()
+        organization = self.config.get_organization()
+        project = self.config.get_project()
+        repo_id = self.config.get_repo_id()
+        pat = self.config.get_pat()
+        if not (base_url and organization and project and repo_id and pat):
+            raise GitOperationError(
+                "Azure DevOps provider is not fully configured for cloning"
+            )
+
+        return CloneSpec(
+            url=f"{base_url}/{organization}/{project}/_git/{repo_id}",
+            user="",
+            password=pat,
+            expected_host=host_from_url(base_url),
+            allow_insecure=self.config.get_allow_insecure_clone_url(),
+        )
 
     async def _fetch_pull_request(self, pull_request_id: str) -> PullRequest:
         """Fetch pull request from Azure DevOps API."""

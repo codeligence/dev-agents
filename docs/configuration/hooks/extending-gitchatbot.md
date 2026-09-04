@@ -1,358 +1,141 @@
-# Extending GitChatbot Tools
+# Extending the Chat Agent
 
-GitChatbot uses an extensible tool registration system that allows you to add custom tools without modifying the agent code.
+The chat agent (`gitchatbot`) builds its toolset at run time from a list of `ToolRegistration`
+objects. Two [hooks](index.md) let you change that list, so you can add company-specific tools
+without forking the agent:
 
-## Overview
+- `gitchatbot.register_tools` (action) — append your registrations
+- `gitchatbot.tool_registrations` (filter) — reorder or drop registrations, defaults included
 
-The GitChatbot agent dynamically registers tools at runtime using hooks:
+The same pair exists for the code research subagent: `code_research.register_tools` and
+`code_research.tool_registrations`.
 
-1. **Default tools** are collected from the agent
-2. **Action hook** fires to allow adding new tools
-3. **Filter hook** fires to allow sorting/removing tools
-4. **System prompt** is built with tool descriptions
-5. **Tools** are registered with the PydanticAI agent
-
-## Quick Start
-
-Add a custom tool to GitChatbot:
+## ToolRegistration
 
 ```python
-from core.hooks import hooks
 from core.agents.models import ToolRegistration
-from pydantic_ai import RunContext
-from agents.agents.gitchatbot.models import PersistentAgentDeps
-
-async def estimate_complexity(
-    ctx: RunContext[PersistentAgentDeps],
-    scope: str = "current_context",
-) -> str:
-    """
-    Estimate the complexity of code changes.
-
-    Args:
-        scope: What to analyze - "current_context" uses PR/git refs from context
-
-    Returns:
-        Complexity estimation with metrics
-    """
-    # Access conversation context
-    context = ctx.deps.load_context()
-
-    # Your implementation here
-    return f"Complexity analysis for PR #{context.pull_request_id}..."
-
-def register_complexity_tool(registrations: list[ToolRegistration]) -> None:
-    """Add complexity estimation tool to GitChatbot."""
-    registrations.append(ToolRegistration(
-        name="estimate_complexity",
-        description="Code complexity estimation for change assessment",
-        function=estimate_complexity,
-        priority=50,
-    ))
-
-# Register during app startup
-hooks().add_action("gitchatbot.register_tools", register_complexity_tool)
 ```
-
-## ToolRegistration Model
-
-```python
-from dataclasses import dataclass
-from typing import Any, Awaitable, Callable
-
-@dataclass
-class ToolRegistration:
-    name: str                           # Tool function name
-    description: str                    # Shown in system prompt
-    function: Callable[..., Awaitable[Any]]  # Async tool function
-    priority: int = 10                  # Display order (lower = first)
-```
-
-### Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | str | Unique identifier used as the tool function name |
-| `description` | str | Short description added to the system prompt |
-| `function` | async callable | The tool implementation |
-| `priority` | int | Controls ordering in system prompt (default: 10) |
+| `name` | `str` | Function name the model calls |
+| `description` | `str` | One-liner listed under the agent's capabilities in the system prompt |
+| `function` | async callable | Tool implementation; first parameter is `RunContext` |
+| `priority` | `int` | Ordering in the prompt, ascending. Default `10` |
 
-## Writing Tool Functions
+The descriptions are joined into `{tool_descriptions}` in
+[`agents.chatbot.initial`](../prompts-yaml.md), so write them for the model: what the tool does,
+what arguments it takes, what it returns.
 
-### Function Signature
+Built-in priorities to slot around: `list_recent_tags` (30), the code research tool (40),
+`get_token_usage` (70).
 
-Tools must be async and accept `RunContext` as the first parameter:
+## A tool
 
 ```python
 from pydantic_ai import RunContext
-from agents.agents.gitchatbot.models import PersistentAgentDeps
 
-async def my_tool(
-    ctx: RunContext[PersistentAgentDeps],
-    required_param: str,
-    optional_param: int = 10,
-) -> str:
-    """
-    Tool documentation becomes the AI's understanding of the tool.
+from core.skills.context import SkillContext
+
+
+async def deployment_status(ctx: RunContext, environment: str) -> str:
+    """Get the current deployment status for an environment.
 
     Args:
-        required_param: Description shown to the AI
-        optional_param: Another parameter with default
+        environment: Environment name, e.g. "staging" or "production".
 
     Returns:
-        Result string returned to the AI
+        Markdown summary of the running version and its health.
     """
-    # Implementation
-    return "Result"
+    sc = SkillContext(ctx)
+    await sc.send_toolcall_message(f"Checking {environment}...")
+
+    try:
+        status = await fetch_status(environment)
+    except Exception as exc:
+        return f"Could not read the deployment status: {exc}"
+
+    return f"**{environment}**: version {status.version}, healthy={status.healthy}"
 ```
 
-### Accessing Context
+Rules that matter:
 
-The `ctx.deps` object provides access to:
+- The function must be `async` and take `RunContext` first. Every other parameter needs a type
+  annotation — Pydantic AI derives the tool schema from them.
+- Return a string. Return a readable error message instead of raising: an exception ends the run,
+  a message lets the model recover.
+- The docstring is part of the schema the model sees.
 
-```python
-async def my_tool(ctx: RunContext[PersistentAgentDeps]) -> str:
-    # Get execution context
-    execution_id = ctx.deps.execution_id
+`SkillContext` (`src/core/skills/context.py`) is the facade onto the run:
 
-    # Load conversation context (PR, issue, git refs)
-    context = ctx.deps.load_context()
+| Member | Purpose |
+|--------|---------|
+| `sc.deps` | Agent dependencies (context, conversation state) |
+| `await sc.send_toolcall_message(fallback)` | Forward the model's tool-call text as a status update |
+| `await sc.send_status(msg)` / `send_response(msg)` | Post a status / a full response |
+| `await sc.send_attachment(...)` / `download_attachment(id)` | Attachments (a Slack canvas, for example) |
+| `sc.save_artifact(...)` / `load_artifact(...)` | Persist and reload generated artifacts |
+| `sc.get_selected_project(default)` | The project the user is currently working in |
+| `sc.config` / `sc.prompts` | Configuration and prompts |
 
-    if context.pull_request_id:
-        # Work with PR
-        pr_id = context.pull_request_id
+## Registering it
 
-    if context.source_git_ref and context.target_git_ref:
-        # Work with git refs
-        source = context.source_git_ref
-        target = context.target_git_ref
-
-    if context.issue_id:
-        # Work with issue
-        issue_id = context.issue_id
-
-    # Access storage for artifacts
-    storage = ctx.deps.storage
-
-    return "Result"
-```
-
-### Sending Messages
-
-Tools can send status updates to the user:
+Put the wiring in a skill module — one `setup()` that registers the hooks:
 
 ```python
-from core.agents.context import get_current_agent_execution_context
+# mycompany_skills/deploy.py
+from core.agents.models import ToolRegistration
+from core.hooks import hooks
 
-async def my_tool(ctx: RunContext[PersistentAgentDeps]) -> str:
-    # Send status message
-    await get_current_agent_execution_context().send_status("Processing...")
 
-    # Send response/attachment
-    await get_current_agent_execution_context().send_attachment(
-        title="Analysis Results",
-        content="Detailed analysis content here..."
+def register_tools(registrations: list[ToolRegistration]) -> None:
+    registrations.append(
+        ToolRegistration(
+            name="deployment_status",
+            description=(
+                "Get the current deployment status of an environment. "
+                "Args: environment (e.g. 'staging', 'production'). "
+                "Returns: running version and health as markdown."
+            ),
+            function=deployment_status,
+            priority=50,
+        )
     )
 
-    return "Analysis complete"
+
+def setup() -> None:
+    hooks().add_action("gitchatbot.register_tools", register_tools)
 ```
 
-## Hook Reference
+Enable it in `config/config.custom.yaml`:
 
-### `gitchatbot.register_tools` (Action)
+```yaml
+skills:
+  enable:
+    - mycompany_skills.deploy
+  search_paths:
+    - /opt/dev-agents/custom-skills   # only if the module is not importable already
+```
 
-Called with a mutable list of `ToolRegistration` objects. Add new tools by appending to this list.
+`load_skills()` imports each listed module at startup and calls its `setup()`. A module without
+`setup()` is skipped with a warning, and an error inside `setup()` is logged without taking the
+process down.
+
+## Removing or reordering tools
+
+The filter receives the full list, defaults included:
 
 ```python
-def add_my_tools(registrations: list[ToolRegistration]) -> None:
-    registrations.append(ToolRegistration(...))
-    registrations.append(ToolRegistration(...))
+def drop_token_usage(registrations: list[ToolRegistration]) -> list[ToolRegistration]:
+    return [r for r in registrations if r.name != "get_token_usage"]
 
-hooks().add_action("gitchatbot.register_tools", add_my_tools)
+
+hooks().add_filter("gitchatbot.tool_registrations", drop_token_usage)
 ```
 
-### `gitchatbot.tool_registrations` (Filter)
+Filters must return the list, and exceptions propagate — a raise here fails the run.
 
-Called with the complete list after all additions. Use to sort, filter, or modify tools.
+## Next steps
 
-```python
-def filter_tools(registrations: list[ToolRegistration]) -> list[ToolRegistration]:
-    # Remove a specific tool
-    return [r for r in registrations if r.name != "unwanted_tool"]
-
-def reorder_tools(registrations: list[ToolRegistration]) -> list[ToolRegistration]:
-    # Custom sorting
-    return sorted(registrations, key=lambda r: r.name)
-
-hooks().add_filter("gitchatbot.tool_registrations", filter_tools)
-hooks().add_filter("gitchatbot.tool_registrations", reorder_tools, priority=20)
-```
-
-## Example: Complete Custom Tool
-
-Here's a complete example of a custom code metrics tool:
-
-```python
-# my_extension/tools.py
-
-from core.hooks import hooks
-from core.agents.models import ToolRegistration
-from core.agents.context import get_current_agent_execution_context
-from pydantic_ai import RunContext
-from agents.agents.gitchatbot.models import PersistentAgentDeps
-from integrations.git.git_repository import GitRepository
-
-async def analyze_code_metrics(
-    ctx: RunContext[PersistentAgentDeps],
-    metric_type: str = "all",
-) -> str:
-    """
-    Analyze code metrics for the current context.
-
-    Provides metrics like lines of code, complexity scores, and change statistics
-    based on the current PR or git reference comparison.
-
-    Args:
-        metric_type: Type of metrics to analyze - "all", "complexity", "changes", "coverage"
-
-    Returns:
-        Formatted metrics report
-    """
-    # Notify user
-    await get_current_agent_execution_context().send_status("Analyzing metrics...")
-
-    # Get context
-    context = ctx.deps.load_context()
-
-    if not context.pull_request_id and not (context.source_git_ref and context.target_git_ref):
-        return "No PR or git refs in context. Use update_context first."
-
-    # Get git repository
-    from core.agents.context import get_current_config
-    config = get_current_config()
-    project_config = config.get_default_project_config()
-    git_repo = GitRepository(project_config=project_config)
-
-    # Analyze based on metric type
-    results = []
-
-    if metric_type in ("all", "changes"):
-        # Get changed files
-        if context.source_git_ref and context.target_git_ref:
-            diff_context = git_repo.get_diff_from_branches(
-                context.source_git_ref,
-                context.target_git_ref,
-                "Metrics analysis"
-            )
-            results.append(f"Changed files: {len(diff_context.changed_files)}")
-
-    if metric_type in ("all", "complexity"):
-        results.append("Complexity: Medium (placeholder)")
-
-    if metric_type in ("all", "coverage"):
-        results.append("Coverage impact: Not available")
-
-    return "## Code Metrics\n\n" + "\n".join(f"- {r}" for r in results)
-
-
-def register_metrics_tools(registrations: list[ToolRegistration]) -> None:
-    """Register code metrics tools with GitChatbot."""
-    registrations.append(ToolRegistration(
-        name="analyze_code_metrics",
-        description="Code metrics analysis for quality assessment",
-        function=analyze_code_metrics,
-        priority=45,  # After changelog (20), tags (30), before research (40)
-    ))
-
-
-def setup_extension():
-    """Initialize the extension during app startup."""
-    hooks().add_action("gitchatbot.register_tools", register_metrics_tools)
-```
-
-Register in your app startup:
-
-```python
-# In your app initialization
-from my_extension.tools import setup_extension
-
-setup_extension()
-```
-
-## Default Tools
-
-GitChatbot includes these default extensible tools:
-
-| Tool | Priority | Description |
-|------|----------|-------------|
-| `create_test_plan_report` | 10 | Test plan generation |
-| `create_changelog_report` | 20 | Changelog generation |
-| `list_recent_tags` | 30 | Git tags listing |
-| `research_codebase_subagent` | 40 | Code research with Claude |
-
-## Tips and Best Practices
-
-### 1. Use Appropriate Priority
-
-Choose priority to position your tool logically:
-
-```python
-# Place after changelog but before research
-priority=35
-
-# Place at the end
-priority=100
-```
-
-### 2. Write Clear Docstrings
-
-The docstring becomes the AI's understanding of when to use the tool:
-
-```python
-async def my_tool(ctx: RunContext[PersistentAgentDeps], param: str) -> str:
-    """
-    Analyze security implications of code changes.
-
-    Use this tool when the user asks about security, vulnerabilities,
-    or potential risks in their code changes.
-
-    Args:
-        param: Specific area to focus on (e.g., "authentication", "input_validation")
-
-    Returns:
-        Security analysis report with recommendations
-    """
-```
-
-### 3. Handle Errors Gracefully
-
-Return helpful error messages instead of raising exceptions:
-
-```python
-async def my_tool(ctx: RunContext[PersistentAgentDeps]) -> str:
-    try:
-        result = await do_analysis()
-        return f"Analysis complete: {result}"
-    except SomeError as e:
-        return f"Analysis failed: {str(e)}. Please check the configuration."
-```
-
-### 4. Validate Context Early
-
-Check for required context before doing work:
-
-```python
-async def my_tool(ctx: RunContext[PersistentAgentDeps]) -> str:
-    context = ctx.deps.load_context()
-
-    if not context.pull_request_id:
-        return "This tool requires a PR context. Use update_context with a PR ID first."
-
-    # Continue with analysis...
-```
-
-## Next Steps
-
-- [Hook System Overview](index.md)
-- [Configuration Reference](../config-yaml.md)
-- [Prompts Configuration](../prompts-yaml.md)
+- [Hook system](index.md) — the full hook list
+- [prompts.yaml](../prompts-yaml.md) — where `{tool_descriptions}` is rendered

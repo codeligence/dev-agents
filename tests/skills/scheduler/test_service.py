@@ -4,8 +4,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from skills.scheduler.service import SchedulerService, validate_cron
-from skills.scheduler.storage import ScheduleEntry, ScheduleStorage
+pytest.importorskip("apscheduler")
+
+from skills.scheduler.service import SchedulerService, validate_cron  # noqa: E402
+from skills.scheduler.storage import ScheduleEntry, ScheduleStorage  # noqa: E402
 
 
 class FakeStorage:

@@ -1,8 +1,15 @@
 from typing import Any
 
+from core.config import parse_bool
+
 
 class BitBucketConfig:
-    """BitBucket specific configuration class that works with project config subsets."""
+    """BitBucket specific configuration class that works with project config subsets.
+
+    ``allowInsecureCloneUrl`` is **development-only**: it permits ``http://``
+    clone URLs. The clone URL must still point at the web host derived from
+    ``api_url``.
+    """
 
     DEFAULT_API_URL = "https://api.bitbucket.org/2.0"
 
@@ -43,11 +50,11 @@ class BitBucketConfig:
 
     def get_use_mocks(self) -> bool:
         """Get the BitBucket mock mode setting."""
-        mock_value = self._config_data.get("mock", "false")
-        # Handle both boolean and string representations
-        if isinstance(mock_value, bool):
-            return mock_value
-        return str(mock_value).lower() in ("true", "1", "yes", "on")
+        return parse_bool(self._config_data.get("mock", "false"))
+
+    def get_allow_insecure_clone_url(self) -> bool:
+        """Whether ``http://`` clone URLs are permitted (development only)."""
+        return parse_bool(self._config_data.get("allowInsecureCloneUrl", "false"))
 
     def is_configured(self) -> bool:
         """Check if all required BitBucket configuration is present."""

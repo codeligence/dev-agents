@@ -30,11 +30,100 @@ class TestMattermostService:
         svc = self._make_service(MATTERMOST_URL="https://mm.example.com/")
         assert svc._base_url == "https://mm.example.com"
 
+    def test_init_lowercases_scheme(self):
+        """Scheme is normalized once so downstream checks can be case-sensitive."""
+        svc = self._make_service(MATTERMOST_URL="HTTPS://mm.example.com/")
+        assert svc._base_url == "https://mm.example.com"
+
+    def test_ws_url_for_https(self):
+        svc = self._make_service(MATTERMOST_URL="https://mm.example.com")
+        assert svc._ws_url() == "wss://mm.example.com/api/v4/websocket"
+
+    def test_ws_url_for_uppercase_https(self):
+        """Uppercase HTTPS:// must still produce a valid wss:// WebSocket URL."""
+        svc = self._make_service(MATTERMOST_URL="HTTPS://mm.example.com")
+        assert svc._ws_url() == "wss://mm.example.com/api/v4/websocket"
+
+    def test_ws_url_for_http(self):
+        svc = self._make_service(MATTERMOST_URL="http://mm.example.com")
+        assert svc._ws_url() == "ws://mm.example.com/api/v4/websocket"
+
     def test_headers(self):
         svc = self._make_service()
         h = svc._headers()
         assert h["Authorization"] == "Bearer test-token"
         assert h["Content-Type"] == "application/json"
+
+    @pytest.mark.asyncio
+    async def test_connect_rejects_plaintext_url(self):
+        """A http:// URL must be refused before any network/auth I/O.
+
+        We patch ``_api_get`` and ``_ws_loop`` so any path that gets past the
+        https guard would observably reach them. The guard must short-circuit
+        so neither is touched.
+        """
+        svc = self._make_service(MATTERMOST_URL="http://mm.example.com")
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            patch.object(svc, "_api_get", AsyncMock()) as mock_api,
+            patch.object(svc, "_ws_loop", AsyncMock()) as mock_ws,
+        ):
+            assert await svc.connect() is False
+
+        mock_api.assert_not_awaited()
+        mock_ws.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_connect_allows_plaintext_with_override(self):
+        """With the insecure override, connect() proceeds past the guard to
+        a successful auth + WebSocket loop, returning True. This removes the
+        ambiguity of asserting False on a path that fails either way.
+        """
+        svc = self._make_service(MATTERMOST_URL="http://mm.example.com")
+        valid_me = {"id": "U1", "username": "bot"}
+        with (
+            patch.dict(os.environ, {"MATTERMOST_ALLOW_INSECURE": "true"}),
+            patch.object(svc, "_api_get", AsyncMock(return_value=valid_me)) as mock_api,
+            patch.object(svc, "_ws_loop", AsyncMock()) as mock_ws,
+        ):
+            assert await svc.connect() is True
+
+        mock_api.assert_awaited_with("users/me")
+        mock_ws.assert_awaited_once()
+        assert svc._bot_user_id == "U1"
+        assert svc._bot_username == "bot"
+
+    @pytest.mark.asyncio
+    async def test_connect_insecure_override_emits_warning(self, caplog, monkeypatch):
+        """When the override is honored, a warning must name the env var so
+        operators can spot accidental use of plaintext in production logs."""
+        import logging as _logging
+
+        svc = self._make_service(MATTERMOST_URL="http://mm.example.com")
+        # Install a real logger for this test (conftest stubs get_logger
+        # with a MagicMock at module load).
+        real_logger = _logging.getLogger("test.integrations.platforms.mattermost")
+        real_logger.propagate = True
+        monkeypatch.setattr(svc, "logger", real_logger)
+
+        valid_me = {"id": "U1", "username": "bot"}
+        caplog.set_level(_logging.WARNING, logger=real_logger.name)
+        with (
+            patch.dict(os.environ, {"MATTERMOST_ALLOW_INSECURE": "true"}),
+            patch.object(svc, "_api_get", AsyncMock(return_value=valid_me)),
+            patch.object(svc, "_ws_loop", AsyncMock()),
+        ):
+            await svc.connect()
+
+        warnings = [
+            r
+            for r in caplog.records
+            if r.levelno == _logging.WARNING and r.name == real_logger.name
+        ]
+        assert warnings, "expected an insecure-override warning"
+        msg = warnings[-1].getMessage()
+        assert "MATTERMOST_ALLOW_INSECURE" in msg
+        assert "insecure" in msg.lower()
 
     def test_format_message_strips_image_markdown(self):
         result = MattermostService._format_message("Look: ![alt](http://img.png) here")

@@ -57,17 +57,8 @@ repos:
         language_version: python3.11
         args: ['--config', 'pyproject.toml']
 
-  # Import sorting with isort
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        name: isort - Sort Python imports
-        description: A Python utility/library to sort imports
-        language_version: python3.11
-        args: ['--settings-path', 'pyproject.toml']
-
   # Python linting with Ruff (fast alternative to flake8)
+  # Ruff's `I` rules are the single source of truth for import sorting.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.10
     hooks:

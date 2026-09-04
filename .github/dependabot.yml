@@ -9,6 +9,9 @@ updates:
       day: "monday"
       time: "06:00"
       timezone: "UTC"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
     open-pull-requests-limit: 5
     reviewers:
       - "dev-agents-team"
@@ -28,7 +31,6 @@ updates:
         patterns:
           - "pytest*"
           - "black"
-          - "isort"
           - "mypy"
           - "ruff"
           - "bandit"
@@ -75,6 +77,9 @@ updates:
       day: "tuesday"
       time: "06:00"
       timezone: "UTC"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
     open-pull-requests-limit: 3
     reviewers:
       - "dev-agents-team"
@@ -105,6 +110,9 @@ updates:
       day: "wednesday"
       time: "06:00"
       timezone: "UTC"
+    cooldown:
+      default-days: 3
+      semver-major-days: 7
     open-pull-requests-limit: 2
     reviewers:
       - "dev-agents-team"

@@ -18,6 +18,17 @@ class ClaudeCodeConfig(BaseConfig):
         # Return None if empty string or not set
         return cli_path if cli_path else None
 
+    def get_model(self) -> str | None:
+        """Get the model the Claude Code CLI subprocess must use.
+
+        Returning ``None`` would let the spawned CLI fall back to the host
+        user's personal ``~/.claude/settings.json`` model preference, which is
+        not a valid deployment default for a server product. Configurable via
+        the CLAUDE_CODE_MODEL environment variable.
+        """
+        model = self.get_value("subagents.claude_code.model", "")
+        return model if model else None
+
     def is_configured(self) -> bool:
         """Check if Claude Code CLI path is configured."""
         return self.get_cli_path() is not None

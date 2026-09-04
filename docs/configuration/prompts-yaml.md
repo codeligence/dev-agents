@@ -1,236 +1,109 @@
 # prompts.yaml
 
-The `config/prompts.yaml` file contains all AI prompts and templates used by Dev Agents. Customize these to change how your agent behaves and responds.
+`prompts.yaml` holds the agent persona and system prompts. It is resolved in the same three layers
+as [`config.yaml`](config-yaml.md#resolution):
 
-## File Structure
+1. Bundled defaults — `src/core/defaults/prompts.yaml`
+2. `<cwd>/config/prompts.yaml` — replaces the bundled defaults entirely
+3. `<cwd>/config/prompts.custom.yaml` — deep-merged on top
 
-Prompts are organized by agent type and function:
+Put your changes in `config/prompts.custom.yaml` and override only the keys you care about.
+
+## Structure
+
+The shipped file is short — two top-level sections:
 
 ```yaml
-# System prompts for different agent types
+avatar:
+  fullName: "@jinja {{ env.AVATAR_FULL_NAME or 'Kira Draft' }}"
+  shortName: "@jinja {{ env.AVATAR_SHORT_NAME or 'Kira' }}"
+  character: "@jinja {{ env.AVATAR_CHARACTER or 'You are a helpful AI assistant. ...' }}"
+
 agents:
-  git_chatbot:
-    system_prompt: |
-      You are BettySharp, a senior software engineer...
-      
-  code_research:
-    system_prompt: |
-      You are an expert code analyst...
-      
-  testingnotes:
-    system_prompt: |
-      You specialize in analyzing code changes...
-
-# Templates for specific responses
-templates:
-  code_review:
-    summary: |
-      ## Code Review Summary for {pr_title}
-      
-  testing_notes_report:
-    header: |
-      # Testing Notes Report
-      **Changes analyzed:** {changed_files_count} files
+  chatbot:
+    initial: |
+      @jinja You are {{ this.avatar.fullName }} a multilingual developer assistant.
+      ...
+      {{ this.agents.chatbot.custom }}
+    custom: ""
+    research_codebase_prompt: |
+      ...
+    code_research_prompt: |
+      ...
+  code_research_tools: |
+    ## Code Research Tools (max 20 calls)
+    ...
 ```
 
-## Agent System Prompts
+| Key | Used by |
+|-----|---------|
+| `avatar.fullName` / `shortName` | Referenced from prompts; also how the agent addresses itself |
+| `avatar.character` | Personality paragraph interpolated into the chatbot prompt |
+| `agents.chatbot.initial` | System prompt of the main chat agent |
+| `agents.chatbot.custom` | Empty by default — your team-specific instructions, appended to `initial` |
+| `agents.chatbot.research_codebase_prompt` | Task prompt sent to the Claude Code research subagent |
+| `agents.chatbot.code_research_prompt` | System prompt of the built-in code research subagent |
+| `agents.code_research_tools` | Tool cheat-sheet interpolated into `code_research_prompt` |
 
-### Git Chatbot Agent
+## Placeholders
+
+Two mechanisms interpolate into these strings — do not mix them up:
+
+- **`@jinja` / `{{ … }}`** — resolved by Dynaconf at load time. Use `env.NAME` for environment
+  variables and `this.<dotted.path>` to reference another prompt value.
+- **`{name}`** — Python `str.format()` placeholders filled in at runtime. These must survive
+  into the final string:
+
+| Placeholder | In | Filled with |
+|-------------|-----|-------------|
+| `{tool_descriptions}` | `agents.chatbot.initial` | Descriptions of the registered tools |
+| `{instructions}` | `research_codebase_prompt` | The research task |
+| `{context_description}` | `research_codebase_prompt` | Current PR / branch context |
+| `{git_analysis_instructions}` | `research_codebase_prompt` | Git refs to compare |
+
+Removing a placeholder from a prompt you override breaks that agent's formatting, so keep them.
+
+## Customizing
+
+The lowest-risk change is `agents.chatbot.custom`, which is appended to the stock prompt:
 
 ```yaml
+# config/prompts.custom.yaml
 agents:
-  git_chatbot:
-    system_prompt: |
-      You are BettySharp, a senior software engineer and helpful assistant.
-      
-      Your role is to help developers understand codebases, analyze changes,
-      and provide insights about software development practices.
-      
-      Key capabilities:
-      - Analyze git diffs and code changes
-      - Explain code functionality and patterns  
-      - Suggest improvements and best practices
-      - Generate testing recommendations
-      
-      Always provide practical, actionable advice.
+  chatbot:
+    custom: |
+      Our services live under services/. Always mention the owning team when you
+      describe a service, and prefer German when the user writes in German.
 ```
 
-### Code Research Agent
+Persona changes need no YAML at all — set `AVATAR_FULL_NAME`, `AVATAR_SHORT_NAME` and
+`AVATAR_CHARACTER` in `.env`.
 
-```yaml
-agents:
-  code_research:
-    system_prompt: |
-      You are an expert code analyst with deep knowledge of software architecture.
-      
-      Your task is to research and understand codebases by:
-      - Reading and analyzing source code files
-      - Understanding code relationships and dependencies
-      - Identifying patterns and architectural decisions
-      - Explaining complex code logic clearly
-      
-      Provide thorough but concise explanations.
-```
-
-### Testing Notes Agent
-
-```yaml
-agents:
-  testingnotes:
-    system_prompt: |
-      You specialize in generating testing recommendations for code changes.
-
-      For each change, provide:
-      - Testing scenarios: What specific tests to run
-      - User workflows: End-to-end testing paths
-      - Edge cases: Boundary conditions and error scenarios
-      - Manual testing steps: Actionable test procedures
-
-      Focus on practical, actionable testing recommendations.
-```
-
-## Response Templates
-
-### Code Review Template
-
-```yaml
-templates:
-  code_review:
-    summary: |
-      ## Code Review Summary for {pr_title}
-      
-      **Files Changed:** {changed_files_count}
-      **Lines Added:** {lines_added} | **Lines Removed:** {lines_removed}
-      
-      ### Overview
-      {overview}
-      
-      ### Key Changes
-      {key_changes}
-      
-      ### Recommendations
-      {recommendations}
-      
-      ### Testing Suggestions
-      {testing_suggestions}
-```
-
-### Testing Notes Template
-
-```yaml
-templates:
-  testingnotes:
-    header: |
-      # Testing Notes Report
-      **Generated:** {timestamp}
-      **Changes analyzed:** {changed_files_count} files
-
-    ui_testing: |
-      ## 🧪 UI Testing Recommendations
-      **Priority Level:** {priority_level}
-
-      {testing_scenarios}
-      
-    api_testing: |
-      ## 🔌 API Testing Recommendations
-      **Breaking Changes:** {has_breaking_changes}
-
-      {testing_procedures}
-      
-    footer: |
-      ---
-      *Generated by Dev Agents - Testing Notes*
-```
-
-## Slack Message Templates
-
-```yaml
-slack:
-  messages:
-    analysis_complete: |
-      ✅ **Analysis Complete**
-      
-      I've analyzed the changes in {context}
-      
-      {summary}
-      
-      Would you like me to elaborate on any aspect?
-      
-    error_response: |
-      ❌ **Error Processing Request**
-      
-      I encountered an issue: {error_message}
-      
-      Please check the configuration and try again.
-```
-
-## Customization
-
-### Changing Agent Personality
-
-Modify the system prompts to change how your agent behaves:
+To replace a full prompt, copy the key from the bundled file and edit it:
 
 ```yaml
 agents:
-  git_chatbot:
-    system_prompt: |
-      You are DevBot, a friendly and enthusiastic coding assistant.
-      
-      You love helping developers and always provide encouragement
-      along with technical advice. Use emojis and keep responses upbeat! 🚀
+  chatbot:
+    initial: |
+      You are a release engineer assistant.
+
+      Available capabilities:
+      {tool_descriptions}
 ```
 
-### Adding New Templates
-
-Add custom templates for new use cases:
-
-```yaml
-templates:
-  deployment_checklist:
-    header: |
-      ## 🚀 Deployment Checklist for {release_version}
-      
-    items: |
-      - [ ] Database migrations applied
-      - [ ] Environment variables updated
-      - [ ] Tests passing
-      - [ ] Documentation updated
-```
-
-## Environment Variable Substitution
-
-Prompts support environment variable substitution:
-
-```yaml
-agents:
-  git_chatbot:
-    system_prompt: |
-      You are ${AGENT_NAME:-BettySharp}, working with the ${AGENT_TEAM:-development} team.
-```
-
-## Validation
-
-Test your prompt changes:
+## Check what loaded
 
 ```bash
 python -c "
-from src.core.prompts import BasePrompts
-prompts = BasePrompts()
-print('✓ Prompts loaded successfully')
-print('Git chatbot prompt:', prompts.get_value('agents.git_chatbot.system_prompt')[:100])
+from core.prompts import get_default_prompts
+p = get_default_prompts()
+print(p.get_prompt('avatar.fullName'))
+print(p.get_prompt('agents.chatbot.initial')[:400])
 "
 ```
 
-## Best Practices
+## Next steps
 
-1. **Keep prompts focused** - Each agent should have a clear, specific role
-2. **Use consistent formatting** - Maintain template structure across agents
-3. **Include context** - Provide enough background for accurate responses
-4. **Test changes** - Verify prompt modifications work as expected
-5. **Version control** - Track prompt changes like any other code
-
-## Next Steps
-
-- Configure [integrations](integrations/git.md)
-- Test your customizations with the [Quick Start](../quick-start.md) guide
-- Review [environment variables](environment-variables.md) for additional customization
+- [config.yaml](config-yaml.md) — models, agents, subagents
+- [Extending the chat agent](hooks/extending-gitchatbot.md) — add tools that show up in
+  `{tool_descriptions}`

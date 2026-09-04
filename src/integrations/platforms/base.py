@@ -283,3 +283,29 @@ class BasePlatformService(ABC):
         if not raw:
             return None
         return {uid.strip() for uid in raw.split(",") if uid.strip()}
+
+    @staticmethod
+    def env_flag(env_var: str, default: bool = False) -> bool:
+        """Parse a boolean-ish env var.
+
+        Truthy values: ``true``, ``1``, ``yes``, ``on`` (case-insensitive).
+        Falsy values: ``false``, ``0``, ``no``, ``off``. An unset or empty
+        var yields *default* silently; an unparseable value logs a warning
+        and falls back to *default* so operators notice typos rather than
+        silently getting the unintended default.
+        """
+        raw = os.environ.get(env_var)
+        if raw is None or not raw.strip():
+            return default
+        value = raw.strip().lower()
+        if value in ("true", "1", "yes", "on"):
+            return True
+        if value in ("false", "0", "no", "off"):
+            return False
+        logger.warning(
+            "Unparseable boolean for %s=%r; falling back to default %s",
+            env_var,
+            raw,
+            default,
+        )
+        return default

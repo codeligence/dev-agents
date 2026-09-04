@@ -6,10 +6,10 @@ configured with read-only tools for safe exploration.
 
 from .claude_code_subagent import ClaudeCodeSubagent
 from .models import ClaudeCodeConfig
-from .permissions import read_only_tool_handler
+from .permissions import create_read_only_tool_handler
 
 __all__ = [
     "ClaudeCodeConfig",
     "ClaudeCodeSubagent",
-    "read_only_tool_handler",
+    "create_read_only_tool_handler",
 ]

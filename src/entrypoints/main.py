@@ -13,6 +13,7 @@ import threading
 from dotenv import find_dotenv, load_dotenv
 
 from core.config import get_default_config
+from core.exceptions import ConfigurationError
 from core.log import get_logger, setup_thread_logging
 from core.version_check import check_for_updates
 
@@ -67,8 +68,13 @@ def detect_configured_services() -> list[str]:
 def register_http_entrypoints() -> bool:
     """Let each HTTP-based entrypoint register itself on the shared HTTP server.
 
-    Each entrypoint checks its own config and registers routes if enabled.
-    Returns True if at least one entrypoint registered.
+    Each entrypoint checks its own config and registers routes if enabled. An
+    entrypoint whose optional dependencies are missing is skipped; an enabled
+    entrypoint with invalid auth configuration propagates its
+    ``ConfigurationError`` so startup aborts rather than serving openly.
+
+    Returns:
+        True if at least one entrypoint registered.
     """
     any_registered = False
 
@@ -77,22 +83,20 @@ def register_http_entrypoints() -> bool:
         from entrypoints.agui_entrypoint.service import (
             register_if_configured as agui_register,
         )
-
-        if agui_register():
-            any_registered = True
-    except Exception as e:
-        logger.debug(f"AGUI entrypoint registration check failed: {e}")
+    except ImportError as e:
+        logger.debug(f"AGUI entrypoint unavailable: {e}")
+    else:
+        any_registered |= agui_register()
 
     # OpenAI-compatible entrypoint
     try:
         from entrypoints.openai_entrypoint.service import (
             register_if_configured as openai_register,
         )
-
-        if openai_register():
-            any_registered = True
-    except Exception as e:
-        logger.debug(f"OpenAI entrypoint registration check failed: {e}")
+    except ImportError as e:
+        logger.debug(f"OpenAI entrypoint unavailable: {e}")
+    else:
+        any_registered |= openai_register()
 
     return any_registered
 
@@ -291,7 +295,11 @@ Examples:
     logger.info(f"Configured services: {configured if configured else '(none)'}")
 
     # Let HTTP entrypoints register themselves on the shared server
-    http_registered = register_http_entrypoints()
+    try:
+        http_registered = register_http_entrypoints()
+    except ConfigurationError as e:
+        logger.error(f"Refusing to start: {e}")
+        sys.exit(1)
     if http_registered:
         configured.append("http")
         logger.info("HTTP server will start (at least one HTTP entrypoint registered)")

@@ -27,7 +27,7 @@ except ImportError:
 logger = get_logger(logger_name="LLM", level="DEBUG")
 
 
-def _create_agent(model_full_name: str) -> Agent[None, str]:
+def _create_agent(model_full_name: str) -> Agent[object, str]:
     return Agent(
         model=model_full_name,
         output_type=str,
@@ -56,7 +56,7 @@ def invoke_llm(prompt_text: str, model_full_name: str) -> str:
     result = agent.run_sync(prompt_text)
 
     # Track usage after execution
-    _track_usage_for_model(model_full_name, result.usage())
+    _track_usage_for_model(model_full_name, result.usage)
 
     return result.output
 
@@ -69,6 +69,6 @@ async def invoke_llm_async(prompt_text: str, model_full_name: str) -> str:
     result = await agent.run(prompt_text)
 
     # Track usage after execution
-    _track_usage_for_model(model_full_name, result.usage())
+    _track_usage_for_model(model_full_name, result.usage)
 
     return result.output

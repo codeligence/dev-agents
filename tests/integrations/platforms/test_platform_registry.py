@@ -17,6 +17,7 @@ class TestDetectPlatforms:
         with patch.dict(
             os.environ,
             {
+                "EMAIL_ENABLED": "true",
                 "EMAIL_ADDRESS": "a@b.com",
                 "EMAIL_PASSWORD": "x",
                 "EMAIL_IMAP_HOST": "imap.example.com",
@@ -28,22 +29,40 @@ class TestDetectPlatforms:
 
     def test_email_needs_all_four(self):
         base = {
+            "EMAIL_ENABLED": "true",
             "EMAIL_ADDRESS": "a@b.com",
             "EMAIL_PASSWORD": "x",
             "EMAIL_IMAP_HOST": "imap.example.com",
             "EMAIL_SMTP_HOST": "smtp.example.com",
         }
-        for missing in base:
+        for missing in (k for k in base if k != "EMAIL_ENABLED"):
             env = {k: v for k, v in base.items() if k != missing}
             with patch.dict(os.environ, env, clear=True):
                 assert (
                     "email" not in detect_platforms()
                 ), f"email should not be detected when {missing} is missing"
 
+    def test_enabled_flag_is_mandatory(self):
+        """Credentials alone must not activate a platform."""
+        creds = {
+            "EMAIL_ADDRESS": "a@b.com",
+            "EMAIL_PASSWORD": "x",
+            "EMAIL_IMAP_HOST": "imap.example.com",
+            "EMAIL_SMTP_HOST": "smtp.example.com",
+            "MATTERMOST_URL": "https://mm",
+            "MATTERMOST_TOKEN": "tok",
+            "TELEGRAM_BOT_TOKEN": "123:ABC",
+        }
+        with patch.dict(os.environ, creds, clear=True):
+            assert detect_platforms() == []
+        with patch.dict(os.environ, {**creds, "EMAIL_ENABLED": "false"}, clear=True):
+            assert "email" not in detect_platforms()
+
     def test_mattermost_detected(self):
         with patch.dict(
             os.environ,
             {
+                "MATTERMOST_ENABLED": "true",
                 "MATTERMOST_URL": "https://mm.example.com",
                 "MATTERMOST_TOKEN": "tok",
             },
@@ -52,23 +71,34 @@ class TestDetectPlatforms:
             assert "mattermost" in detect_platforms()
 
     def test_mattermost_needs_both(self):
-        with patch.dict(os.environ, {"MATTERMOST_URL": "https://mm"}, clear=True):
+        with patch.dict(
+            os.environ,
+            {"MATTERMOST_ENABLED": "true", "MATTERMOST_URL": "https://mm"},
+            clear=True,
+        ):
             assert "mattermost" not in detect_platforms()
 
     def test_telegram_detected(self):
-        with patch.dict(os.environ, {"TELEGRAM_BOT_TOKEN": "123:ABC"}, clear=True):
+        with patch.dict(
+            os.environ,
+            {"TELEGRAM_ENABLED": "true", "TELEGRAM_BOT_TOKEN": "123:ABC"},
+            clear=True,
+        ):
             assert "telegram" in detect_platforms()
 
     def test_all_detected(self):
         with patch.dict(
             os.environ,
             {
+                "EMAIL_ENABLED": "true",
                 "EMAIL_ADDRESS": "a@b.com",
                 "EMAIL_PASSWORD": "x",
                 "EMAIL_IMAP_HOST": "imap.example.com",
                 "EMAIL_SMTP_HOST": "smtp.example.com",
+                "MATTERMOST_ENABLED": "true",
                 "MATTERMOST_URL": "https://mm",
                 "MATTERMOST_TOKEN": "tok",
+                "TELEGRAM_ENABLED": "true",
                 "TELEGRAM_BOT_TOKEN": "123:ABC",
             },
             clear=True,

@@ -61,14 +61,26 @@ class ThreadRouter(logging.Handler):
     def __init__(self, logs_dir: str = "logs") -> None:
         super().__init__()
         self.logs_dir = logs_dir
-        Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+        self._disabled = False
 
     def emit(self, record: logging.LogRecord) -> None:
+        if self._disabled:
+            return
         thread_id = getattr(record, "thread_ts", "main")
         h = _context_based_handlers.get(thread_id)
         if h is None:
-            log_path = Path(self.logs_dir) / f"{thread_id}.log"
-            h = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+            # Created lazily (not in __init__) so that merely importing a
+            # module that sets up logging cannot crash on an unwritable
+            # default dir (e.g. /data/logs outside docker). If the dir is
+            # unusable, file logging is disabled instead of raising.
+            try:
+                Path(self.logs_dir).mkdir(parents=True, exist_ok=True)
+                log_path = Path(self.logs_dir) / f"{thread_id}.log"
+                h = logging.FileHandler(log_path, mode="a", encoding="utf-8")
+            except OSError:
+                self._disabled = True
+                self.handleError(record)
+                return
             h.setFormatter(
                 logging.Formatter(
                     "%(asctime)s %(levelname)s [%(thread_ts)s] %(message)s"

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import UTC
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlparse
 import re
 
 from slack_sdk.errors import SlackApiError
@@ -38,6 +39,13 @@ class SlackClientService:
         self.bot_token = slack_config.get_bot_token()
         self.app_token = slack_config.get_app_token()
         self._always_respond = slack_config.get_always_respond()
+        self._attachments_enabled = slack_config.get_attachments_enabled()
+        self._attachment_max_bytes = (
+            slack_config.get_attachment_max_size_mb() * 1024 * 1024
+        )
+        self._inline_text_max_bytes = (
+            slack_config.get_attachment_max_inline_text_kb() * 1024
+        )
 
         self.client = AsyncWebClient(token=self.bot_token)
 
@@ -123,7 +131,7 @@ class SlackClientService:
         """Create a SlackMessage from a Slack API message response."""
         from datetime import datetime
 
-        from entrypoints.slack_entrypoint.models import SlackMessage
+        from entrypoints.slack_entrypoint.models import SlackFile, SlackMessage
 
         message_id = slack_msg.get("ts", "")
         timestamp = (
@@ -147,20 +155,34 @@ class SlackClientService:
             else ""
         )
 
-        files = slack_msg.get("files", [])
-        if files:
-            attachment_lines = []
-            for f in files:
-                file_id = f.get("id", "")
-                file_name = f.get("name", "unknown")
-                if file_id:
-                    attachment_lines.append(
-                        f"[#attachment id={file_id} name={file_name}]"
-                    )
-            if attachment_lines:
-                processed_content = (
-                    processed_content + "\n" + "\n".join(attachment_lines)
+        slack_files = []
+        for f in slack_msg.get("files", []):
+            file_id = f.get("id", "")
+            if not file_id:
+                continue
+            # Slack metadata is not guaranteed: mimetype may be null and size
+            # may be missing or non-numeric. Coerce defensively so one malformed
+            # file entry can't abort processing for the whole thread.
+            mimetype = str(f.get("mimetype") or "application/octet-stream")
+            size = self._coerce_size(f.get("size"))
+            url = f.get("url_private_download") or f.get("url_private")
+            data, note = await self._load_attachment_bytes(mimetype, size, url)
+            # File names/ids are private; keep the per-file detail at DEBUG since
+            # attachment processing is an explicit opt-in.
+            self.log.debug(
+                f"Attachment {file_id} name={f.get('name', 'unknown')} "
+                f"mime={mimetype} size={size} -> "
+                + (f"downloaded {len(data)} bytes" if data else f"note={note}")
+            )
+            slack_files.append(
+                SlackFile(
+                    file_id=file_id,
+                    name=f.get("name", "unknown"),
+                    mimetype=mimetype,
+                    data=data,
+                    note=note,
                 )
+            )
 
         return SlackMessage(
             channel_id=channel_id,
@@ -171,7 +193,109 @@ class SlackClientService:
             timestamp=timestamp,
             thread_ts=slack_msg.get("thread_ts", message_id),
             is_from_bot=user_id == self.bot_id,
+            files=slack_files,
         )
+
+    @staticmethod
+    def _coerce_size(value: Any) -> int:
+        """Parse a Slack ``size`` field, tolerating null/non-numeric values."""
+        try:
+            return max(0, int(value))
+        except (TypeError, ValueError):
+            return 0
+
+    async def _load_attachment_bytes(
+        self, mimetype: str, size: int, url: str | None
+    ) -> tuple[bytes | None, str | None]:
+        """Download an attachment's bytes if it is supported and within limits.
+
+        Returns ``(data, note)`` where ``data`` is ``None`` when the file was
+        not downloaded and ``note`` explains why (so the model still learns the
+        attachment exists).
+        """
+        from integrations.slack.attachments import classify_attachment
+
+        if not self._attachments_enabled:
+            return None, "attachment processing disabled"
+        kind = classify_attachment(mimetype)
+        if kind == "unsupported":
+            return None, None
+        # Inlined text lands verbatim in the model context, so it gets a much
+        # tighter cap than binary content.
+        max_bytes = (
+            self._inline_text_max_bytes
+            if kind == "text"
+            else self._attachment_max_bytes
+        )
+        if size and size > max_bytes:
+            return None, f"too large (>{self._format_size(max_bytes)})"
+        if not url:
+            return None, "no download URL"
+        data = await self.download_file_content(url, max_bytes)
+        if data is None:
+            return None, "download failed"
+        return data, None
+
+    @staticmethod
+    def _format_size(num_bytes: int) -> str:
+        if num_bytes >= 1024 * 1024:
+            return f"{num_bytes // (1024 * 1024)} MB"
+        return f"{num_bytes // 1024} KB"
+
+    async def download_file_content(
+        self, url: str, max_bytes: int | None = None
+    ) -> bytes | None:
+        """Download a Slack private file URL and return its raw bytes.
+
+        The URL must be HTTPS on ``files.slack.com`` — the request carries the
+        bot token as a Bearer header, so sending it to any other host would
+        leak the token.
+
+        When ``max_bytes`` is given, the advertised ``Content-Length`` is
+        rejected up front and the stream is aborted past the cap, so a
+        missing/under-reported ``size`` field on the Slack metadata can never
+        lead to an unbounded read.
+        """
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or parsed.hostname != "files.slack.com":
+            self.log.error(
+                "Refusing to download attachment: URL is not an HTTPS "
+                "files.slack.com URL"
+            )
+            return None
+        timeout = aiohttp.ClientTimeout(total=120)
+        headers = {"Authorization": f"Bearer {self.bot_token}"}
+        try:
+            async with (
+                aiohttp.ClientSession(timeout=timeout, headers=headers) as session,
+                session.get(url) as resp,
+            ):
+                resp.raise_for_status()
+                content_length = resp.headers.get("Content-Length")
+                if (
+                    max_bytes is not None
+                    and content_length
+                    and int(content_length) > max_bytes
+                ):
+                    self.log.error(
+                        "Refusing attachment: Content-Length exceeds max size"
+                    )
+                    return None
+                buffer = bytearray()
+                async for chunk in resp.content.iter_chunked(64 * 1024):
+                    buffer.extend(chunk)
+                    if max_bytes is not None and len(buffer) > max_bytes:
+                        self.log.error(
+                            "Aborting attachment download: body exceeds max size"
+                        )
+                        return None
+                return bytes(buffer)
+        except aiohttp.ClientError as e:
+            self.log.error(f"HTTP error downloading attachment: {e}")
+            return None
+        except Exception as e:
+            self.log.error(f"Error downloading attachment: {e}")
+            return None
 
     @staticmethod
     def _build_message_payload(
@@ -192,17 +316,22 @@ class SlackClientService:
     async def _post_chunk(
         self,
         channel_id: str,
-        thread_ts: str,
+        thread_ts: str | None,
         text: str,
         extra_blocks: list[dict[str, Any]] | None = None,
     ) -> str | None:
         """Post a single pre-sized chunk as one Slack message."""
         try:
-            response = await self.client.chat_postMessage(
-                channel=channel_id,
-                thread_ts=thread_ts,
+            # thread_ts=None or empty -> omit param so the message posts
+            # to the channel top-level instead of being rejected by Slack
+            # with invalid_thread_ts.
+            kwargs: dict[str, Any] = {
+                "channel": channel_id,
                 **self._build_message_payload(text, extra_blocks=extra_blocks),
-            )
+            }
+            if thread_ts:
+                kwargs["thread_ts"] = thread_ts
+            response = await self.client.chat_postMessage(**kwargs)
             return cast("str", response["ts"])
         except SlackApiError as e:
             self.log.error(
@@ -213,11 +342,14 @@ class SlackClientService:
     async def send_reply(
         self,
         channel_id: str,
-        thread_ts: str,
+        thread_ts: str | None,
         text: str,
         include_feedback: bool = False,
     ) -> str | None:
         """Send a reply in a thread with markdown formatting support.
+
+        When ``thread_ts`` is None or empty, the message is posted as a
+        top-level channel message instead of a thread reply.
 
         Long content is split into multiple Slack messages at semantic
         boundaries (headings, paragraphs, lines) so each message fits
@@ -294,8 +426,7 @@ class SlackClientService:
             self.log.info(f"Message {message_ts} updated successfully")
         except SlackApiError as e:
             self.log.error(
-                f"Slack update error: {e.response['error']} "
-                f"(len={len(first)})\n{first}"
+                f"Slack update error: {e.response['error']} (len={len(first)})\n{first}"
             )
             return None
 
@@ -443,20 +574,11 @@ class SlackClientService:
                 self.log.error(f"No download URL available for file {file_id}")
                 return None
 
-            if not download_url.startswith("https://"):
-                self.log.error(
-                    f"Refusing to download file {file_id}: URL scheme is not HTTPS"
-                )
+            payload = await self.download_file_content(
+                download_url, self._attachment_max_bytes
+            )
+            if payload is None:
                 return None
-
-            timeout = aiohttp.ClientTimeout(total=120)
-            headers = {"Authorization": f"Bearer {self.bot_token}"}
-            async with (
-                aiohttp.ClientSession(timeout=timeout, headers=headers) as session,
-                session.get(download_url) as resp,
-            ):
-                resp.raise_for_status()
-                payload = await resp.read()
 
             target_dir.mkdir(parents=True, exist_ok=True)
             file_path = target_dir / safe_name
@@ -468,9 +590,6 @@ class SlackClientService:
             self.log.error(
                 f"Slack API error downloading file {file_id}: {e.response['error']}"
             )
-            return None
-        except aiohttp.ClientError as e:
-            self.log.error(f"HTTP error downloading file {file_id}: {e}")
             return None
         except Exception as e:
             self.log.error(f"Error downloading file {file_id}: {e}")

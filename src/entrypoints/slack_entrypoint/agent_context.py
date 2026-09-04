@@ -72,7 +72,10 @@ class SlackAgentContext(AgentExecutionContext):
         Returns:
             Message timestamp if successful, None otherwise
         """
-        thread = self.thread_ts or self.channel_id
+        # Use thread_ts only when it's a non-empty value; otherwise post
+        # as a top-level channel message. Falling back to channel_id here
+        # caused Slack to reject the post with invalid_thread_ts.
+        thread = self.thread_ts or None
         message_ts: str | None = None
 
         try:

@@ -4,7 +4,9 @@ Connects via REST API (v4) and WebSocket for real-time events.
 Ported from hermes-agent/gateway/platforms/mattermost.py (MIT).
 
 Environment variables:
-    MATTERMOST_URL                  — Server URL (e.g. https://mm.example.com)
+    MATTERMOST_ENABLED              — Must be true to activate this platform
+    MATTERMOST_URL                  — Server URL (https:// required)
+    MATTERMOST_ALLOW_INSECURE       — Allow plaintext http:// URL (dev only)
     MATTERMOST_TOKEN                — Bot token or personal-access token
     MATTERMOST_REPLY_MODE           — "thread" to nest replies, "off" for flat (default: off)
     MATTERMOST_REQUIRE_MENTION      — Require @mention in channels (default: true)
@@ -51,7 +53,7 @@ class MattermostService(BasePlatformService):
     def __init__(self) -> None:
         super().__init__("mattermost")
 
-        self._base_url: str = os.getenv("MATTERMOST_URL", "").rstrip("/")
+        self._base_url: str = self._normalize_base_url(os.getenv("MATTERMOST_URL", ""))
         self._token: str = os.getenv("MATTERMOST_TOKEN", "")
         self._reply_mode: str = os.getenv("MATTERMOST_REPLY_MODE", "off").lower()
 
@@ -69,6 +71,30 @@ class MattermostService(BasePlatformService):
         self._seen_posts: dict[str, float] = {}
         self._SEEN_MAX = 2000
         self._SEEN_TTL = 300  # 5 min
+
+    # -- URL helpers ----------------------------------------------------------
+
+    @staticmethod
+    def _normalize_base_url(raw: str) -> str:
+        """Normalize the configured base URL once at init.
+
+        Strips trailing slashes and lower-cases the scheme so downstream code
+        can do case-sensitive comparisons (``startswith("https://")``) and
+        case-sensitive ``re.sub`` replacements without surprises.
+        """
+        raw = raw.strip().rstrip("/")
+        if "://" in raw:
+            scheme, rest = raw.split("://", 1)
+            return f"{scheme.lower()}://{rest}"
+        return raw
+
+    def _ws_url(self) -> str:
+        """Return the WebSocket URL for the normalized base URL.
+
+        ``https://`` becomes ``wss://`` and ``http://`` becomes ``ws://``.
+        Relies on ``_normalize_base_url`` having lower-cased the scheme.
+        """
+        return re.sub(r"^http", "ws", self._base_url) + "/api/v4/websocket"
 
     # -- HTTP helpers ---------------------------------------------------------
 
@@ -155,6 +181,25 @@ class MattermostService(BasePlatformService):
         if not self._base_url or not self._token:
             self.logger.error("URL or token not configured")
             return False
+
+        # The bot token is sent over both the REST and WebSocket connections.
+        # A plaintext http:// URL would leak it, so refuse unless the operator
+        # explicitly opts into an insecure connection for local development.
+        # _base_url is normalized at init, so a case-sensitive check is safe.
+        if not self._base_url.startswith("https://"):
+            if self.env_flag("MATTERMOST_ALLOW_INSECURE"):
+                self.logger.warning(
+                    "MATTERMOST_URL is not https:// — sending the token over an "
+                    "insecure connection because MATTERMOST_ALLOW_INSECURE is set"
+                )
+            else:
+                self.logger.error(
+                    "MATTERMOST_URL must use https:// (got %r). The auth token "
+                    "would otherwise be sent in plaintext. Set "
+                    "MATTERMOST_ALLOW_INSECURE=true to override for local dev.",
+                    self._base_url,
+                )
+                return False
 
         self._session = aiohttp.ClientSession(
             timeout=aiohttp.ClientTimeout(total=30),
@@ -272,7 +317,7 @@ class MattermostService(BasePlatformService):
 
     async def _ws_connect_and_listen(self) -> None:
         """Single WebSocket session: connect, authenticate, process events."""
-        ws_url = re.sub(r"^http", "ws", self._base_url) + "/api/v4/websocket"
+        ws_url = self._ws_url()
         self.logger.info("Connecting to %s", ws_url)
 
         self._ws = await self._session.ws_connect(ws_url, heartbeat=30.0)
@@ -340,15 +385,13 @@ class MattermostService(BasePlatformService):
 
         # Mention-gating for non-DM channels
         if channel_type_raw != "D":
-            require_mention = os.getenv(
-                "MATTERMOST_REQUIRE_MENTION",
-                "true",
-            ).lower() not in ("false", "0", "no")
+            require_mention = self.env_flag("MATTERMOST_REQUIRE_MENTION", default=True)
 
-            free_channels_raw = os.getenv("MATTERMOST_FREE_RESPONSE_CHANNELS", "")
-            free_channels = {
-                ch.strip() for ch in free_channels_raw.split(",") if ch.strip()
-            }
+            # get_authorized_ids returns None when the env var is unset/empty;
+            # treat that as "no free channels".
+            free_channels = (
+                self.get_authorized_ids("MATTERMOST_FREE_RESPONSE_CHANNELS") or set()
+            )
             is_free_channel = channel_id in free_channels
 
             mention_patterns = [
@@ -396,8 +439,11 @@ class MattermostService(BasePlatformService):
         )
 
         self.logger.info(
-            "New message from @%s in %s: %s",
-            sender_name,
+            "New message from @%s (%s) in %s", sender_name, sender_id, channel_id
+        )
+        self.logger.debug(
+            "Message content from %s in %s: %s",
+            sender_id,
             channel_id,
             message_text[:80],
         )

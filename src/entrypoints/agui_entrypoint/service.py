@@ -26,6 +26,7 @@ from core.log import get_logger, reset_context_token, set_context_token
 from core.prompts import get_default_prompts
 from entrypoints.agui_entrypoint.agent_context import AGUIAgentContext
 from entrypoints.agui_entrypoint.message import convert_agui_messages_to_message_list
+from entrypoints.http_server.auth import ApiKeyAuth
 from entrypoints.shared.agent_setup import ensure_agents_registered
 
 logger = get_logger("AGUIEntrypoint", level="INFO")
@@ -52,6 +53,15 @@ class AGUIConfig:
     def get_max_message_length(self) -> int:
         return int(self._base_config.get_value("agui.agent.maxMessageLength", 10000))
 
+    def get_auth(self) -> ApiKeyAuth:
+        """Validated Bearer-token policy for ``/agent``.
+
+        Raises:
+            ConfigurationError: If ``agui.server.apiKeys`` is malformed or empty
+                without ``agui.server.allowUnauthenticated``.
+        """
+        return ApiKeyAuth.from_config(self._base_config, "agui")
+
     def is_configured(self) -> bool:
         """Check if AGUI service is configured and enabled."""
         return self._base_config.get_bool("agui.server.enabled", False)
@@ -75,6 +85,14 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
 
     base_config = get_default_config()
     config_instance = AGUIConfig(base_config)
+
+    # Same gate as the OpenAI entrypoint: this endpoint runs the agent, so it
+    # must not be the one unauthenticated door on the shared HTTP server.
+    if not config_instance.get_auth().is_authorized(
+        request.headers.get("authorization", "")
+    ):
+        logger.warning("Rejected agent run request: invalid or missing API key")
+        raise HTTPException(status_code=401, detail="Invalid API key")
 
     if not input_data.thread_id or not input_data.run_id:
         logger.error("Missing required thread_id or run_id")
@@ -251,22 +269,31 @@ async def run_agent(input_data: RunAgentInput, request: Request) -> StreamingRes
 def register_if_configured() -> bool:
     """Check config and register routes on the shared HTTP server if enabled.
 
+    The auth policy is built here, before any route is mounted, so an enabled
+    endpoint without keys (and without the explicit unauthenticated opt-in)
+    aborts startup instead of serving the agent openly.
+
     Returns:
         True if routes were registered, False otherwise.
+
+    Raises:
+        ConfigurationError: If the entrypoint is enabled but its auth
+            configuration is invalid.
     """
-    try:
-        base_config = get_default_config()
-        config = AGUIConfig(base_config)
-        if not config.is_configured():
-            logger.debug("AGUI entrypoint not enabled")
-            return False
-
-        from entrypoints.http_server.server import register_router
-
-        register_router(router)
-        logger.info("AG-UI entrypoint registered on shared HTTP server")
-        return True
-
-    except Exception as e:
-        logger.debug(f"AGUI entrypoint registration failed: {e}")
+    config = AGUIConfig(get_default_config())
+    if not config.is_configured():
+        logger.debug("AGUI entrypoint not enabled")
         return False
+
+    auth = config.get_auth()
+    if auth.allow_unauthenticated:
+        logger.warning(
+            "AG-UI entrypoint runs WITHOUT authentication "
+            "(agui.server.allowUnauthenticated=true)"
+        )
+
+    from entrypoints.http_server.server import register_router
+
+    register_router(router)
+    logger.info("AG-UI entrypoint registered on shared HTTP server")
+    return True

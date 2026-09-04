@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from datetime import datetime
 
 from pydantic_ai.messages import (
     ModelRequest,
     ModelResponse,
     TextPart,
+    UserContent,
     UserPromptPart,
 )
+
+__all__ = ["BaseMessage", "MessageList", "UserContent"]
 
 
 class BaseMessage(ABC):
@@ -50,6 +53,15 @@ class BaseMessage(ABC):
         else:
             formatted_date = self.get_message_date().strftime("%Y-%m-%d %H:%M")
             return f"From {self.get_user_name()} ({formatted_date}):\n{self.get_message_content()}"
+
+    def get_user_content(self) -> "str | Sequence[UserContent]":
+        """Return the content for a user prompt part.
+
+        Defaults to the formatted text. Subclasses with attachments can override
+        this to return a list mixing the text with multimodal parts
+        (``BinaryContent``, inlined file text, …).
+        """
+        return self.get_formatted_message()
 
 
 class MessageList:
@@ -152,6 +164,6 @@ class MessageList:
         else:
             # User messages become ModelRequest with list of UserPromptPart
             user_parts = [
-                UserPromptPart(content=msg.get_formatted_message()) for msg in messages
+                UserPromptPart(content=msg.get_user_content()) for msg in messages
             ]
             return ModelRequest(parts=user_parts)

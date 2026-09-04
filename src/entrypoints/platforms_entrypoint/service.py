@@ -54,8 +54,10 @@ async def _run(shutdown_event: threading.Event) -> None:
 
     await start_platforms(agent_service)
 
-    # Wait for the orchestrator's shutdown event in a non-blocking way
-    await asyncio.get_event_loop().run_in_executor(None, shutdown_event.wait)
+    # Wait for the orchestrator's shutdown event in a non-blocking way.
+    # get_running_loop() is the supported way to reach the loop from inside
+    # a coroutine; get_event_loop() is deprecated for that use.
+    await asyncio.get_running_loop().run_in_executor(None, shutdown_event.wait)
 
     logger.info("Shutdown event received, stopping platforms...")
     await stop_platforms()

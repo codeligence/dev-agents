@@ -54,6 +54,10 @@ class PlatformAgentContext(AgentExecutionContext):
         self._message_list = MessageList(messages)
         self.context_id = str(uuid.uuid4())
         self._last_message_id: str | None = None
+        # Compact label used by info logs so each line carries the platform
+        # name and a short context id — enough to correlate without leaking
+        # message content.
+        self._log_tag = f"{platform_service.name}/{self.context_id[:8]}"
 
         logger.info(
             f"Created platform agent context: platform={platform_service.name}, "
@@ -113,12 +117,16 @@ class PlatformAgentContext(AgentExecutionContext):
             )
             return
 
-        logger.info(f"Sending status: {message}")
+        logger.info(
+            "[%s] Sending status update (%d chars)", self._log_tag, len(message)
+        )
+        logger.debug("[%s] Status content: %s", self._log_tag, message)
         await self._send_or_update_message(message, is_status=True)
 
     async def send_response(self, response: str) -> None:
         """Send the final agent response back to the platform."""
-        logger.info(f"Sending response: {response[:100]}...")
+        logger.info("[%s] Sending response (%d chars)", self._log_tag, len(response))
+        logger.debug("[%s] Response content: %s", self._log_tag, response)
         await self._send_or_update_message(response, is_status=False)
 
     async def send_attachment(

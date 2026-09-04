@@ -1,8 +1,15 @@
 from typing import Any
 
+from core.config import parse_bool
+
 
 class GitLabConfig:
-    """GitLab specific configuration class that works with project config subsets."""
+    """GitLab specific configuration class that works with project config subsets.
+
+    ``allowInsecureCloneUrl`` is **development-only**: it permits ``http://``
+    clone URLs returned by the GitLab API. The clone URL must still point at
+    the host of ``api_url``.
+    """
 
     def __init__(self, config_data: dict[str, Any]):
         """Initialize with a configuration dictionary subset.
@@ -26,11 +33,11 @@ class GitLabConfig:
 
     def get_use_mocks(self) -> bool:
         """Get the GitLab mock mode setting."""
-        mock_value = self._config_data.get("mock", "false")
-        # Handle both boolean and string representations
-        if isinstance(mock_value, bool):
-            return mock_value
-        return str(mock_value).lower() in ("true", "1", "yes", "on")
+        return parse_bool(self._config_data.get("mock", "false"))
+
+    def get_allow_insecure_clone_url(self) -> bool:
+        """Whether ``http://`` clone URLs are permitted (development only)."""
+        return parse_bool(self._config_data.get("allowInsecureCloneUrl", "false"))
 
     def is_configured(self) -> bool:
         """Check if all required GitLab configuration is present."""

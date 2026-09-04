@@ -1,8 +1,15 @@
 from typing import Any
 
+from core.config import parse_bool
+
 
 class AzureDevOpsConfig:
-    """Azure DevOps specific configuration class that works with project config subsets."""
+    """Azure DevOps specific configuration class that works with project config subsets.
+
+    ``allowInsecureCloneUrl`` is **development-only**: it permits an
+    ``http://`` ``url`` to be used for cloning. The clone URL must still point
+    at the host of ``url``.
+    """
 
     def __init__(self, config_data: dict[str, Any]):
         """Initialize with a configuration dictionary subset.
@@ -34,11 +41,11 @@ class AzureDevOpsConfig:
 
     def get_use_mocks(self) -> bool:
         """Get the Azure DevOps mock mode setting."""
-        mock_value = self._config_data.get("mock", "false")
-        # Handle both boolean and string representations
-        if isinstance(mock_value, bool):
-            return mock_value
-        return str(mock_value).lower() in ("true", "1", "yes", "on")
+        return parse_bool(self._config_data.get("mock", "false"))
+
+    def get_allow_insecure_clone_url(self) -> bool:
+        """Whether ``http://`` clone URLs are permitted (development only)."""
+        return parse_bool(self._config_data.get("allowInsecureCloneUrl", "false"))
 
     def is_configured(self) -> bool:
         """Check if all required Azure DevOps configuration is present."""

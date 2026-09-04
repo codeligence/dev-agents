@@ -18,17 +18,26 @@ providers:
     pat: "@jinja {{ env.get('AZURE_DEVOPS_PAT', '') }}"
     repoId: "@jinja {{ env.get('AZURE_DEVOPS_REPOID', '') }}"
     mock: "@jinja {{ env.get('AZURE_DEVOPS_MOCK', 'False') }}"
+    # Development only: permit an http:// url for cloning. Clone URLs must
+    # otherwise use https and always match the host of url.
+    allowInsecureCloneUrl: "@jinja {{ env.get('DEVOPS_ALLOW_INSECURE_CLONE_URL', 'False') }}"
   gitlab:
     api_url: "@jinja {{ env.get('GITLAB_API_URL', '') }}"
     project_id: "@jinja {{ env.get('GITLAB_PROJECT_ID', '') }}"
     token: "@jinja {{ env.get('GITLAB_TOKEN', '') }}"
     mock: "@jinja {{ env.get('GITLAB_MOCK', 'False') }}"
+    # Development only: permit http:// clone URLs returned by the API. Clone
+    # URLs must otherwise use https and always match the host of api_url.
+    allowInsecureCloneUrl: "@jinja {{ env.get('GITLAB_ALLOW_INSECURE_CLONE_URL', 'False') }}"
   github:
     api_url: "@jinja {{ env.get('GITHUB_API_URL', '') }}"
     owner: "@jinja {{ env.get('GITHUB_OWNER', '') }}"
     repo: "@jinja {{ env.get('GITHUB_REPO', '') }}"
     token: "@jinja {{ env.get('GITHUB_TOKEN', '') }}"
     mock: "@jinja {{ env.get('GITHUB_MOCK', 'False') }}"
+    # Development only: permit http:// clone URLs. Clone URLs must otherwise
+    # use https and always match the web host derived from api_url.
+    allowInsecureCloneUrl: "@jinja {{ env.get('GITHUB_ALLOW_INSECURE_CLONE_URL', 'False') }}"
   jira:
     domain: "@jinja {{ env.get('JIRA_DOMAIN', '') }}"
     email: "@jinja {{ env.get('JIRA_EMAIL', '') }}"
@@ -42,6 +51,9 @@ providers:
     username: "@jinja {{ env.get('BITBUCKET_EMAIL', '') }}"
     token: "@jinja {{ env.get('BITBUCKET_TOKEN', '') }}"
     mock: "@jinja {{ env.get('BITBUCKET_MOCK', 'False') }}"
+    # Development only: permit http:// clone URLs. Clone URLs must otherwise
+    # use https and always match the web host derived from api_url.
+    allowInsecureCloneUrl: "@jinja {{ env.get('BITBUCKET_ALLOW_INSECURE_CLONE_URL', 'False') }}"
 
 projects:
   default:
@@ -58,17 +70,20 @@ projects:
         pat: "@jinja {{ this.providers.devops.pat }}"
         repoId: "@jinja {{ this.providers.devops.repoId }}"
         mock: "@jinja {{ this.providers.devops.mock }}"
+        allowInsecureCloneUrl: "@jinja {{ this.providers.devops.allowInsecureCloneUrl }}"
       gitlab:
         api_url: "@jinja {{ this.providers.gitlab.api_url }}"
         project_id: "@jinja {{ this.providers.gitlab.project_id }}"
         token: "@jinja {{ this.providers.gitlab.token }}"
         mock: "@jinja {{ this.providers.gitlab.mock }}"
+        allowInsecureCloneUrl: "@jinja {{ this.providers.gitlab.allowInsecureCloneUrl }}"
       github:
         api_url: "@jinja {{ this.providers.github.api_url }}"
         owner: "@jinja {{ this.providers.github.owner }}"
         repo: "@jinja {{ this.providers.github.repo }}"
         token: "@jinja {{ this.providers.github.token }}"
         mock: "@jinja {{ this.providers.github.mock }}"
+        allowInsecureCloneUrl: "@jinja {{ this.providers.github.allowInsecureCloneUrl }}"
       bitbucket:
         api_url: "@jinja {{ this.providers.bitbucket.api_url }}"
         workspace: "@jinja {{ this.providers.bitbucket.workspace }}"
@@ -76,6 +91,7 @@ projects:
         username: "@jinja {{ this.providers.bitbucket.username }}"
         token: "@jinja {{ this.providers.bitbucket.token }}"
         mock: "@jinja {{ this.providers.bitbucket.mock }}"
+        allowInsecureCloneUrl: "@jinja {{ this.providers.bitbucket.allowInsecureCloneUrl }}"
     issues:
       devops:
         url: "@jinja {{ this.providers.devops.url }}"
@@ -114,6 +130,12 @@ slack:
     appToken:    "@jinja {{ env.SLACK_APP_TOKEN or '' }}"
     processingTimeout: "@jinja {{ env.SLACK_PROCESSING_TIMEOUT or 6000 }}"
     alwaysRespond: "@jinja {{ env.ALWAYS_RESPOND or false }}"
+  attachments:
+    # Opt-in: forwarding private Slack files into the LLM context is a
+    # deliberate deployment choice, so this defaults off.
+    enabled: "@jinja {{ env.SLACK_ATTACHMENTS_ENABLED or false }}"
+    maxFileSizeMb: "@jinja {{ env.SLACK_ATTACHMENT_MAX_SIZE_MB or 25 }}"
+    maxInlineTextKb: "@jinja {{ env.SLACK_ATTACHMENT_MAX_INLINE_TEXT_KB or 50 }}"
   assistant:
     welcomeMessage: "Hi! Ask me anything about the codebase, pull requests, or work items."
     includeFeedbackButtons: "@jinja {{ env.SLACK_INCLUDE_FEEDBACK_BUTTONS or false }}"
@@ -136,15 +158,25 @@ http:
 agui:
   server:
     enabled: "@jinja {{env.AGUI_ENABLED or false}}"
+    # Comma-separated Bearer tokens. This endpoint runs the agent, so when it
+    # is enabled without keys startup fails unless allowUnauthenticated is set.
+    apiKeys: "@jinja {{env.AGUI_API_KEYS or ''}}"
+    # Explicit opt-in to run without authentication. Unsafe outside a trusted
+    # network: anyone reaching the port gets repository access and LLM spend.
+    allowUnauthenticated: "@jinja {{env.AGUI_ALLOW_UNAUTHENTICATED or false}}"
   agent:
     defaultTimeout: "@jinja {{env.AGUI_DEFAULT_TIMEOUT or 300}}"
-    defaultAgentType: "@jinja {{env.AGUI_DEFAULT_AGENT_TYPE or 'chatbot'}}"
+    defaultAgentType: "@jinja {{env.AGUI_DEFAULT_AGENT_TYPE or 'gitchatbot'}}"
     maxMessageLength: "@jinja {{env.AGUI_MAX_MESSAGE_LENGTH or 10000}}"
 
 openai:
   server:
     enabled: "@jinja {{env.OPENAI_ENTRYPOINT_ENABLED or false}}"
+    # Comma-separated Bearer tokens; same fail-closed rule as agui.server.
     apiKeys: "@jinja {{env.OPENAI_API_KEYS or ''}}"
+    # Explicit opt-in to run without authentication. Unsafe outside a trusted
+    # network: anyone reaching the port gets repository access and LLM spend.
+    allowUnauthenticated: "@jinja {{env.OPENAI_ALLOW_UNAUTHENTICATED or false}}"
     modelName: "@jinja {{env.OPENAI_MODEL_NAME or 'dev-agents'}}"
     streaming: "@jinja {{env.OPENAI_STREAMING_ENABLED or true}}"
     thinking: "@jinja {{env.OPENAI_THINKING_ENABLED or true}}"
@@ -181,3 +213,4 @@ subagents:
     model: "@jinja {{ this.models.small }}"
   claude_code:
     cli_path: "@jinja {{ env.get('CLAUDE_CODE_PATH', '') }}"
+    model: "@jinja {{ env.get('CLAUDE_CODE_MODEL', 'claude-sonnet-5') }}"

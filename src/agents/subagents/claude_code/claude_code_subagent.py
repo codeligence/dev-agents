@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 from claude_agent_sdk import (
@@ -17,11 +18,12 @@ from claude_agent_sdk.types import (
 from pydantic_ai.usage import RunUsage
 
 from core.agents.context import get_current_agent_execution_context
+from core.exceptions import AgentExecutionError
 from core.integrations.context_integration_loader import ContextIntegrationLoader
 from core.log import get_logger
 
 from .models import ClaudeCodeConfig
-from .permissions import pretool_noop_hook, read_only_tool_handler
+from .permissions import create_read_only_tool_handler, pretool_noop_hook
 
 logger = get_logger(__name__)
 
@@ -44,35 +46,36 @@ class ClaudeCodeSubagent:
             cli_path: Optional path to Claude Code CLI. If not provided, uses config default.
             context_loader: Optional ContextIntegrationLoader for accessing project issues and PRs.
         """
-        if cli_path is None:
-            # Load from config
-            from core.config import get_default_config
+        from core.config import get_default_config
 
-            base_config = get_default_config()
-            claude_config = ClaudeCodeConfig(base_config)
-            cli_path = claude_config.get_cli_path()
+        claude_config = ClaudeCodeConfig(get_default_config())
 
-        self._cli_path = cli_path
+        self._cli_path = (
+            cli_path if cli_path is not None else claude_config.get_cli_path()
+        )
+        self._model = claude_config.get_model()
         self._context_loader = context_loader
 
     def _create_project_tools(
         self, context_loader: ContextIntegrationLoader
-    ) -> tuple[list[Any], list[str]]:
+    ) -> list[Any]:
         """Create project-specific tools for Claude SDK based on available providers.
 
         Args:
             context_loader: ContextIntegrationLoader instance to access providers
 
         Returns:
-            Tuple of (tools_list, tool_names_list) for MCP server creation
+            The tools to expose through the ``project_tools`` MCP server.
         """
         project_tools = []
-        tool_names = []
 
         # Check if issue provider is available before creating tool
         if context_loader.get_issue_provider() is not None:
 
-            @tool(
+            # untyped-decorator fires only when claude-agent-sdk is absent
+            # (ignore_missing_imports makes @tool Any); unused-ignore covers
+            # envs where the sdk is installed and typed.
+            @tool(  # type: ignore[untyped-decorator, unused-ignore]
                 "get_issue_info",
                 "Get detailed information about an issue/work item",
                 {"id": str},
@@ -103,13 +106,15 @@ class ClaudeCodeSubagent:
                     }
 
             project_tools.append(get_issue_info)
-            tool_names.append("mcp__project_tools__get_issue_info")
             logger.debug("Added get_issue_info tool (issue provider available)")
 
         # Check if PR provider is available before creating tool
         if context_loader.get_pullrequest_provider() is not None:
 
-            @tool(
+            # untyped-decorator fires only when claude-agent-sdk is absent
+            # (ignore_missing_imports makes @tool Any); unused-ignore covers
+            # envs where the sdk is installed and typed.
+            @tool(  # type: ignore[untyped-decorator, unused-ignore]
                 "get_pullrequest_info",
                 "Get detailed information about a pull request",
                 {"id": str},
@@ -142,10 +147,36 @@ class ClaudeCodeSubagent:
                     }
 
             project_tools.append(get_pullrequest_info)
-            tool_names.append("mcp__project_tools__get_pullrequest_info")
             logger.debug("Added get_pullrequest_info tool (PR provider available)")
 
-        return project_tools, tool_names
+        return project_tools
+
+    @staticmethod
+    def _collect_skill_tools() -> dict[str, Any]:
+        """Collect MCP tools contributed by skills via filter hook.
+
+        Skills register a filter on ``claude_code_subagent.collect_tools``
+        that appends ``(server_name, tools_list)`` tuples.
+        """
+        from core.hooks import hooks as core_hooks
+
+        registrations: list[tuple[str, list[Any]]] = []
+        registrations = core_hooks().apply_filters(
+            "claude_code_subagent.collect_tools", registrations
+        )
+
+        servers: dict[str, Any] = {}
+        for server_name, tools in registrations:
+            if tools:
+                servers[server_name] = create_sdk_mcp_server(
+                    name=server_name,
+                    version="1.0.0",
+                    tools=tools,
+                )
+                logger.debug(
+                    f"Added {len(tools)} skill tool(s) from MCP server '{server_name}'"
+                )
+        return servers
 
     async def query(
         self,
@@ -164,30 +195,25 @@ class ClaudeCodeSubagent:
         logger.debug(f"Querying Claude SDK for repository: {repo_path}")
 
         # Create custom tools if context_loader is available
-        mcp_servers = {}
-        # Bash is intentionally NOT in allowed_tools so permission requests
-        # go through the can_use_tool callback for fine-grained command filtering.
-        # The Bash(subcommand:*) pattern syntax does not work in the Agent SDK.
-        allowed_tools: list[str] = ["Read", "Grep", "Glob"]
-        disallowed_tools = ["Write", "Edit"]
+        mcp_servers: dict[str, Any] = {}
 
         if self._context_loader is not None:
             # Create project-specific tools based on available providers
-            project_tools, tool_names = self._create_project_tools(self._context_loader)
+            project_tools = self._create_project_tools(self._context_loader)
 
             # Only create MCP server if we have tools to add
             if project_tools:
-                project_tools_server = create_sdk_mcp_server(
+                mcp_servers["project_tools"] = create_sdk_mcp_server(
                     name="project-tools",
                     version="1.0.0",
                     tools=project_tools,
                 )
-
-                mcp_servers["project_tools"] = project_tools_server
-                allowed_tools.extend(tool_names)
                 logger.debug(
                     f"Added {len(project_tools)} project tool(s) to Claude SDK"
                 )
+
+        # Collect MCP tools contributed by skills (e.g. scheduler)
+        mcp_servers.update(self._collect_skill_tools())
 
         # Required workaround for Python SDK: PreToolUse hook keeps the stream
         # open so can_use_tool callback is invoked for Bash commands.
@@ -196,30 +222,31 @@ class ClaudeCodeSubagent:
             "PreToolUse": [HookMatcher(matcher=None, hooks=[pretool_noop_hook])]
         }
 
-        if mcp_servers:
-            options = ClaudeAgentOptions(
-                cwd=repo_path,
-                cli_path=self._cli_path,
-                system_prompt=SystemPromptPreset(type="preset", preset="claude_code"),
-                setting_sources=["user", "project"],
-                mcp_servers=mcp_servers,  # type: ignore[arg-type]
-                allowed_tools=allowed_tools,
-                disallowed_tools=disallowed_tools,
-                can_use_tool=read_only_tool_handler,
-                hooks=hooks,
-            )
-        else:
-            options = ClaudeAgentOptions(
-                max_buffer_size=10 * 1024 * 1024,
-                cwd=repo_path,
-                cli_path=self._cli_path,
-                system_prompt=SystemPromptPreset(type="preset", preset="claude_code"),
-                setting_sources=["user", "project"],
-                allowed_tools=allowed_tools,
-                disallowed_tools=disallowed_tools,
-                can_use_tool=read_only_tool_handler,
-                hooks=hooks,
-            )
+        options = ClaudeAgentOptions(
+            max_buffer_size=10 * 1024 * 1024,
+            cwd=repo_path,
+            cli_path=self._cli_path,
+            model=self._model,
+            system_prompt=SystemPromptPreset(type="preset", preset="claude_code"),
+            # "user" only — deliberately NOT "project"/"local". Those read
+            # .claude/settings.json out of the repository being analysed, and
+            # such a file can carry `permissions.allow` entries (auto-approved
+            # *before* can_use_tool runs, exactly like allowed_tools below) and
+            # `hooks` (shell commands the CLI runs outside the permission
+            # callback entirely). That would hand anyone who can land a commit
+            # on the analysed branch code execution in this container, which
+            # holds the deployment's provider tokens. Operator-owned ~/.claude
+            # config stays honoured.
+            setting_sources=["user"],
+            mcp_servers=mcp_servers,
+            # allowed_tools is intentionally left empty: any entry there
+            # auto-approves a whole tool *before* can_use_tool runs, which would
+            # both shadow the callback and split the read-only policy across two
+            # places. read_only_tool_handler is the single permission authority.
+            disallowed_tools=["Write", "Edit"],
+            can_use_tool=create_read_only_tool_handler(Path(repo_path)),
+            hooks=hooks,
+        )
 
         # Use Claude SDK to perform the analysis
         summary_report = ""
@@ -272,6 +299,18 @@ class ClaudeCodeSubagent:
                         )
                         get_current_agent_execution_context().track_usage(
                             "claude", run_usage
+                        )
+
+                    # Usage is tracked above even on failure (cost was incurred),
+                    # but a failed run must not be returned as a result: the text
+                    # carries CLI diagnostics ("Not logged in", API errors), which
+                    # the calling agent would otherwise present as research output.
+                    if msg.is_error:
+                        raise AgentExecutionError(
+                            "Claude Code CLI reported a failed run "
+                            f"(subtype={msg.subtype}, "
+                            f"api_error_status={msg.api_error_status}): "
+                            f"{msg.result or last_result or 'no details provided'}"
                         )
 
             summary_report = last_result

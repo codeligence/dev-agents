@@ -18,7 +18,7 @@ def create_plain_subagent(
     num_retries: int = 3,
     output_type: type[Any] = str,
     deps_type: type[DepsT] | None = None,
-) -> PydanticAgent[DepsT, Any] | PydanticAgent[None, Any]:
+) -> PydanticAgent[DepsT, Any] | PydanticAgent[object, Any]:
     """Create a plain agent for structured output with optional dependencies.
 
     Args:
@@ -41,7 +41,7 @@ def create_plain_subagent(
         )
         return agent
     else:
-        agent_no_deps: PydanticAgent[None, Any] = PydanticAgent(
+        agent_no_deps: PydanticAgent[object, Any] = PydanticAgent(
             model=model,
             output_type=output_type,
             instructions=system_prompt,

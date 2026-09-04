@@ -5,8 +5,11 @@ import urllib.parse
 
 import httpx
 
+from core.exceptions import GitOperationError
+from core.git.clone_url import host_from_url
 from core.log import get_logger
 from core.protocols.provider_protocols import (
+    CloneSpec,
     IssueModel,
     IssueProvider,
     PipelineListFilter,
@@ -115,6 +118,54 @@ class GitLabMergeRequestProvider(PullRequestProvider):
             refs.append(target_commit_id)
 
         return refs
+
+    async def _clone_spec(self) -> CloneSpec | None:
+        """Build the clone spec for the configured GitLab project.
+
+        The numeric project id cannot be turned into a clone path locally, so
+        the canonical ``http_url_to_repo`` is fetched from the API. The API
+        response is untrusted input for this purpose: the clone URL is pinned
+        to the host of ``api_url`` so the token cannot be sent elsewhere.
+        """
+        if self.config.get_use_mocks():
+            return None
+
+        api_url = self.config.get_api_url()
+        project_id = self.config.get_project_id()
+        token = self.config.get_token()
+        if not (api_url and project_id and token):
+            raise GitOperationError(
+                "GitLab provider is not fully configured for cloning"
+            )
+
+        http_url = await self._fetch_clone_url()
+        return CloneSpec(
+            url=http_url,
+            user="oauth2",
+            password=token,
+            expected_host=host_from_url(api_url),
+            allow_insecure=self.config.get_allow_insecure_clone_url(),
+        )
+
+    async def _fetch_clone_url(self) -> str:
+        """Fetch the project's HTTPS clone URL from the GitLab API."""
+        api_url = self.config.get_api_url()
+        project_id = self.config.get_project_id()
+        token = self.config.get_token()
+
+        url = f"{api_url}/projects/{project_id}"
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/json"}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers)
+            response.raise_for_status()
+            http_url = response.json().get("http_url_to_repo")
+
+        if not http_url:
+            raise GitOperationError(
+                f"GitLab project {project_id} did not return an http_url_to_repo"
+            )
+        return str(http_url)
 
     async def _fetch_merge_request(self, merge_request_id: str) -> MergeRequest:
         """Fetch merge request from GitLab API."""

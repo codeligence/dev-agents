@@ -40,7 +40,10 @@ def _create_conclusion_agent(
     return Agent(
         model=agent.model,
         output_type=agent.output_type,
-        instructions=agent._instructions,
+        # `_instructions` holds SourcedInstruction records (pydantic-ai >= 2.36);
+        # `instructions=` wants the underlying values. `.instruction` carries the
+        # original str or callable, so dynamic instructions survive the copy.
+        instructions=[sourced.instruction for sourced in agent._instructions],
         deps_type=agent.deps_type,
         model_settings=agent.model_settings,
         defer_model_check=True,  # Skip model validation since original was valid

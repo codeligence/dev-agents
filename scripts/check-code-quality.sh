@@ -346,6 +346,9 @@ run_test_validation() {
 
     # Check test syntax
     if [ -d "tests/" ]; then
+        # pyproject addopts includes --benchmark-json=reports/benchmark.json;
+        # pytest opens that path even for --collect-only, so the dir must exist.
+        mkdir -p reports
         run_check "Test Syntax Validation" \
             "python -m pytest tests/ --collect-only -q" \
             "" \

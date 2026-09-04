@@ -250,11 +250,21 @@ class TestTelegramService:
         assert svc._should_process_message(msg) is True
 
     def test_should_process_group_no_mention_required(self):
-        svc = self._make_service(TELEGRAM_REQUIRE_MENTION="false")
+        svc = self._make_service()
         svc._bot_id = 99
         svc._bot_username = "mybot"
         msg = self._make_message_mock(chat_type="supergroup")
-        assert svc._should_process_message(msg) is True
+        with patch.dict(os.environ, {"TELEGRAM_REQUIRE_MENTION": "false"}):
+            assert svc._should_process_message(msg) is True
+
+    def test_should_process_group_defaults_to_mention_only(self):
+        """With no TELEGRAM_REQUIRE_MENTION set, groups are gated by default."""
+        svc = self._make_service()
+        svc._bot_id = 99
+        svc._bot_username = "mybot"
+        msg = self._make_message_mock(chat_type="supergroup", text="hello everyone")
+        with patch.dict(os.environ, {}, clear=True):
+            assert svc._should_process_message(msg) is False
 
     def test_should_process_group_mention_required_no_mention(self):
         svc = self._make_service(TELEGRAM_REQUIRE_MENTION="true")
@@ -288,14 +298,18 @@ class TestTelegramService:
         assert svc._should_process_message(msg, is_command=True) is True
 
     def test_should_process_free_chat(self):
-        svc = self._make_service(
-            TELEGRAM_REQUIRE_MENTION="true",
-            TELEGRAM_FREE_RESPONSE_CHATS="123",
-        )
+        svc = self._make_service()
         svc._bot_id = 99
         svc._bot_username = "mybot"
         msg = self._make_message_mock(chat_type="supergroup", chat_id="123")
-        assert svc._should_process_message(msg) is True
+        with patch.dict(
+            os.environ,
+            {
+                "TELEGRAM_REQUIRE_MENTION": "true",
+                "TELEGRAM_FREE_RESPONSE_CHATS": "123",
+            },
+        ):
+            assert svc._should_process_message(msg) is True
 
     # -- Conflict / network error detection -----------------------------------
 

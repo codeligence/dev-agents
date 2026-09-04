@@ -21,6 +21,19 @@ _BUNDLED_CONFIG_DIR = Path(__file__).parent / "defaults"
 _ENTITY_SECTIONS = ("projects",)
 
 
+def parse_bool(value: object) -> bool:
+    """Parse a config value into a boolean.
+
+    Jinja-rendered YAML templates produce strings like ``"False"``, which
+    ``bool()`` would incorrectly evaluate as truthy. Recognises common
+    truthy string forms (``true``, ``1``, ``yes``, ``on``, case-insensitive)
+    and falls back to ``bool(value)`` for non-string types.
+    """
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes", "on")
+    return bool(value)
+
+
 def _prune_bundled_entity_keys(
     settings: Dynaconf,
     bundled_path: str,
@@ -254,15 +267,9 @@ class BaseConfig:
     def get_bool(self, key_path: str, default: bool = False) -> bool:
         """Get a boolean config value, correctly parsing string values.
 
-        Jinja-rendered YAML templates produce strings like ``"False"``, which
-        ``bool()`` would incorrectly evaluate as truthy. This helper recognises
-        common truthy/falsy string forms and falls back to ``bool(value)`` for
-        non-string types.
+        See :func:`parse_bool` for the accepted string forms.
         """
-        value = self.get_value(key_path, default)
-        if isinstance(value, str):
-            return value.strip().lower() in ("true", "1", "yes", "on")
-        return bool(value)
+        return parse_bool(self.get_value(key_path, default))
 
     def get_available_projects(self) -> list[str]:
         """Get list of configured project names."""

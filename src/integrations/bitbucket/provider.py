@@ -4,7 +4,10 @@ import urllib.parse
 
 import httpx
 
+from core.exceptions import GitOperationError
+from core.git.clone import web_host_from_api_url
 from core.protocols.provider_protocols import (
+    CloneSpec,
     PullRequestModel,
     PullRequestProvider,
 )
@@ -95,6 +98,36 @@ class BitBucketPullRequestProvider(PullRequestProvider):
             refs.append(target_commit_id)
 
         return refs
+
+    async def _clone_spec(self) -> CloneSpec | None:
+        """Build the clone spec for the configured Bitbucket repository.
+
+        Assumes the Bitbucket Cloud URL layout
+        (``https://<host>/<workspace>/<slug>.git``). Self-hosted Bitbucket
+        Server/Data Center uses ``/scm/<project>/<repo>.git`` and is not
+        supported.
+        """
+        if self.config.get_use_mocks():
+            return None
+
+        api_url = self.config.get_api_url()
+        workspace = self.config.get_workspace()
+        repo_slug = self.config.get_repo_slug()
+        username = self.config.get_username()
+        token = self.config.get_token()
+        if not (api_url and workspace and repo_slug and username and token):
+            raise GitOperationError(
+                "Bitbucket provider is not fully configured for cloning"
+            )
+
+        host = web_host_from_api_url(api_url)
+        return CloneSpec(
+            url=f"https://{host}/{workspace}/{repo_slug}.git",
+            user=username,
+            password=token,
+            expected_host=host,
+            allow_insecure=self.config.get_allow_insecure_clone_url(),
+        )
 
     async def _fetch_pull_request(self, pull_request_id: str) -> PullRequest:
         """Fetch pull request from BitBucket API."""

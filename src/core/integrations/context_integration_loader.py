@@ -1,10 +1,15 @@
+import asyncio
 import logging
 
 from core.integrations.provider_registry import ProviderRegistry
 from core.project_config import ProjectConfig
 from core.protocols import IssueModel, PullRequestModel
 from core.protocols.provider_protocols import IssueProvider, PullRequestProvider
+from integrations.git.config import GitRepositoryConfig
 from integrations.git.git_repository import GitRepository
+
+# Per-repository-path locks to serialize concurrent auto-clones.
+_clone_locks: dict[str, asyncio.Lock] = {}
 
 
 class ContextIntegrationLoader:
@@ -113,6 +118,9 @@ class ContextIntegrationLoader:
         """
         pr_model = await self.load_pullrequest(pullrequest_id)
 
+        # Ensure the working copy exists before resolving refs against it.
+        await self.ensure_repository_available()
+
         # Extract branch information from the model using refs lists
         source_branch = self._resolve_refs_to_branch(pr_model.source_refs)
         target_branch = self._resolve_refs_to_branch(pr_model.target_refs)
@@ -123,6 +131,52 @@ class ContextIntegrationLoader:
             )
 
         return source_branch, target_branch
+
+    async def ensure_repository_available(self) -> None:
+        """Clone the configured repository if its directory is empty.
+
+        Only an empty (or non-existent) directory is cloned into, matching
+        ``git clone``'s own requirement; an existing checkout is left as-is and
+        a populated non-git directory is never touched. Idempotent and safe
+        under concurrency: returns immediately when the repository already
+        exists, and serializes concurrent clones per repository path via
+        :data:`_clone_locks`. Cloning uses the configured pull request
+        provider's credentials.
+
+        Raises:
+            ValueError: If no pull request provider is available to clone with
+        """
+        git_config = GitRepositoryConfig.from_project_config(self.project_config)
+        if git_config.has_git_repo():
+            return
+
+        repo_dir = git_config.get_repo_dir()
+        if not git_config.is_repo_dir_empty():
+            # Populated but not a git checkout: outside the "clone when empty"
+            # contract, and git clone would reject a non-empty target.
+            self._get_logger().debug(
+                f"Repository directory '{repo_dir}' is not empty and not a git "
+                "checkout; skipping auto-clone"
+            )
+            return
+
+        lock = _clone_locks.setdefault(repo_dir, asyncio.Lock())
+        async with lock:
+            # Re-check after acquiring the lock: while waiting, another task may
+            # have cloned the repo or the directory may have been populated.
+            if git_config.has_git_repo() or not git_config.is_repo_dir_empty():
+                return
+
+            provider = self.get_pullrequest_provider()
+            if provider is None:
+                raise ValueError(
+                    "No pull request provider available to clone repository"
+                )
+
+            self._get_logger().info(
+                f"Repository directory '{repo_dir}' is empty; cloning"
+            )
+            await provider.clone(repo_dir)
 
     def _resolve_refs_to_branch(self, refs: list[str]) -> str | None:
         return GitRepository(self.project_config).resolve_refs_to_branch(refs)

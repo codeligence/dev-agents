@@ -126,10 +126,27 @@ class SlackBotRuntime:
     # Channel / group / im (non-Assistant) handling
     # ------------------------------------------------------------------
     async def _handle_channel_message(self, event: dict[str, Any]) -> None:
-        if event.get("subtype") not in (None, "file_share"):
+        # Trace every inbound message event so silent filter drops are
+        # visible in the log. Without this, a misconfigured bot or
+        # changed Slack event subscription looks identical to "no
+        # messages arrived" — see ceo.log 2026-05-18 07:58–15:16.
+        subtype = event.get("subtype")
+        ts = event.get("ts", "")
+        ch = event.get("channel", "")
+        self.logger.info(
+            f"message event: ts={ts} channel={ch} subtype={subtype} "
+            f"user={event.get('user', '')!r}"
+        )
+
+        if subtype not in (None, "file_share"):
+            self.logger.info(f"  drop: subtype={subtype!r} not handled")
             return
         user_id = event.get("user", "")
-        if not user_id or user_id == self.slack_service.bot_id:
+        if not user_id:
+            self.logger.info("  drop: missing user id")
+            return
+        if user_id == self.slack_service.bot_id:
+            self.logger.debug("  drop: message from bot itself")
             return
 
         content = event.get("text", "")
@@ -137,11 +154,16 @@ class SlackBotRuntime:
         message_id = event.get("ts", "")
         thread_ts = event.get("thread_ts", message_id)
         if not message_id or not channel_id:
+            self.logger.info("  drop: missing ts or channel")
             return
 
         is_top_level = thread_ts == message_id
         if is_top_level:
             if not self.slack_service.is_bot_mentioned(content):
+                self.logger.info(
+                    f"  drop: top-level message without bot mention "
+                    f"(bot_id={self.slack_service.bot_id})"
+                )
                 return
             self.slack_service.register_bot_conversation(thread_ts, user_id)
             preloaded: list[dict[str, Any]] | None = None
@@ -155,6 +177,10 @@ class SlackBotRuntime:
                 message_content=content,
             )
             if not decision.should_process:
+                self.logger.info(
+                    f"  drop: thread reply rejected by should_process_thread_reply "
+                    f"thread={thread_ts}"
+                )
                 return
             preloaded = decision.conversation
 

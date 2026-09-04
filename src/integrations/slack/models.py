@@ -55,6 +55,26 @@ class SlackBotConfig:
             "slack.assistant.includeFeedbackButtons", False
         )
 
+    def get_attachments_enabled(self) -> bool:
+        """Whether message file attachments are downloaded and fed to the agent.
+
+        Off by default: forwarding private Slack files into the LLM context is
+        an explicit opt-in (set ``SLACK_ATTACHMENTS_ENABLED``).
+        """
+        return self._base_config.get_bool("slack.attachments.enabled", False)
+
+    def get_attachment_max_size_mb(self) -> int:
+        """Maximum size (in MB) of a binary attachment to download."""
+        return int(self._base_config.get_value("slack.attachments.maxFileSizeMb", 25))
+
+    def get_attachment_max_inline_text_kb(self) -> int:
+        """Maximum size (in KB) of a text attachment to inline into the prompt.
+
+        Much smaller than the binary cap: inlined text lands verbatim in the
+        model context, so megabytes of text would blow up the prompt.
+        """
+        return int(self._base_config.get_value("slack.attachments.maxInlineTextKb", 50))
+
     def is_configured(self) -> bool:
         """Check if all required Slack configuration is present."""
         return bool(self.get_bot_token() and self.get_app_token())

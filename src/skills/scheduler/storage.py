@@ -66,7 +66,8 @@ class ScheduleStorage:
         return f"{self.KEY_PREFIX}{schedule_id}"
 
     def _load_index(self) -> list[str]:
-        return self._storage.get(self.INDEX_KEY, [])
+        ids: list[str] = self._storage.get(self.INDEX_KEY, [])
+        return ids
 
     def _save_index(self, ids: list[str]) -> None:
         self._storage.set(self.INDEX_KEY, ids)

@@ -85,3 +85,14 @@ def create_context_from_origin(
 def get_registered_origin_types() -> list[str]:
     """Return all registered origin type names."""
     return list(_factories.keys())
+
+
+def is_origin_factory_registered(origin_type: str) -> bool:
+    """Return whether a factory is registered for *origin_type*.
+
+    Use this to gate deferred-execution paths (e.g. the scheduler) that
+    need to recreate a context later — if no factory is registered the
+    deferred run would fail at fire time with "No context factory
+    registered". Callers should refuse up front instead.
+    """
+    return origin_type in _factories

@@ -135,7 +135,7 @@ class PydanticAIAgent(Agent):
             model_name = (
                 self.agent.model if self.agent and self.agent.model else "unknown"
             )
-            context.track_usage(model_name, result.usage())
+            context.track_usage(model_name, result.usage)
 
             response = result.output
 

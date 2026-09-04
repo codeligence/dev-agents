@@ -13,8 +13,9 @@ Deferred (not ported):
 - Media batching, DM topics, webhook mode, fallback transport, sticker analysis
 
 Environment variables:
+    TELEGRAM_ENABLED                — Must be true to activate this platform
     TELEGRAM_BOT_TOKEN              — Bot token from @BotFather
-    TELEGRAM_REQUIRE_MENTION        — Require @mention in groups (default: false)
+    TELEGRAM_REQUIRE_MENTION        — Require @mention in groups (default: true)
     TELEGRAM_FREE_RESPONSE_CHATS    — Chat IDs where bot responds without mention
     TELEGRAM_ALLOWED_USERS          — Comma-separated allowed user IDs (optional)
 
@@ -211,16 +212,20 @@ class TelegramService(BasePlatformService):
             )
 
             # Initialize with retry for transient TLS errors
+            _NetErr: type[BaseException]
+            _TimedOut: type[BaseException]
             try:
-                from telegram.error import NetworkError, TimedOut
+                from telegram.error import NetworkError as _NetErr
+                from telegram.error import TimedOut as _TimedOut
             except ImportError:
-                NetworkError = TimedOut = OSError
+                _NetErr = OSError
+                _TimedOut = OSError
 
             for attempt in range(3):
                 try:
                     await self._app.initialize()
                     break
-                except (NetworkError, TimedOut, OSError) as e:
+                except (_NetErr, _TimedOut, OSError) as e:
                     if attempt < 2:
                         wait = 2**attempt
                         self.logger.warning(
@@ -320,11 +325,13 @@ class TelegramService(BasePlatformService):
                 re.sub(r" \((\d+)/(\d+)\)$", r" \\(\1/\2\\)", chunk) for chunk in chunks
             ]
 
+        _BadReq: type[BaseException] | None
+        _NetErr2: type[BaseException]
         try:
             from telegram.error import BadRequest as _BadReq
-            from telegram.error import NetworkError as _NetErr
+            from telegram.error import NetworkError as _NetErr2
         except ImportError:
-            _NetErr = OSError
+            _NetErr2 = OSError
             _BadReq = None
 
         last_message_id: str | None = None
@@ -360,13 +367,13 @@ class TelegramService(BasePlatformService):
                         last_message_id = str(sent.message_id)
                     break
                 except Exception as send_err:
-                    if _BadReq and isinstance(send_err, _BadReq):
+                    if _BadReq is not None and isinstance(send_err, _BadReq):
                         err_lower = str(send_err).lower()
                         if "thread not found" in err_lower and thread_id:
                             thread_id = ""
                             continue
                         raise
-                    if isinstance(send_err, (_NetErr, OSError)) and attempt < 2:
+                    if isinstance(send_err, (_NetErr2, OSError)) and attempt < 2:
                         await asyncio.sleep(2**attempt)
                         continue
                     self.logger.error("Send failed to %s: %s", chat_id, send_err)
@@ -388,6 +395,7 @@ class TelegramService(BasePlatformService):
         if len(formatted) > MAX_MESSAGE_LENGTH:
             return False
 
+        _BadReq: type[BaseException] | None
         try:
             from telegram.error import BadRequest as _BadReq
         except ImportError:
@@ -416,7 +424,7 @@ class TelegramService(BasePlatformService):
             # "message is not modified" means the new text matches the old —
             # treat as success so the caller doesn't send a duplicate.
             if (
-                _BadReq
+                _BadReq is not None
                 and isinstance(edit_err, _BadReq)
                 and "message is not modified" in str(edit_err).lower()
             ):
@@ -553,7 +561,9 @@ class TelegramService(BasePlatformService):
             return
 
         msg = update.message
-        await self._dispatch_telegram_message(msg, msg.text)
+        text = msg.text
+        assert text is not None  # guarded above
+        await self._dispatch_telegram_message(msg, text)
 
     async def _dispatch_telegram_message(self, msg: Any, text: str) -> None:
         """Convert a Telegram message to PlatformMessage and dispatch."""
@@ -580,11 +590,9 @@ class TelegramService(BasePlatformService):
             platform_name="telegram",
         )
 
-        self.logger.info(
-            "New message from %s in %s: %s",
-            user_name,
-            chat.id,
-            text[:80],
+        self.logger.info("New message from %s in %s", user_id, chat.id)
+        self.logger.debug(
+            "Message content from %s in %s: %s", user_id, chat.id, text[:80]
         )
         await self._dispatch_message(message)
 
@@ -604,16 +612,15 @@ class TelegramService(BasePlatformService):
 
         chat_id = str(getattr(getattr(message, "chat", None), "id", ""))
 
-        # Free-response chats bypass mention requirement
-        free_raw = os.getenv("TELEGRAM_FREE_RESPONSE_CHATS", "")
-        free_chats = {c.strip() for c in free_raw.split(",") if c.strip()}
+        # Free-response chats bypass the mention requirement. get_authorized_ids
+        # returns None when the env var is unset/empty — treat that as "none".
+        free_chats = self.get_authorized_ids("TELEGRAM_FREE_RESPONSE_CHATS") or set()
         if chat_id in free_chats:
             return True
 
-        require_mention = os.getenv(
-            "TELEGRAM_REQUIRE_MENTION",
-            "false",
-        ).lower() in ("true", "1", "yes", "on")
+        # Default to mention-only in groups: an un-gated bot in a group is a
+        # public, un-authenticated entrypoint to the agent.
+        require_mention = self.env_flag("TELEGRAM_REQUIRE_MENTION", default=True)
 
         if not require_mention:
             return True
