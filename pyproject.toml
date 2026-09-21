@@ -92,7 +92,7 @@ nats = [
     "nats-py>=2.0.0",
 ]
 agui = [
-    "ag-ui-protocol>=0.1.19,<1.0.0",
+    "ag-ui-protocol>=0.1.19,<2.0.0",
 ]
 claude = [
     "claude-agent-sdk>=0.2.128,<1.0.0",
